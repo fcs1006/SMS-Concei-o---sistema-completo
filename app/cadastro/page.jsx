@@ -221,7 +221,7 @@ export default function Cadastro() {
 
             <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <button type="submit" className="btn-primary"
-                style={{ background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)', padding: '12px 40px', fontSize: '14px' }}>
+                style={{ background: 'linear-gradient(135deg, #172554, #1e3a8a)', padding: '12px 40px', fontSize: '14px' }}>
                 {salvando ? 'Salvando...' : '✓ SALVAR PACIENTE'}
               </button>
             </div>
