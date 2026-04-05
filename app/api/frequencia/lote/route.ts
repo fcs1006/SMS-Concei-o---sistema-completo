@@ -73,10 +73,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar escala
-    const { data: escala = [] } = await supabase
+    const { data: escalaRaw } = await supabase
       .from('escala')
       .select('matricula_normalizada');
 
+    const escala = escalaRaw ?? []
     const escalaSet = new Set(escala.map(s => s.matricula_normalizada));
 
     // Filtrar servidor conforme modo
