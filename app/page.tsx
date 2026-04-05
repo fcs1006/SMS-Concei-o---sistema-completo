@@ -1,8 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-
 export default function Login() {
   const [usuario, setUsuario] = useState('')
   const [senha, setSenha] = useState('')
@@ -15,19 +13,26 @@ export default function Login() {
     setCarregando(true)
     setErro('')
 
-    const { data, error } = await supabase.rpc('fazer_login', {
-      p_usuario: usuario.trim(),
-      p_senha: senha.trim()
-    })
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: usuario.trim(), senha: senha.trim() })
+      })
+      const data = await res.json()
 
-    if (error || !data?.ok) {
-      setErro('Usuário ou senha incorretos.')
+      if (!data?.ok) {
+        setErro('Usuário ou senha incorretos.')
+        setCarregando(false)
+        return
+      }
+
+      localStorage.setItem('sms_user', JSON.stringify(data))
+      router.push('/agendamento')
+    } catch {
+      setErro('Erro de conexão. Tente novamente.')
       setCarregando(false)
-      return
     }
-
-    localStorage.setItem('sms_user', JSON.stringify(data))
-    router.push('/agendamento')
   }
 
   return (
