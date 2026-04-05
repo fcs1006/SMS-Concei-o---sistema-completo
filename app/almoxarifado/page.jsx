@@ -272,6 +272,10 @@ export default function Almoxarifado() {
 
   async function salvarProduto() {
     if (!formProduto.nome.trim()) { setErroProduto('Nome é obrigatório'); return }
+    if (!formProduto.unidade) { setErroProduto('Unidade é obrigatória'); return }
+    if (!editandoProduto && (formProduto.quantidade_atual === '' || formProduto.quantidade_atual === null)) { setErroProduto('Quantidade inicial é obrigatória'); return }
+    if (formProduto.quantidade_minima === '' || formProduto.quantidade_minima === null) { setErroProduto('Quantidade mínima é obrigatória'); return }
+    if (!formProduto.categoria_id) { setErroProduto('Categoria é obrigatória'); return }
     setSalvandoProduto(true); setErroProduto('')
     try {
       const payload = { ...formProduto }
@@ -1495,31 +1499,27 @@ export default function Almoxarifado() {
                 <input className="input-modern" value={formProduto.codigo_barras} onChange={e => setFormProduto(p => ({ ...p, codigo_barras: e.target.value.toUpperCase() }))} placeholder="EAN-13, Code128..." />
               </div>
               <div>
-                <label className="label-modern">Unidade</label>
+                <label className="label-modern">Unidade *</label>
                 <select className="input-modern" value={formProduto.unidade} onChange={e => setFormProduto(p => ({ ...p, unidade: e.target.value }))}>
                   {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
               </div>
               {!editandoProduto && (
                 <div>
-                  <label className="label-modern">Quantidade inicial</label>
+                  <label className="label-modern">Quantidade inicial *</label>
                   <input className="input-modern" type="number" min="0" value={formProduto.quantidade_atual} onChange={e => setFormProduto(p => ({ ...p, quantidade_atual: e.target.value }))} placeholder="0" />
                 </div>
               )}
               <div>
-                <label className="label-modern">Quantidade mínima</label>
+                <label className="label-modern">Quantidade mínima *</label>
                 <input className="input-modern" type="number" min="0" value={formProduto.quantidade_minima} onChange={e => setFormProduto(p => ({ ...p, quantidade_minima: e.target.value }))} placeholder="0" />
               </div>
               <div style={{ gridColumn: editandoProduto ? '1 / -1' : '' }}>
-                <label className="label-modern">Categoria</label>
+                <label className="label-modern">Categoria *</label>
                 <select className="input-modern" value={formProduto.categoria_id} onChange={e => setFormProduto(p => ({ ...p, categoria_id: e.target.value }))}>
-                  <option value="">Sem categoria</option>
+                  <option value="">Selecione...</option>
                   {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
-              </div>
-              <div>
-                <label className="label-modern">Localização</label>
-                <input className="input-modern" value={formProduto.localizacao} onChange={e => setFormProduto(p => ({ ...p, localizacao: e.target.value.toUpperCase() }))} placeholder="Ex: PRATELEIRA A2" />
               </div>
               <div>
                 <label className="label-modern">Data de validade</label>
