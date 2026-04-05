@@ -205,7 +205,7 @@ export default function BPA() {
             <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
               BPA — Boletim de Produção Ambulatorial
             </h1>
-            <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
+            <p style={{ color: '#000000', fontSize: '13px', margin: 0 }}>
               Consolidação e geração do arquivo TXT para o DATASUS
             </p>
           </div>
@@ -332,7 +332,7 @@ export default function BPA() {
               onClick={consolidar} disabled={etapa === 'consolidando' || etapa === 'gerando'}>
               {etapa === 'consolidando' ? '⏳ Consolidando...' : '🔄 Consolidar'}
             </button>
-            <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}
+            <button className="btn-primary" style={{ background: gradPerfil }}
               onClick={gerarTxt} disabled={!consolidados.length || etapa === 'gerando' || etapa === 'consolidando'}>
               {etapa === 'gerando' ? '⏳ Gerando...' : '⬇️ Gerar TXT'}
             </button>
