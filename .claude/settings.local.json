@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:apicnes.datasus.gov.br)",
+      "WebFetch(domain:cnes.datasus.gov.br)"
+    ]
+  }
+}
