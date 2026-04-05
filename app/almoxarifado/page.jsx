@@ -294,7 +294,7 @@ export default function Almoxarifado() {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: p.id })
     })
-    await carregarProdutos()
+    await Promise.all([carregarProdutos(), carregarDashboard()])
   }
 
   async function reativarProduto(p) {
@@ -302,7 +302,7 @@ export default function Almoxarifado() {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...p, id: p.id, ativo: true, categoria_id: p.categoria_id || null })
     })
-    await carregarProdutos()
+    await Promise.all([carregarProdutos(), carregarDashboard()])
   }
 
   // ─── Categorias ────────────────────────────────────────────────────────
