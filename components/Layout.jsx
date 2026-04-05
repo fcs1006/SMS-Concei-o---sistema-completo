@@ -9,7 +9,7 @@ export default function Layout({ children, usuario }) {
     { label: 'Agendamento', icon: '📋', path: '/agendamento',
       bg1: '#172554', bg2: '#1e3a8a', cor: '#93c5fd', corBg: 'rgba(147,197,253,0.15)', acento: '#93c5fd' },
     { label: 'Relatório',    icon: '📊', path: '/relatorio',
-      bg1: '#451a03', bg2: '#78350f', cor: '#fcd34d', corBg: 'rgba(252,211,77,0.15)',  acento: '#fcd34d' },
+      bg1: '#b45309', bg2: '#f59e0b', cor: '#fcd34d', corBg: 'rgba(252,211,77,0.15)',  acento: '#fcd34d' },
     { label: 'TFD',          icon: '🚌', path: '/tfd',
       bg1: '#450a0a', bg2: '#7f1d1d', cor: '#fca5a5', corBg: 'rgba(252,165,165,0.15)', acento: '#fca5a5' },
     { label: 'Frequência', icon: '📆', path: '/frequencia',

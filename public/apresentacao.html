@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SMS Conceição — Apresentação do Sistema</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --teal:   #0d9488;
+    --teal2:  #14b8a6;
+    --navy:   #0f172a;
+    --slate:  #1e293b;
+    --muted:  #64748b;
+    --light:  #f1f5f9;
+    --white:  #ffffff;
+    --indigo: #4f46e5;
+    --amber:  #f59e0b;
+    --green:  #10b981;
+    --red:    #ef4444;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #e2e8f0;
+    color: var(--navy);
+  }
+
+  /* ── CONTROLS ─────────────────────────────── */
+  #controls {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 999;
+    background: rgba(15,23,42,0.85);
+    padding: 10px 20px;
+    border-radius: 999px;
+    backdrop-filter: blur(10px);
+  }
+  #controls button {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    padding: 6px 18px;
+    border-radius: 999px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  #controls button:hover { background: rgba(255,255,255,0.15); }
+  #controls button.active { background: var(--teal); border-color: var(--teal); }
+  #counter { color: rgba(255,255,255,0.6); font-size: 12px; align-self: center; min-width: 48px; text-align: center; }
+
+  /* ── SLIDE BASE ───────────────────────────── */
+  .slide {
+    width: 1280px;
+    min-height: 720px;
+    margin: 32px auto;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+    display: none;
+    position: relative;
+  }
+  .slide.active { display: flex; flex-direction: column; }
+
+  /* ── PRINT ────────────────────────────────── */
+  @media print {
+    body { background: white; }
+    #controls { display: none; }
+    .slide {
+      display: flex !important;
+      flex-direction: column;
+      width: 100%;
+      min-height: 100vh;
+      margin: 0;
+      border-radius: 0;
+      box-shadow: none;
+      page-break-after: always;
+      break-after: page;
+    }
+    .slide:last-child { page-break-after: avoid; break-after: avoid; }
+  }
+
+  /* ── SLIDE 1 — CAPA ───────────────────────── */
+  .slide-capa {
+    background: linear-gradient(135deg, var(--navy) 0%, #134e4a 100%);
+    min-height: 720px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px;
+  }
+  .capa-icon {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 38px;
+    margin: 0 auto 28px;
+    box-shadow: 0 16px 48px rgba(13,148,136,0.4);
+  }
+  .capa h1 {
+    font-family: 'Sora', sans-serif;
+    font-size: 52px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .capa h1 span { color: var(--teal2); }
+  .capa p {
+    font-size: 20px;
+    color: rgba(255,255,255,0.65);
+    max-width: 600px;
+    margin: 0 auto 40px;
+    line-height: 1.6;
+  }
+  .capa-badge {
+    display: inline-block;
+    background: rgba(13,148,136,0.25);
+    border: 1px solid rgba(20,184,166,0.4);
+    color: var(--teal2);
+    padding: 8px 22px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .5px;
+  }
+  .capa-url {
+    margin-top: 20px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+  }
+
+  /* ── SLIDE HEADER ─────────────────────────── */
+  .slide-header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--slate) 100%);
+    padding: 32px 56px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .slide-header .icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .slide-header h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .slide-header p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 2px;
+  }
+  .slide-body {
+    background: var(--light);
+    flex: 1;
+    padding: 40px 56px;
+  }
+
+  /* ── CARDS GRID ───────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .card-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .card h3 {
+    font-family: 'Sora', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+  .card p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .card .tag {
+    display: inline-block;
+    margin-top: 10px;
+    background: #f0fdf4;
+    color: #16a34a;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+
+  /* ── STAT CARDS ─────────────────────────────── */
+  .stat-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    text-align: center;
+    border-top: 4px solid var(--teal);
+  }
+  .stat-card .num {
+    font-family: 'Sora', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .stat-card .label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  /* ── TABLE ────────────────────────────────── */
+  .table-slide {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .table-slide th {
+    background: var(--navy);
+    color: #fff;
+    padding: 11px 16px;
+    text-align: left;
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .table-slide td {
+    padding: 11px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    color: var(--slate);
+  }
+  .table-slide tr:nth-child(even) td { background: #f8fafc; }
+  .table-slide tr:last-child td { border-bottom: none; }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .badge-green { background: #dcfce7; color: #16a34a; }
+  .badge-blue  { background: #dbeafe; color: #1d4ed8; }
+  .badge-amber { background: #fef3c7; color: #d97706; }
+
+  /* ── TIMELINE ─────────────────────────────── */
+  .timeline { display: flex; flex-direction: column; gap: 14px; }
+  .tl-item { display: flex; gap: 16px; align-items: flex-start; }
+  .tl-dot {
+    width: 36px; height: 36px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 4px 12px rgba(13,148,136,0.3);
+  }
+  .tl-content h4 {
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 3px;
+  }
+  .tl-content p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* ── HIGHLIGHT BOX ───────────────────────── */
+  .highlight {
+    background: linear-gradient(135deg, var(--teal) 0%, #0891b2 100%);
+    border-radius: 14px;
+    padding: 24px 28px;
+    color: #fff;
+  }
+  .highlight h3 {
+    font-family: 'Sora', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .highlight p { font-size: 13px; opacity: .85; line-height: 1.6; }
+
+  /* ── PRICE TABLE ─────────────────────────── */
+  .price-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 2px solid transparent;
+    position: relative;
+  }
+  .price-card.featured { border-color: var(--teal); }
+  .price-card .featured-badge {
+    position: absolute;
+    top: -12px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--teal);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .price-card h3 {
+    font-family: 'Sora', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+  .price-card .price {
+    font-family: 'Sora', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--teal);
+    line-height: 1;
+    margin: 14px 0 4px;
+  }
+  .price-card .period {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .price-card ul { list-style: none; }
+  .price-card ul li {
+    font-size: 12px;
+    color: var(--slate);
+    padding: 5px 0;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    gap: 8px;
+  }
+  .price-card ul li::before { content: '✓'; color: var(--green); font-weight: 700; }
+
+  /* ── SLIDE ENCERRAMENTO ──────────────────── */
+  .slide-end {
+    background: linear-gradient(135deg, var(--navy) 0%, #134e4a 100%);
+    min-height: 720px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px;
+  }
+  .slide-end h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 44px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 16px;
+    line-height: 1.15;
+  }
+  .slide-end h2 span { color: var(--teal2); }
+  .slide-end p { font-size: 18px; color: rgba(255,255,255,0.6); margin-bottom: 40px; }
+  .contact-grid { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+  .contact-item {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 20px 28px;
+    color: #fff;
+    min-width: 180px;
+  }
+  .contact-item .ci-label { font-size: 11px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .contact-item .ci-value { font-size: 15px; font-weight: 600; }
+
+  /* ── SECTION LABEL ───────────────────────── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--teal);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 1 — CAPA
+═══════════════════════════════════════════ -->
+<div class="slide slide-capa capa active" id="slide-1">
+  <div class="capa-icon">🏥</div>
+  <h1>Sistema de Gestão<br /><span>SMS Conceição</span></h1>
+  <p>Plataforma digital completa para Secretarias Municipais de Saúde — do agendamento ao almoxarifado, tudo em um só lugar.</p>
+  <div class="capa-badge">Secretaria Municipal de Saúde · Conceição do Tocantins</div>
+  <p class="capa-url">conceicaodoto.vercel.app</p>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 2 — O PROBLEMA
+═══════════════════════════════════════════ -->
+<div class="slide" id="slide-2">
+  <div class="slide-header">
+    <div class="icon">⚡</div>
+    <div>
+      <h2>O desafio da saúde pública municipal</h2>
+      <p>O dia a dia de uma secretaria de saúde sem sistema</p>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="section-label">Cenário atual</div>
+    <div class="grid-2" style="gap:24px;">
+      <div>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot">📋</div>
+            <div class="tl-content">
+              <h4>Planilhas desatualizadas</h4>
+              <p>Frequência e escala controladas em Excel, sem histórico confiável, sujeitas a erros humanos e versões duplicadas.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">📦</div>
+            <div class="tl-content">
+              <h4>Estoque no papel</h4>
+              <p>Materiais vencendo sem alerta, produtos zerados sem que a gestão saiba, movimentações sem rastreabilidade.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">🚌</div>
+            <div class="tl-content">
+              <h4>TFD sem controle</h4>
+              <p>Encaminhamentos de pacientes anotados manualmente, sem padronização de documento nem histórico centralizado.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">🏛️</div>
+            <div class="tl-content">
+              <h4>Relatórios para o Ministério da Saúde</h4>
+              <p>Geração manual do BPA para o DATASUS, processo lento e propenso a rejeições por inconsistência.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="highlight" style="align-self:start;">
+        <h3>A solução existe — e foi construída</h3>
+        <p style="margin-bottom:16px;">O SMS Conceição resolve todos esses pontos em um sistema web moderno, acessível de qualquer dispositivo, sem instalação, com dados na nuvem e relatórios prontos para impressão.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
+          <span style="background:rgba(255,255,255,0.15);padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;">✓ Zero instalação</span>
+          <span style="background:rgba(255,255,255,0.15);padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;">✓ Nuvem segura</span>
+          <span style="background:rgba(255,255,255,0.15);padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;">✓ Multi-dispositivo</span>
+          <span style="background:rgba(255,255,255,0.15);padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;">✓ Impressão direta</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 3 — MÓDULOS
+═══════════════════════════════════════════ -->
+<div class="slide" id="slide-3">
+  <div class="slide-header">
+    <div class="icon">🧩</div>
+    <div>
+      <h2>Módulos do sistema</h2>
+      <p>7 módulos integrados, prontos para uso imediato</p>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-3" style="gap:16px;">
+      <div class="card">
+        <span class="card-icon">🚌</span>
+        <h3>Agendamento / TFD</h3>
+        <p>Encaminhamento de pacientes para Tratamento Fora do Domicílio com formulário completo e documento pronto para impressão.</p>
+        <span class="tag">Em produção</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">👥</span>
+        <h3>Cadastro de Servidores</h3>
+        <p>Gestão completa dos servidores da secretaria: função, lotação, situação funcional e histórico.</p>
+        <span class="tag">Em produção</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">📅</span>
+        <h3>Frequência</h3>
+        <p>Espelho de ponto individual e geração em lote para todos os servidores do mês, com escala, feriados e dias facultativos.</p>
+        <span class="tag">Em produção</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">📊</span>
+        <h3>BPA / DATASUS</h3>
+        <p>Boletim de Produção Ambulatorial — consolidação e exportação no formato padrão do Ministério da Saúde.</p>
+        <span class="tag">Em produção</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">📦</span>
+        <h3>Almoxarifado</h3>
+        <p>Controle de estoque com dashboard, alertas de vencimento, scanner de código de barras e relatórios imprimíveis.</p>
+        <span class="tag">Em produção</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">📄</span>
+        <h3>Relatórios &amp; Transparência</h3>
+        <p>Central de relatórios com 7+ tipos, impressão direta e exportação para portal de transparência pública.</p>
+        <span class="tag">Em produção</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 4 — ALMOXARIFADO (destaque)
+═══════════════════════════════════════════ -->
+<div class="slide" id="slide-4">
+  <div class="slide-header">
+    <div class="icon">📦</div>
+    <div>
+      <h2>Módulo Almoxarifado em detalhe</h2>
+      <p>Controle de estoque completo, do scanner à impressão</p>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2" style="gap:24px;align-items:start;">
+      <div>
+        <div class="section-label">Funcionalidades</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 2px 8px rgba(0,0,0,0.05);display:flex;gap:12px;align-items:center;">
+            <span style="font-size:22px;">📊</span>
+            <div><strong style="font-size:13px;">Dashboard em tempo real</strong><br /><span style="font-size:12px;color:#64748b;">Total, críticos, zerados, vencidos, vencendo, entradas e saídas do dia</span></div>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 2px 8px rgba(0,0,0,0.05);display:flex;gap:12px;align-items:center;">
+            <span style="font-size:22px;">📷</span>
+            <div><strong style="font-size:13px;">Scanner por câmera</strong><br /><span style="font-size:12px;color:#64748b;">Leitura de código de barras direto pelo celular ou webcam, sem app externo</span></div>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 2px 8px rgba(0,0,0,0.05);display:flex;gap:12px;align-items:center;">
+            <span style="font-size:22px;">⚠️</span>
+            <div><strong style="font-size:13px;">Alertas automáticos</strong><br /><span style="font-size:12px;color:#64748b;">Produtos vencidos, a vencer em 30 dias e abaixo do estoque mínimo</span></div>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 2px 8px rgba(0,0,0,0.05);display:flex;gap:12px;align-items:center;">
+            <span style="font-size:22px;">🖨️</span>
+            <div><strong style="font-size:13px;">Relatórios imprimíveis</strong><br /><span style="font-size:12px;color:#64748b;">Estoque geral, críticos, vencimentos, movimentações por período, balanço</span></div>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 2px 8px rgba(0,0,0,0.05);display:flex;gap:12px;align-items:center;">
+            <span style="font-size:22px;">↕️</span>
+            <div><strong style="font-size:13px;">Movimentações rastreadas</strong><br /><span style="font-size:12px;color:#64748b;">Entrada com origem, saída com destino (farmácia, UBS, secretaria...) e observação</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">Indicadores do dashboard</div>
+        <div class="grid-2" style="gap:12px;">
+          <div class="stat-card">
+            <div class="num" style="color:#0d9488;">∞</div>
+            <div class="label">Produtos cadastrados</div>
+          </div>
+          <div class="stat-card" style="border-top-color:#ef4444;">
+            <div class="num" style="color:#ef4444;">⚠</div>
+            <div class="label">Alertas de vencimento</div>
+          </div>
+          <div class="stat-card" style="border-top-color:#f59e0b;">
+            <div class="num" style="color:#f59e0b;">↓</div>
+            <div class="label">Estoque crítico</div>
+          </div>
+          <div class="stat-card" style="border-top-color:#10b981;">
+            <div class="num" style="color:#10b981;">↕</div>
+            <div class="label">Movimentações / dia</div>
+          </div>
+        </div>
+        <div class="highlight" style="margin-top:16px;">
+          <h3>Histórico completo</h3>
+          <p>Cada entrada e saída registrada com usuário, data, quantidade, destino e motivo — rastreabilidade total para auditorias.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 5 — FREQUÊNCIA (destaque)
+═══════════════════════════════════════════ -->
+<div class="slide" id="slide-5">
+  <div class="slide-header">
+    <div class="icon">📅</div>
+    <div>
+      <h2>Módulo Frequência em detalhe</h2>
+      <p>Do espelho individual à geração em lote — em segundos</p>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2" style="gap:24px;">
+      <div>
+        <div class="section-label">Como funciona</div>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot">1</div>
+            <div class="tl-content">
+              <h4>Configurar o mês</h4>
+              <p>Selecione mês, ano, tipo de período e informe dias facultativos específicos do município.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">2</div>
+            <div class="tl-content">
+              <h4>Gerar em lote</h4>
+              <p>Um clique gera os espelhos de todos os servidores — diferenciando escala rotativa de regime padrão.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">3</div>
+            <div class="tl-content">
+              <h4>Editar individualmente</h4>
+              <p>Ajuste faltas, horas extras ou ocorrências específicas de cada servidor antes de imprimir.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">4</div>
+            <div class="tl-content">
+              <h4>Imprimir com um clique</h4>
+              <p>Documento formatado, pronto para assinatura, no padrão exigido pelo TCE/TCM.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">Diferenciais</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="card" style="padding:16px 20px;">
+            <h3 style="font-size:13px;margin-bottom:4px;">🗓️ Feriados automáticos</h3>
+            <p>Feriados nacionais e municipais já marcados automaticamente na grade de frequência.</p>
+          </div>
+          <div class="card" style="padding:16px 20px;">
+            <h3 style="font-size:13px;margin-bottom:4px;">📋 Escala diferenciada</h3>
+            <p>Servidores em escala recebem folha em branco; demais recebem grade Seg–Sex preenchida.</p>
+          </div>
+          <div class="card" style="padding:16px 20px;">
+            <h3 style="font-size:13px;margin-bottom:4px;">🔒 Transparência pública</h3>
+            <p>Exportação de dados de frequência para portal de transparência, com sincronização automática.</p>
+          </div>
+          <div class="card" style="padding:16px 20px;">
+            <h3 style="font-size:13px;margin-bottom:4px;">🏥 CNPJ e cabeçalho da SMS</h3>
+            <p>Documento impresso já com os dados institucionais da secretaria — sem configuração manual.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 6 — TECNOLOGIA & SEGURANÇA
+═══════════════════════════════════════════ -->
+<div class="slide" id="slide-6">
+  <div class="slide-header">
+    <div class="icon">🔒</div>
+    <div>
+      <h2>Tecnologia &amp; Segurança</h2>
+      <p>Infraestrutura de nível enterprise, custo acessível</p>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2" style="gap:28px;">
+      <div>
+        <div class="section-label">Stack tecnológico</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:#fff;border-radius:12px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+            <span style="font-size:13px;font-weight:600;color:#0f172a;">Next.js 15 + React</span>
+            <span class="badge badge-blue">Frontend</span>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+            <span style="font-size:13px;font-weight:600;color:#0f172a;">API Routes Node.js</span>
+            <span class="badge badge-blue">Backend</span>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+            <span style="font-size:13px;font-weight:600;color:#0f172a;">Supabase · PostgreSQL</span>
+            <span class="badge badge-green">Banco de dados</span>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+            <span style="font-size:13px;font-weight:600;color:#0f172a;">Vercel · CDN global</span>
+            <span class="badge badge-green">Deploy / Hospedagem</span>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+            <span style="font-size:13px;font-weight:600;color:#0f172a;">pgcrypto · bcrypt</span>
+            <span class="badge badge-amber">Segurança</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">Garantias de segurança</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="card" style="padding:16px 20px;">
+            <h3 style="font-size:13px;margin-bottom:4px;">🔐 Senhas criptografadas</h3>
+            <p>Nenhuma senha é armazenada em texto puro — bcrypt com salt no banco de dados.</p>
+          </div>
+          <div class="card" style="padding:16px 20px;">
+            <h3 style="font-size:13px;margin-bottom:4px;">🌐 HTTPS obrigatório</h3>
+            <p>Toda comunicação criptografada via TLS/SSL — padrão em todas as conexões.</p>
+          </div>
+          <div class="card" style="padding:16px 20px;">
+            <h3 style="font-size:13px;margin-bottom:4px;">🛡️ Credenciais protegidas</h3>
+            <p>Chaves do banco de dados nunca expostas ao navegador — processamento exclusivo no servidor.</p>
+          </div>
+          <div class="card" style="padding:16px 20px;">
+            <h3 style="font-size:13px;margin-bottom:4px;">💾 Backup automático</h3>
+            <p>Supabase mantém backups diários automáticos com retenção de 7 dias no plano gratuito.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 7 — NÚMEROS
+═══════════════════════════════════════════ -->
+<div class="slide" id="slide-7">
+  <div class="slide-header">
+    <div class="icon">📈</div>
+    <div>
+      <h2>O sistema em números</h2>
+      <p>Um projeto de escala real, entregue e em produção</p>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-4" style="margin-bottom:28px;">
+      <div class="stat-card">
+        <div class="num">7</div>
+        <div class="label">Módulos completos</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">5k+</div>
+        <div class="label">Linhas de código</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">20+</div>
+        <div class="label">Rotas de API</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">7</div>
+        <div class="label">Tipos de relatório</div>
+      </div>
+    </div>
+    <div class="grid-3" style="gap:16px;">
+      <div class="card">
+        <span class="card-icon">🌐</span>
+        <h3>100% na nuvem</h3>
+        <p>Nenhum servidor local necessário. Acesso de qualquer dispositivo com navegador e internet.</p>
+      </div>
+      <div class="card">
+        <span class="card-icon">⚡</span>
+        <h3>Deploy contínuo</h3>
+        <p>Atualizações chegam automaticamente via GitHub + Vercel — sem janela de manutenção.</p>
+      </div>
+      <div class="card">
+        <span class="card-icon">📱</span>
+        <h3>Multi-plataforma</h3>
+        <p>Funciona em PC, notebook, tablet e celular — interface adaptada para cada tela.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 8 — PLANOS
+═══════════════════════════════════════════ -->
+<div class="slide" id="slide-8">
+  <div class="slide-header">
+    <div class="icon">💰</div>
+    <div>
+      <h2>Planos e investimento</h2>
+      <p>Modelo SaaS — pague pelo uso, sem surpresas</p>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-3" style="gap:20px;align-items:start;margin-bottom:24px;">
+      <div class="price-card">
+        <h3>Pequeno Município</h3>
+        <p style="font-size:12px;color:#64748b;">Até 50 servidores</p>
+        <div class="price">R$ 390</div>
+        <div class="period">por mês · + R$ 1.500 implantação</div>
+        <ul>
+          <li>Todos os módulos inclusos</li>
+          <li>Acesso ilimitado de usuários</li>
+          <li>Suporte por WhatsApp</li>
+          <li>Atualizações automáticas</li>
+          <li>Backup diário</li>
+        </ul>
+      </div>
+      <div class="price-card featured">
+        <div class="featured-badge">Mais contratado</div>
+        <h3>Município Médio</h3>
+        <p style="font-size:12px;color:#64748b;">Até 150 servidores</p>
+        <div class="price">R$ 690</div>
+        <div class="period">por mês · + R$ 1.500 implantação</div>
+        <ul>
+          <li>Todos os módulos inclusos</li>
+          <li>Acesso ilimitado de usuários</li>
+          <li>Suporte prioritário</li>
+          <li>Atualizações automáticas</li>
+          <li>Backup diário</li>
+          <li>Treinamento da equipe</li>
+        </ul>
+      </div>
+      <div class="price-card">
+        <h3>Grande Município</h3>
+        <p style="font-size:12px;color:#64748b;">Acima de 150 servidores</p>
+        <div class="price">R$ 990</div>
+        <div class="period">por mês · + R$ 1.500 implantação</div>
+        <ul>
+          <li>Todos os módulos inclusos</li>
+          <li>Acesso ilimitado de usuários</li>
+          <li>Suporte dedicado</li>
+          <li>Atualizações automáticas</li>
+          <li>Backup diário</li>
+          <li>Treinamento da equipe</li>
+          <li>Customizações mensais</li>
+        </ul>
+      </div>
+    </div>
+    <div class="highlight">
+      <h3 style="font-size:15px;">Alternativa: Licença perpétua</h3>
+      <p>Aquisição única do sistema + hospedagem no servidor do município. Licença a partir de R$ 8.000, com módulos adicionais e customizações sob consulta. Suporte anual opcional (20% do valor da licença).</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 9 — ROADMAP
+═══════════════════════════════════════════ -->
+<div class="slide" id="slide-9">
+  <div class="slide-header">
+    <div class="icon">🚀</div>
+    <div>
+      <h2>Próximos módulos</h2>
+      <p>Expansão contínua da plataforma</p>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="section-label">Roadmap de desenvolvimento</div>
+    <div class="grid-3" style="gap:16px;">
+      <div class="card">
+        <span class="card-icon">💊</span>
+        <h3>Farmácia Básica</h3>
+        <p>Dispensação de medicamentos por paciente, receituário digital, rastreabilidade do estoque de medicamentos.</p>
+        <span class="tag" style="background:#fef3c7;color:#d97706;">Em planejamento</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">🚗</span>
+        <h3>Controle de Frota</h3>
+        <p>Veículos, abastecimento, manutenções preventivas, km por viagem e custo operacional mensal.</p>
+        <span class="tag" style="background:#fef3c7;color:#d97706;">Em planejamento</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">📢</span>
+        <h3>Ouvidoria</h3>
+        <p>Registro e acompanhamento de demandas dos cidadãos com prazos, responsáveis e histórico de atendimento.</p>
+        <span class="tag" style="background:#fef3c7;color:#d97706;">Em planejamento</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">🦟</span>
+        <h3>Vigilância Epidemiológica</h3>
+        <p>Notificação de doenças e agravos, dashboards de indicadores, alertas por surto, integração com SINAN.</p>
+        <span class="tag" style="background:#fef3c7;color:#d97706;">Em planejamento</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">👤</span>
+        <h3>Portal do Servidor</h3>
+        <p>Auto-consulta de frequência, férias, holerite e dados cadastrais — sem depender do RH para informações básicas.</p>
+        <span class="tag" style="background:#fef3c7;color:#d97706;">Em planejamento</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">🏥</span>
+        <h3>Regulação de Consultas</h3>
+        <p>Fila de espera por especialidade, agendamento com unidades de referência e notificação ao paciente.</p>
+        <span class="tag" style="background:#fef3c7;color:#d97706;">Em planejamento</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 10 — ENCERRAMENTO
+═══════════════════════════════════════════ -->
+<div class="slide slide-end" id="slide-10">
+  <div class="capa-icon" style="width:70px;height:70px;margin-bottom:24px;">🏥</div>
+  <h2>Pronto para<br /><span>transformar sua gestão</span></h2>
+  <p>Acesse a demonstração ao vivo e veja o sistema funcionando agora mesmo.</p>
+  <div class="contact-grid">
+    <div class="contact-item">
+      <div class="ci-label">Demo online</div>
+      <div class="ci-value">conceicaodoto.vercel.app</div>
+    </div>
+    <div class="contact-item">
+      <div class="ci-label">Sistema</div>
+      <div class="ci-value">SMS Conceição · v1.0</div>
+    </div>
+    <div class="contact-item">
+      <div class="ci-label">Tecnologia</div>
+      <div class="ci-value">Next.js · Supabase · Vercel</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONTROLES ───────────────────────────── -->
+<div id="controls">
+  <button onclick="prev()">← Anterior</button>
+  <span id="counter">1 / 10</span>
+  <button onclick="next()">Próximo →</button>
+  <button onclick="window.print()" style="background:rgba(13,148,136,0.4);border-color:rgba(20,184,166,0.5);">🖨️ PDF</button>
+</div>
+
+<script>
+  const total = 10
+  let current = 1
+
+  function showSlide(n) {
+    document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'))
+    document.getElementById('slide-' + n).classList.add('active')
+    document.getElementById('counter').textContent = n + ' / ' + total
+    current = n
+  }
+
+  function next() { if (current < total) showSlide(current + 1) }
+  function prev() { if (current > 1) showSlide(current - 1) }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') next()
+    if (e.key === 'ArrowLeft') prev()
+  })
+</script>
+</body>
+</html>
