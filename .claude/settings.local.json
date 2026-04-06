@@ -45,7 +45,8 @@
       "Bash(node -e \"require\\('zlib'\\)\")",
       "Bash(npm list:*)",
       "Bash(npm install:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }
