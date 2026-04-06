@@ -4,6 +4,7 @@ import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import AdmZip from 'adm-zip'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -70,13 +71,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Falha ao baixar arquivo do FTP.' }, { status: 500 })
     }
 
-    // Extrai tb_procedimento.txt
-    const extractDir = path.join(tmpDir, 'extraido')
-    fs.mkdirSync(extractDir)
-    execSync(`unzip -p "${zipPath}" tb_procedimento.txt > "${path.join(extractDir, 'tb_procedimento.txt')}"`)
-
-    const txtPath = path.join(extractDir, 'tb_procedimento.txt')
-    if (!fs.existsSync(txtPath) || fs.statSync(txtPath).size < 1000) {
+    // Extrai tb_procedimento.txt usando adm-zip (sem dependência de binário externo)
+    const zip = new AdmZip(zipPath)
+    const entry = zip.getEntry('tb_procedimento.txt')
+    if (!entry) {
       fs.rmSync(tmpDir, { recursive: true, force: true })
       return NextResponse.json({ ok: false, error: 'tb_procedimento.txt não encontrado no zip.' }, { status: 500 })
     }
@@ -86,7 +84,7 @@ export async function POST(request: NextRequest) {
     // QT_MAXIMA_EXEC[263-266] QT_DIAS_PERM[267-270] QT_PONTOS[271-274]
     // VL_IDADE_MIN[275-278] VL_IDADE_MAX[279-282] VL_SH[283-294] VL_SA[295-306] VL_SP[307-318]
     // CO_FINANCIAMENTO[319-320] CO_RUBRICA[321-326] QT_TEMPO_PERM[327-330] DT_COMPETENCIA[331-336]
-    const conteudo = fs.readFileSync(txtPath, { encoding: 'latin1' })
+    const conteudo = entry.getData().toString('latin1')
     const linhas = conteudo.split('\n').filter(l => l.length >= 260)
 
     const registros: any[] = []

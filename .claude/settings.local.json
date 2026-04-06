@@ -41,7 +41,10 @@
       "Bash(unzip -o sigtap202603.zip -d sigtap202603/)",
       "Bash(curl -s --max-time 20 --list-only \"ftp://ftp2.datasus.gov.br/pub/sistemas/tup/tup/\")",
       "Bash(unzip -l sigtap202603.zip)",
-      "Bash(unzip -p sigtap202603.zip tb_procedimento.txt)"
+      "Bash(unzip -p sigtap202603.zip tb_procedimento.txt)",
+      "Bash(node -e \"require\\('zlib'\\)\")",
+      "Bash(npm list:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
