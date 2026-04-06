@@ -124,8 +124,20 @@ export default function Layout({ children, usuario }) {
         </div>
       </aside>
 
-      <main style={{ flex: 1, overflow: 'auto' }}>
-        {children}
+      <main style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <div style={{ flex: 1 }}>
+          {children}
+        </div>
+        <footer style={{
+          textAlign: 'center',
+          padding: '12px',
+          color: '#94a3b8',
+          fontSize: '11px',
+          fontFamily: 'DM Sans, sans-serif',
+          letterSpacing: '0.03em'
+        }}>
+          © Fernando Cerqueira de Sousa
+        </footer>
       </main>
     </div>
   )
