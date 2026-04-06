@@ -261,6 +261,14 @@ export default function Agendamento() {
 
   async function salvar(e) {
     e.preventDefault()
+    const faltando = []
+    if (!form.tipoViagem) faltando.push('Tipo de Viagem')
+    if (!form.temAcomp)   faltando.push('Acompanhante')
+    if (!form.agendadoPor) faltando.push('Agendado por')
+    if (faltando.length > 0) {
+      setStatus({ msg: `⚠️ Preencha os campos obrigatórios: ${faltando.join(', ')}`, tipo: 'erro' })
+      return
+    }
     setSalvando(true)
     setStatus({ msg: '', tipo: '' })
     setUltimoAgendamento(null)
