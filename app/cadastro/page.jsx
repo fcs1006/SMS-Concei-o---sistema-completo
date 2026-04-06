@@ -84,9 +84,10 @@ function camposPendentes(paciente) {
 
 export default function Cadastro() {
   const router = useRouter()
-  const usuario = typeof window !== 'undefined'
-    ? JSON.parse(localStorage.getItem('sms_user') || 'null')
-    : null
+  const [usuario] = useState(() => {
+    if (typeof window === 'undefined') return null
+    return JSON.parse(localStorage.getItem('sms_user') || 'null')
+  })
   const [form, setForm] = useState(FORM_INICIAL)
   const [erros, setErros] = useState({})
   const [status, setStatus] = useState({ msg: '', tipo: '' })
