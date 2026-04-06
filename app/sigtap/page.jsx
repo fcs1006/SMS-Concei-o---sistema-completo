@@ -1,35 +1,41 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 
-const COR     = '#34d399'
-const GRAD    = 'linear-gradient(135deg, #064e3b, #065f46)'
+const GRAD = 'linear-gradient(135deg, #022c22, #064e3b)'
 
+function formatarCompetencia(c) {
+  if (!c || c.length !== 6) return c
+  return `${c.slice(4,6)}/${c.slice(0,4)}`
+}
 function complexidade(c) {
-  const m = { '01': 'AB', '02': 'MC', '03': 'AC', '04': 'AP' }
+  const m = { '1': 'AB', '2': 'MC', '3': 'AC', '4': 'AP' }
   return m[c] || c || '-'
 }
 function sexo(s) {
   return s === 'M' ? 'Masculino' : s === 'F' ? 'Feminino' : 'Ambos'
+}
+function formatarMoeda(v) {
+  if (!v) return '-'
+  return `R$ ${Number(v).toFixed(2).replace('.', ',')}`
 }
 
 export default function Sigtap() {
   const router = useRouter()
   const [usuario, setUsuario] = useState(null)
 
-  // Importação
-  const [competenciaImport, setCompetenciaImport] = useState('')
-  const [arquivo, setArquivo] = useState(null)
-  const [importando, setImportando] = useState(false)
-  const [resultImport, setResultImport] = useState(null)
-  const fileRef = useRef()
+  // Sincronização
+  const [disponiveis, setDisponiveis] = useState([])
+  const [importadas, setImportadas] = useState([])
+  const [carregandoLista, setCarregandoLista] = useState(false)
+  const [sincronizando, setSincronizando] = useState('')
+  const [msgSync, setMsgSync] = useState(null)
 
   // Busca
   const [busca, setBusca] = useState('')
   const [competenciaBusca, setCompetenciaBusca] = useState('')
-  const [competencias, setCompetencias] = useState([])
   const [resultados, setResultados] = useState([])
   const [buscando, setBuscando] = useState(false)
 
@@ -37,48 +43,49 @@ export default function Sigtap() {
     const u = localStorage.getItem('sms_user')
     if (!u) { router.push('/'); return }
     setUsuario(JSON.parse(u))
-    carregarCompetencias()
+    carregarLista()
   }, [])
 
   useEffect(() => {
-    if (busca.length < 3 && !competenciaBusca) { setResultados([]); return }
-    const timer = setTimeout(() => buscarProcedimentos(), 400)
+    if (busca.length < 2 && !competenciaBusca) { setResultados([]); return }
+    const timer = setTimeout(buscarProcedimentos, 400)
     return () => clearTimeout(timer)
   }, [busca, competenciaBusca])
 
-  async function carregarCompetencias() {
-    const { data } = await supabase
-      .from('sigtap_procedimentos')
-      .select('competencia')
-      .order('competencia', { ascending: false })
-    if (data) {
-      const unicas = [...new Set(data.map(d => d.competencia))]
-      setCompetencias(unicas)
-      if (unicas.length > 0) setCompetenciaBusca(unicas[0])
-    }
+  async function carregarLista() {
+    setCarregandoLista(true)
+    try {
+      const res = await fetch('/api/sigtap/importar')
+      const data = await res.json()
+      if (data.ok) {
+        setDisponiveis(data.disponiveis || [])
+        setImportadas(data.importadas || [])
+        if (data.importadas?.length > 0) setCompetenciaBusca(data.importadas[0])
+      }
+    } catch {}
+    setCarregandoLista(false)
   }
 
-  async function importar(e) {
-    e.preventDefault()
-    if (!arquivo || !competenciaImport) return
-    setImportando(true)
-    setResultImport(null)
-    const fd = new FormData()
-    fd.append('arquivo', arquivo)
-    fd.append('competencia', competenciaImport.replace(/\D/g, ''))
+  async function sincronizar(competencia) {
+    setSincronizando(competencia)
+    setMsgSync(null)
     try {
-      const res = await fetch('/api/sigtap/importar', { method: 'POST', body: fd })
+      const res = await fetch('/api/sigtap/importar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ competencia })
+      })
       const data = await res.json()
-      setResultImport(data)
       if (data.ok) {
-        carregarCompetencias()
-        setArquivo(null)
-        fileRef.current.value = ''
+        setMsgSync({ ok: true, msg: `✅ ${data.inseridos.toLocaleString('pt-BR')} procedimentos importados — competência ${formatarCompetencia(data.competencia)}` })
+        carregarLista()
+      } else {
+        setMsgSync({ ok: false, msg: `❌ ${data.error}` })
       }
-    } catch (err) {
-      setResultImport({ ok: false, error: err.message })
+    } catch (e) {
+      setMsgSync({ ok: false, msg: `❌ ${e.message}` })
     }
-    setImportando(false)
+    setSincronizando('')
   }
 
   async function buscarProcedimentos() {
@@ -94,18 +101,8 @@ export default function Sigtap() {
     setBuscando(false)
   }
 
-  function formatarCompetencia(c) {
-    if (!c || c.length !== 6) return c
-    return `${c.slice(4,6)}/${c.slice(0,4)}`
-  }
-
-  function formatarMoeda(v) {
-    if (!v) return '-'
-    return `R$ ${Number(v).toFixed(2).replace('.', ',')}`
-  }
-
-  const mesAtual = new Date()
-  const compSugerida = `${mesAtual.getFullYear()}${String(mesAtual.getMonth()+1).padStart(2,'0')}`
+  const maisRecente = disponiveis[0]?.competencia
+  const jaTem = (c) => importadas.includes(c)
 
   return (
     <Layout usuario={usuario}>
@@ -116,62 +113,69 @@ export default function Sigtap() {
             SIGTAP — Procedimentos SUS
           </h1>
           <p style={{ color: '#64748b', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', margin: 0 }}>
-            Importe a tabela por competência e consulte os procedimentos
+            Sincronização automática via FTP do DATASUS
           </p>
         </div>
 
-        {/* ── IMPORTAÇÃO ── */}
+        {/* ── SINCRONIZAÇÃO ── */}
         <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 8px rgba(0,0,0,0.07)', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-          <h2 style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '14px', color: '#1e293b', margin: '0 0 16px' }}>
-            📥 Importar nova competência
-          </h2>
-
-          <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', border: '1px solid #e2e8f0' }}>
-            <p style={{ fontSize: '12px', color: '#475569', fontFamily: 'DM Sans, sans-serif', margin: '0 0 6px', fontWeight: '600' }}>
-              Como baixar o arquivo:
-            </p>
-            <ol style={{ fontSize: '12px', color: '#64748b', fontFamily: 'DM Sans, sans-serif', margin: 0, paddingLeft: '18px', lineHeight: '1.8' }}>
-              <li>Acesse <strong>sigtap.datasus.gov.br</strong></li>
-              <li>Clique em <strong>"Tabelas"</strong> → <strong>"Download"</strong></li>
-              <li>Selecione a competência desejada</li>
-              <li>Baixe o arquivo <strong>tb_procedimento.txt</strong></li>
-              <li>Faça o upload abaixo</li>
-            </ol>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h2 style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '14px', color: '#1e293b', margin: 0 }}>
+              🔄 Competências disponíveis no DATASUS
+            </h2>
+            <button onClick={carregarLista} disabled={carregandoLista}
+              style={{ padding: '7px 14px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', color: '#475569' }}>
+              {carregandoLista ? 'Atualizando...' : '↻ Atualizar lista'}
+            </button>
           </div>
 
-          <form onSubmit={importar} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '14px' }}>
-              <div>
-                <label className="label-modern">Competência (AAAAMM) *</label>
-                <input className="input-modern" value={competenciaImport}
-                  onChange={e => setCompetenciaImport(e.target.value.replace(/\D/g,'').slice(0,6))}
-                  placeholder={compSugerida} maxLength={6} required />
-              </div>
-              <div>
-                <label className="label-modern">Arquivo tb_procedimento.txt *</label>
-                <input ref={fileRef} type="file" accept=".txt,.csv"
-                  className="input-modern"
-                  onChange={e => setArquivo(e.target.files?.[0] || null)}
-                  style={{ paddingTop: '8px' }} required />
-              </div>
+          {msgSync && (
+            <div className={msgSync.ok ? 'status-ok' : 'status-err'} style={{ marginBottom: '16px' }}>
+              {msgSync.msg}
             </div>
+          )}
 
-            {resultImport && (
-              <div className={resultImport.ok ? 'status-ok' : 'status-err'}>
-                {resultImport.ok
-                  ? `✅ ${resultImport.inseridos.toLocaleString('pt-BR')} procedimentos importados para ${formatarCompetencia(resultImport.competencia)} (${resultImport.pulados} linhas ignoradas)`
-                  : `❌ ${resultImport.error}`}
-              </div>
-            )}
-
-            <div>
-              <button type="submit" disabled={importando || !arquivo || !competenciaImport}
-                className="btn-primary"
-                style={{ background: GRAD, padding: '10px 28px', fontSize: '13px' }}>
-                {importando ? 'Importando...' : '📥 IMPORTAR'}
-              </button>
+          {carregandoLista && disponiveis.length === 0 ? (
+            <p style={{ color: '#94a3b8', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>Buscando competências no FTP do DATASUS...</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
+              {disponiveis.map(({ competencia }) => {
+                const importada = jaTem(competencia)
+                const isLatest = competencia === maisRecente
+                const loading = sincronizando === competencia
+                return (
+                  <div key={competencia} style={{
+                    borderRadius: '12px', padding: '14px',
+                    background: importada ? 'rgba(52,211,153,0.06)' : '#f8fafc',
+                    border: `1px solid ${importada ? '#34d39950' : '#e2e8f0'}`,
+                    display: 'flex', flexDirection: 'column', gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '14px', color: '#1e293b' }}>
+                        {formatarCompetencia(competencia)}
+                      </span>
+                      {isLatest && (
+                        <span style={{ fontSize: '9px', fontWeight: '700', background: '#0d9488', color: '#fff', borderRadius: '4px', padding: '2px 5px' }}>NOVO</span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '11px', color: importada ? '#059669' : '#94a3b8', fontFamily: 'DM Sans, sans-serif', fontWeight: importada ? '600' : '400' }}>
+                      {importada ? '✓ Importada' : 'Não importada'}
+                    </span>
+                    <button onClick={() => sincronizar(competencia)} disabled={!!sincronizando}
+                      style={{
+                        padding: '6px', borderRadius: '8px', fontSize: '11px',
+                        fontWeight: '700', cursor: sincronizando ? 'wait' : 'pointer',
+                        border: 'none', fontFamily: 'DM Sans, sans-serif',
+                        background: importada ? 'rgba(52,211,153,0.15)' : GRAD,
+                        color: importada ? '#059669' : '#fff',
+                      }}>
+                      {loading ? 'Sincronizando...' : importada ? '↻ Atualizar' : '↓ Importar'}
+                    </button>
+                  </div>
+                )
+              })}
             </div>
-          </form>
+          )}
         </div>
 
         {/* ── BUSCA ── */}
@@ -180,9 +184,9 @@ export default function Sigtap() {
             🔍 Consultar procedimentos
           </h2>
 
-          {competencias.length === 0 ? (
+          {importadas.length === 0 ? (
             <p style={{ color: '#94a3b8', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>
-              Nenhuma competência importada ainda.
+              Importe ao menos uma competência para consultar procedimentos.
             </p>
           ) : (
             <>
@@ -197,7 +201,7 @@ export default function Sigtap() {
                   <label className="label-modern">Competência</label>
                   <select className="input-modern" value={competenciaBusca}
                     onChange={e => setCompetenciaBusca(e.target.value)}>
-                    {competencias.map(c => (
+                    {importadas.map(c => (
                       <option key={c} value={c}>{formatarCompetencia(c)}</option>
                     ))}
                   </select>
@@ -211,7 +215,7 @@ export default function Sigtap() {
                   <table className="table-modern">
                     <thead>
                       <tr style={{ background: GRAD }}>
-                        {['Código', 'Procedimento', 'Complexidade', 'Sexo', 'Idade Mín.', 'Idade Máx.', 'Valor SH', 'Valor SA', 'Valor SP'].map(h => (
+                        {['Código', 'Procedimento', 'Compl.', 'Sexo', 'Idade Mín.', 'Idade Máx.', 'Valor SH', 'Valor SA', 'Valor SP'].map(h => (
                           <th key={h} style={{ color: '#fff', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
@@ -220,7 +224,7 @@ export default function Sigtap() {
                       {resultados.map((r, i) => (
                         <tr key={i}>
                           <td style={{ fontFamily: 'monospace', fontSize: '12px', whiteSpace: 'nowrap' }}>{r.co_procedimento}</td>
-                          <td style={{ fontSize: '12px', minWidth: '280px' }}>{r.no_procedimento}</td>
+                          <td style={{ fontSize: '12px', minWidth: '260px' }}>{r.no_procedimento}</td>
                           <td style={{ textAlign: 'center', fontSize: '11px' }}>{complexidade(r.co_complexidade)}</td>
                           <td style={{ textAlign: 'center', fontSize: '11px' }}>{sexo(r.co_sexo)}</td>
                           <td style={{ textAlign: 'center', fontSize: '11px' }}>{r.vl_idade_minima ?? '-'}</td>
@@ -238,15 +242,12 @@ export default function Sigtap() {
                 </div>
               )}
 
-              {resultados.length === 0 && busca.length >= 3 && !buscando && (
-                <p style={{ color: '#94a3b8', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>
-                  Nenhum procedimento encontrado.
-                </p>
+              {resultados.length === 0 && busca.length >= 2 && !buscando && (
+                <p style={{ color: '#94a3b8', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>Nenhum procedimento encontrado.</p>
               )}
             </>
           )}
         </div>
-
       </div>
     </Layout>
   )
