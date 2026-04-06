@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:apicnes.datasus.gov.br)",
-      "WebFetch(domain:cnes.datasus.gov.br)"
+      "WebFetch(domain:cnes.datasus.gov.br)",
+      "WebFetch(domain:sigtap.datasus.gov.br)",
+      "WebFetch(domain:sigtap.com.br)",
+      "Bash(curl -s --max-time 10 \"http://sigtap.datasus.gov.br/tabela-unificada/app/downloadarquivo?competencia=202604&arquivo=tb_procedimento.txt\")",
+      "Bash(curl -s --max-time 15 -L \"http://sigtap.datasus.gov.br/tabela-unificada/app/downloadarquivo?competencia=202604&arquivo=tb_procedimento.txt\" -o /tmp/tb_proc.txt)",
+      "Read(//tmp/**)",
+      "Bash(curl -v --max-time 15 \"http://sigtap.datasus.gov.br/tabela-unificada/app/downloadarquivo?competencia=202604&arquivo=tb_procedimento.txt\")"
     ]
   }
 }

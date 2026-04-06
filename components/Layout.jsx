@@ -23,6 +23,9 @@ export default function Layout({ children, usuario }) {
     { label: 'Almoxarifado', icon: '📦', path: '/almoxarifado',
       cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)',
       bg1: '#1e1b4b', bg2: '#312e81', acento: '#818cf8' },
+    { label: 'SIGTAP', icon: '🔬', path: '/sigtap',
+      cor: '#6ee7b7', corBg: 'rgba(110,231,183,0.15)',
+      bg1: '#022c22', bg2: '#064e3b', acento: '#34d399' },
     ]
 
   const aliasMap = { '/resumo': '/tfd', '/bpa/config': '/bpa' }
