@@ -137,6 +137,12 @@ export default function Agendamento() {
   const [salvando, setSalvando] = useState(false)
   const [ultimoAgendamento, setUltimoAgendamento] = useState(null)
 
+  // Busca acompanhantes
+  const [buscaA1, setBuscaA1] = useState('')
+  const [sugestoesA1, setSugestoesA1] = useState([])
+  const [buscaA2, setBuscaA2] = useState('')
+  const [sugestoesA2, setSugestoesA2] = useState([])
+
   // Reimprimir
   const [modalReimprimir, setModalReimprimir] = useState(false)
   const [buscaRe, setBuscaRe] = useState('')
@@ -166,6 +172,33 @@ export default function Agendamento() {
     return () => clearTimeout(timer)
   }, [busca])
 
+  useEffect(() => {
+    if (buscaA1.length < 3) { setSugestoesA1([]); return }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase.from('pacientes').select('*')
+        .ilike('nome', `%${buscaA1.toUpperCase()}%`).limit(8)
+      setSugestoesA1(data || [])
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [buscaA1])
+
+  useEffect(() => {
+    if (buscaA2.length < 3) { setSugestoesA2([]); return }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase.from('pacientes').select('*')
+        .ilike('nome', `%${buscaA2.toUpperCase()}%`).limit(8)
+      setSugestoesA2(data || [])
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [buscaA2])
+
+  useEffect(() => {
+    if (!modalReimprimir) return
+    if (buscaRe.length < 3 && !dataRe) { setResultadosRe([]); return }
+    const timer = setTimeout(() => buscarParaReimprimir(), 400)
+    return () => clearTimeout(timer)
+  }, [buscaRe, dataRe, modalReimprimir])
+
   function calcularIdade(dtNasc) {
     if (!dtNasc) return ''
     const nasc = new Date(dtNasc)
@@ -186,6 +219,28 @@ export default function Agendamento() {
     }))
     setBusca(p.nome)
     setPacientes([])
+  }
+
+  function selecionarAcomp1(p) {
+    setForm(f => ({
+      ...f,
+      nomeA1: p.nome, cpfA1: p.cpf_cns,
+      nascA1: p.dt_nasc || '', sexoA1: p.sexo || '',
+      telA1: p.telefone || '', endA1: p.endereco || '', bairA1: p.bairro || ''
+    }))
+    setBuscaA1(p.nome)
+    setSugestoesA1([])
+  }
+
+  function selecionarAcomp2(p) {
+    setForm(f => ({
+      ...f,
+      nomeA2: p.nome, cpfA2: p.cpf_cns,
+      nascA2: p.dt_nasc || '', sexoA2: p.sexo || '',
+      telA2: p.telefone || '', endA2: p.endereco || '', bairA2: p.bairro || ''
+    }))
+    setBuscaA2(p.nome)
+    setSugestoesA2([])
   }
 
   function setField(id, val) {
@@ -404,8 +459,22 @@ export default function Agendamento() {
               <>
                 <SectionHeader title="Acompanhante 1" icon="👥" />
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
-                  <div><label className={lbl}>Nome</label>
-                    <input className={inp} value={form.nomeA1} onChange={e => setField('nomeA1', e.target.value.toUpperCase())} /></div>
+                  <div style={{ position: 'relative' }}>
+                    <label className={lbl}>Nome</label>
+                    <input className={inp} value={buscaA1}
+                      onChange={e => { setBuscaA1(e.target.value); setField('nomeA1', e.target.value.toUpperCase()) }}
+                      placeholder="Digite para buscar..." />
+                    {sugestoesA1.length > 0 && (
+                      <div className="search-dropdown">
+                        {sugestoesA1.map(p => (
+                          <button key={p.id} type="button" className="search-item"
+                            onClick={() => selecionarAcomp1(p)}>
+                            <strong>{p.nome}</strong> — {p.cpf_cns}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div><label className={lbl}>CPF/CNS</label>
                     <input className={inp} value={form.cpfA1} onChange={e => setField('cpfA1', e.target.value)} /></div>
                   <div><label className={lbl}>Telefone</label>
@@ -425,8 +494,22 @@ export default function Agendamento() {
 
                 <SectionHeader title="Acompanhante 2" icon="👥" />
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
-                  <div><label className={lbl}>Nome</label>
-                    <input className={inp} value={form.nomeA2} onChange={e => setField('nomeA2', e.target.value.toUpperCase())} /></div>
+                  <div style={{ position: 'relative' }}>
+                    <label className={lbl}>Nome</label>
+                    <input className={inp} value={buscaA2}
+                      onChange={e => { setBuscaA2(e.target.value); setField('nomeA2', e.target.value.toUpperCase()) }}
+                      placeholder="Digite para buscar..." />
+                    {sugestoesA2.length > 0 && (
+                      <div className="search-dropdown">
+                        {sugestoesA2.map(p => (
+                          <button key={p.id} type="button" className="search-item"
+                            onClick={() => selecionarAcomp2(p)}>
+                            <strong>{p.nome}</strong> — {p.cpf_cns}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div><label className={lbl}>CPF/CNS</label>
                     <input className={inp} value={form.cpfA2} onChange={e => setField('cpfA2', e.target.value)} /></div>
                   <div><label className={lbl}>Telefone</label>
@@ -511,15 +594,14 @@ export default function Agendamento() {
             <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
               🖨️ Reimprimir Agendamento
             </h2>
-            <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Busque pelo nome do paciente ou data da viagem.</p>
+            <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Busque pelo nome do paciente ou data da viagem — os resultados aparecem automaticamente.</p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
               <div>
                 <label className={lbl}>Nome do paciente</label>
                 <input className={inp} value={buscaRe}
                   onChange={e => setBuscaRe(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && buscarParaReimprimir()}
-                  placeholder="Digite o nome..." />
+                  placeholder="Mínimo 3 letras..." />
               </div>
               <div>
                 <label className={lbl}>Data da viagem</label>
@@ -527,15 +609,6 @@ export default function Agendamento() {
                   onChange={e => setDataRe(e.target.value)} />
               </div>
             </div>
-
-            <button onClick={buscarParaReimprimir} disabled={buscandoRe}
-              style={{
-                padding: '9px 20px', background: 'linear-gradient(135deg, #172554, #1e3a8a)',
-                border: 'none', borderRadius: '10px', color: 'white', fontSize: '13px',
-                fontWeight: '600', cursor: 'pointer', fontFamily: 'Sora, sans-serif', marginBottom: '16px'
-              }}>
-              {buscandoRe ? 'Buscando...' : '🔍 Buscar'}
-            </button>
 
             {resultadosRe.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
