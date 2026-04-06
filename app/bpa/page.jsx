@@ -261,7 +261,7 @@ export default function BPA() {
             <div>
               <label className="label-modern">Setor</label>
               <select className="input-modern" value={perfil} onChange={e => { setPerfil(e.target.value); setConsolidados([]); setErros([]); setEtapa('idle') }} style={{ width: '180px' }}>
-                <option value="urgencia">Urgência (TFD)</option>
+                <option value="urgencia">Viagens (TFD)</option>
                 <option value="laboratorio">Laboratório</option>
               </select>
             </div>
