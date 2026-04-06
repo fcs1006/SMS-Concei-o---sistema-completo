@@ -267,7 +267,7 @@ async function abrirEditar(v) {
             setImprimirCidade('')
             setModalImprimir(true)
           }} style={{
-            padding: '9px 18px', background: 'linear-gradient(135deg, #b45309, #f59e0b)',
+            padding: '9px 18px', background: 'linear-gradient(135deg, #1a1035, #2e1065)',
             border: 'none', borderRadius: '10px',
             fontSize: '13px', color: 'white', cursor: 'pointer',
             fontFamily: 'Sora, sans-serif', fontWeight: '600',
@@ -380,7 +380,7 @@ async function abrirEditar(v) {
             <div style={{ overflowX: 'auto' }}>
               <table className="table-modern">
                 <thead>
-                  <tr style={{ background: 'linear-gradient(135deg, #b45309, #f59e0b)' }}>
+                  <tr style={{ background: 'linear-gradient(135deg, #1a1035, #2e1065)' }}>
                     {['Data','Hora','Paciente','Telefone','Destino','Local','Motivo','Tipo','Acomp. 1','Acomp. 2','Agendado'].map(h => (
                       <th key={h} style={{ color: '#fff' }}>{h}</th>))}
                   </tr>
@@ -439,7 +439,7 @@ async function abrirEditar(v) {
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setModalImprimir(false)} className="btn-secondary">Fechar</button>
-              <button type="button" onClick={imprimirRelatorio} className="btn-primary" style={{ background: 'linear-gradient(135deg, #b45309, #f59e0b)', padding: '10px 24px' }}>
+              <button type="button" onClick={imprimirRelatorio} className="btn-primary" style={{ background: 'linear-gradient(135deg, #1a1035, #2e1065)', padding: '10px 24px' }}>
                 🖨️ IMPRIMIR
               </button>
             </div>
