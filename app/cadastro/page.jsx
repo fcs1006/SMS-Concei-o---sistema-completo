@@ -232,7 +232,8 @@ export default function Cadastro() {
 
   useEffect(() => {
     if (!usuario) return
-    const timer = setTimeout(() => carregarPacientes(busca), busca ? 300 : 0)
+    if (busca.trim().length < 3) return
+    const timer = setTimeout(() => carregarPacientes(busca), 300)
     return () => clearTimeout(timer)
   }, [busca, usuario])
 
@@ -412,7 +413,7 @@ export default function Cadastro() {
                   Buscar pacientes
                 </h2>
                 <p style={{ color: '#475569', fontSize: '12px', margin: 0 }}>
-                  Pesquise por nome, CPF ou CNS e clique em editar.
+                  Digite ao menos 3 caracteres para pesquisar por nome, CPF ou CNS.
                 </p>
               </div>
               <button type="button" className="btn-secondary" onClick={() => carregarPacientes(busca)}>
@@ -432,6 +433,10 @@ export default function Cadastro() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {carregandoLista ? (
                 <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Carregando pacientes...</p>
+              ) : busca.trim().length > 0 && busca.trim().length < 3 ? (
+                <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Digite pelo menos 3 caracteres para buscar.</p>
+              ) : busca.trim().length === 0 ? (
+                <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Digite nome, CPF ou CNS para buscar.</p>
               ) : pacientes.length === 0 ? (
                 <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Nenhum paciente encontrado.</p>
               ) : (
