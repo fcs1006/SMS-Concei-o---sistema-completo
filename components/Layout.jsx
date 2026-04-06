@@ -7,11 +7,11 @@ export default function Layout({ children, usuario }) {
 
   const menus = [
     { label: 'Painel Geral', icon: '🏠', path: '/painel',
-      bg1: '#064e3b', bg2: '#065f46', cor: '#6ee7b7', corBg: 'rgba(110,231,183,0.15)', acento: '#34d399' },
+      bg1: '#0f172a', bg2: '#1e293b', cor: '#94a3b8', corBg: 'rgba(148,163,184,0.15)', acento: '#cbd5e1' },
     { label: 'Agendamento', icon: '📋', path: '/agendamento',
       bg1: '#172554', bg2: '#1e3a8a', cor: '#93c5fd', corBg: 'rgba(147,197,253,0.15)', acento: '#93c5fd' },
     { label: 'Relatório',    icon: '📊', path: '/relatorio',
-      bg1: '#b45309', bg2: '#ed6e0e', cor: '#fcd34d', corBg: 'rgba(252,211,77,0.15)',  acento: '#fcd34d' },
+      bg1: '#1a1035', bg2: '#2e1065', cor: '#d8b4fe', corBg: 'rgba(216,180,254,0.15)', acento: '#c084fc' },
     { label: 'TFD',          icon: '🚌', path: '/tfd',
       bg1: '#450a0a', bg2: '#7f1d1d', cor: '#fca5a5', corBg: 'rgba(252,165,165,0.15)', acento: '#fca5a5' },
     { label: 'Frequência', icon: '📆', path: '/frequencia',
