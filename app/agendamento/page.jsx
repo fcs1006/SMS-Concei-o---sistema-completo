@@ -298,19 +298,29 @@ export default function Agendamento() {
   }
 
   async function reimprimirViagem(viagem) {
-    // Busca dados do paciente para complementar
-    let dadosPaciente = {}
-    if (viagem.paciente_cpf) {
-      const { data: pac } = await supabase
-        .from('pacientes').select('*')
-        .eq('cpf_cns', viagem.paciente_cpf).maybeSingle()
-      if (pac) dadosPaciente = {
-        dtNasc: pac.dt_nasc, idade: calcularIdade(pac.dt_nasc),
-        sexo: pac.sexo, telefone: pac.telefone,
-        endereco: pac.endereco, bairro: pac.bairro, cep: pac.cep
-      }
+    // CPFs a buscar
+    const cpfs = [viagem.paciente_cpf, viagem.acomp1_cpf, viagem.acomp2_cpf].filter(Boolean)
+    let mapa = {}
+    if (cpfs.length > 0) {
+      const { data: pacs } = await supabase.from('pacientes').select('*').in('cpf_cns', cpfs)
+      if (pacs) pacs.forEach(p => { mapa[p.cpf_cns] = p })
     }
-    imprimirAgendamento({ ...viagem, ...dadosPaciente })
+
+    const pac = mapa[viagem.paciente_cpf] || {}
+    const a1  = mapa[viagem.acomp1_cpf]  || {}
+    const a2  = mapa[viagem.acomp2_cpf]  || {}
+
+    imprimirAgendamento({
+      ...viagem,
+      // paciente
+      dtNasc: pac.dt_nasc, idade: calcularIdade(pac.dt_nasc),
+      sexo: pac.sexo, telefone: pac.telefone,
+      endereco: pac.endereco, bairro: pac.bairro, cep: pac.cep,
+      // acompanhante 1
+      nascA1: a1.dt_nasc, sexoA1: a1.sexo, telA1: a1.telefone, endA1: a1.endereco, bairA1: a1.bairro,
+      // acompanhante 2
+      nascA2: a2.dt_nasc, sexoA2: a2.sexo, telA2: a2.telefone, endA2: a2.endereco, bairA2: a2.bairro,
+    })
     setModalReimprimir(false)
   }
 
