@@ -44,7 +44,8 @@
       "Bash(unzip -p sigtap202603.zip tb_procedimento.txt)",
       "Bash(node -e \"require\\('zlib'\\)\")",
       "Bash(npm list:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(python3:*)"
     ]
   }
 }
