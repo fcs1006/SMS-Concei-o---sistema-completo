@@ -18,14 +18,8 @@ export default function Login() {
       <div className="login-card">
         {/* Logo / Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            width: '56px', height: '56px',
-            background: 'linear-gradient(135deg, #0d9488, #14b8a6)',
-            borderRadius: '16px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px', fontSize: '24px',
-            boxShadow: '0 8px 24px rgba(13,148,136,0.4)'
-          }}>🏥</div>
+          <img src="/logo.jpg" alt="SMS Conceição"
+            style={{ width: '80px', height: '80px', objectFit: 'contain', margin: '0 auto 16px', display: 'block' }} />
           <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
             SMS Conceição
           </h1>

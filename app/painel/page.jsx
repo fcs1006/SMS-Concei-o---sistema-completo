@@ -58,8 +58,9 @@ export default function PainelGeral() {
   async function carregarDados() {
     setCarregando(true)
     const hoje = new Date()
-    const hojeStr = hoje.toISOString().split('T')[0]
-    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0]
+    const pad = (n) => String(n).padStart(2, '0')
+    const hojeStr = `${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}-${pad(hoje.getDate())}`
+    const inicioMes = `${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}-01`
 
     const [
       { count: viagensHoje },
@@ -74,7 +75,7 @@ export default function PainelGeral() {
       supabase.from('pacientes').select('*', { count: 'exact', head: true }),
       supabase.from('servidores').select('*', { count: 'exact', head: true }).eq('ativo', true),
       supabase.from('viagens').select('destino').gte('data_viagem', inicioMes),
-      supabase.from('viagens').select('data_viagem, hora_viagem, paciente_nome, destino').order('data_viagem', { ascending: false }).limit(5)
+      supabase.from('viagens').select('data_viagem, hora, paciente_nome, destino').order('data_viagem', { ascending: false }).limit(5)
     ])
 
     // Contagem por destino
@@ -125,7 +126,7 @@ export default function PainelGeral() {
                 corBg="rgba(59,130,246,0.12)"
               />
               <Card
-                titulo={`Viagens em ${mesAtual}`}
+                titulo={`Viagens previstas em ${mesAtual}`}
                 valor={stats.viagensMes}
                 sub="no mês corrente"
                 icon="📋"
@@ -214,7 +215,7 @@ export default function PainelGeral() {
                           </p>
                           <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
                             {v.destino} · {v.data_viagem ? new Date(v.data_viagem + 'T12:00:00').toLocaleDateString('pt-BR') : ''}
-                            {v.hora_viagem ? ` às ${v.hora_viagem}` : ''}
+                            {v.hora ? ` às ${v.hora}` : ''}
                           </p>
                         </div>
                       </div>

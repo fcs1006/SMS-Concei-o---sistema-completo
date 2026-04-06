@@ -43,14 +43,8 @@ export default function Layout({ children, usuario }) {
 
         {/* Logo */}
         <div style={{ padding: '24px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <div style={{
-            width: '44px', height: '44px',
-            background: paginaAtiva.corBg,
-            border: `1px solid ${paginaAtiva.acento}40`,
-            borderRadius: '12px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '22px', marginBottom: '12px',
-          }}>🏥</div>
+          <img src="/logo.jpg" alt="SMS Conceição"
+            style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '12px', display: 'block' }} />
           <p style={{
             fontFamily: 'Sora, sans-serif', fontWeight: '700',
             fontSize: '13px', color: 'white', margin: '0 0 2px', lineHeight: '1.3'
