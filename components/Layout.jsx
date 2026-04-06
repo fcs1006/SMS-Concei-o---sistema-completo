@@ -6,6 +6,8 @@ export default function Layout({ children, usuario }) {
   const pathname = usePathname()
 
   const menus = [
+    { label: 'Painel Geral', icon: '🏠', path: '/painel',
+      bg1: '#064e3b', bg2: '#065f46', cor: '#6ee7b7', corBg: 'rgba(110,231,183,0.15)', acento: '#34d399' },
     { label: 'Agendamento', icon: '📋', path: '/agendamento',
       bg1: '#172554', bg2: '#1e3a8a', cor: '#93c5fd', corBg: 'rgba(147,197,253,0.15)', acento: '#93c5fd' },
     { label: 'Relatório',    icon: '📊', path: '/relatorio',
@@ -25,7 +27,7 @@ export default function Layout({ children, usuario }) {
 
   const aliasMap = { '/resumo': '/tfd', '/bpa/config': '/bpa' }
   const pathEfetivo = aliasMap[pathname] || pathname
-  const paginaAtiva = menus.find(m => pathEfetivo === m.path) || menus[0]
+  const paginaAtiva = menus.find(m => pathEfetivo === m.path) || menus[1]
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
