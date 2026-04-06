@@ -69,12 +69,12 @@ export default function PainelGeral() {
       { data: viagensDestinoRaw },
       { data: ultimasViagens }
     ] = await Promise.all([
-      supabase.from('viagens').select('*', { count: 'exact', head: true }).eq('data', hojeStr),
-      supabase.from('viagens').select('*', { count: 'exact', head: true }).gte('data', inicioMes),
+      supabase.from('viagens').select('*', { count: 'exact', head: true }).eq('data_viagem', hojeStr),
+      supabase.from('viagens').select('*', { count: 'exact', head: true }).gte('data_viagem', inicioMes),
       supabase.from('pacientes').select('*', { count: 'exact', head: true }),
       supabase.from('servidores').select('*', { count: 'exact', head: true }).eq('ativo', true),
-      supabase.from('viagens').select('destino').gte('data', inicioMes),
-      supabase.from('viagens').select('data, hora, nome, destino').order('data', { ascending: false }).order('hora', { ascending: false }).limit(5)
+      supabase.from('viagens').select('destino').gte('data_viagem', inicioMes),
+      supabase.from('viagens').select('data_viagem, hora_viagem, paciente_nome, destino').order('data_viagem', { ascending: false }).limit(5)
     ])
 
     // Contagem por destino
@@ -210,11 +210,11 @@ export default function PainelGeral() {
                         }}>🚐</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b', margin: 0, fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {v.nome || 'Paciente'}
+                            {v.paciente_nome || 'Paciente'}
                           </p>
                           <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
-                            {v.destino} · {v.data ? new Date(v.data + 'T12:00:00').toLocaleDateString('pt-BR') : ''}
-                            {v.hora ? ` às ${v.hora}` : ''}
+                            {v.destino} · {v.data_viagem ? new Date(v.data_viagem + 'T12:00:00').toLocaleDateString('pt-BR') : ''}
+                            {v.hora_viagem ? ` às ${v.hora_viagem}` : ''}
                           </p>
                         </div>
                       </div>
