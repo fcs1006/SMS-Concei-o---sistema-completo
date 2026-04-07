@@ -364,7 +364,10 @@ async function consolidarLaboratorio(linhas: any[], competencia: string, fixos: 
     }
 
     const compReg = String(dataAtend.getFullYear()) + String(dataAtend.getMonth() + 1).padStart(2, '0')
-    if (compReg !== competencia) continue
+    if (compReg !== competencia) {
+      erros.push({ nome: nomePaciente, data: dtAtendRaw, motivo: 'Competência errada, favor verificar o arquivo', valor: dtAtendRaw })
+      continue
+    }
 
     // Resolver procedimento via base de exames
     const exameRaw = String(linha.procedimento || '').trim()
