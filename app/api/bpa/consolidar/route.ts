@@ -37,6 +37,11 @@ function extrairDocumento(cpfCns: string) {
   return { cpf: '', cns: '' }
 }
 
+function cpfInvalidoObvio(cpf: string) {
+  if (!cpf || cpf.length !== 11) return false
+  return /^(\d)\1+$/.test(cpf)
+}
+
 function formatarData(d: Date) {
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -295,8 +300,50 @@ function resolverProcedimentoLab(exame: string): { procedimento: string; tipo: '
 // Laboratório: dados enviados via XLS importado
 // BPA-C (tipo 02): agrupa por procedimento e conta quantidade
 // BPA-I (tipo 03): individualizado com dados do paciente
-function consolidarLaboratorio(linhas: any[], competencia: string, fixos: any) {
+async function consolidarLaboratorio(linhas: any[], competencia: string, fixos: any) {
   const erros: any[] = []
+
+  // --- BUSCA NA BASE DE PACIENTES ---
+  const todosCpfs = new Set<string>()
+  const todosNomes = new Set<string>()
+  for (const linha of linhas) {
+    const cpfLimpo = String(linha.cpf || linha.cns || '').replace(/\D/g, '')
+    if (cpfLimpo) todosCpfs.add(cpfLimpo)
+    const nome = String(linha.nome || '').trim().toUpperCase()
+    if (nome) todosNomes.add(nome)
+  }
+
+  const mapaPacientesPorCpf: Record<string, any> = {}
+  const mapaPacientesPorNome: Record<string, any> = {}
+
+  const LOTE = 200
+  // Busca por CPFs
+  if (todosCpfs.size > 0) {
+    const cpfsArray = Array.from(todosCpfs)
+    for (let i = 0; i < cpfsArray.length; i += LOTE) {
+      const lote = cpfsArray.slice(i, i + LOTE)
+      const cpfsFormatados = lote.map(c => c.length === 11 ? c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : c)
+      const { data: pacs } = await supabase.from('pacientes').select('*').or(`cpf_cns.in.(${lote.join(',')}),cpf_cns.in.(${cpfsFormatados.join(',')})`)
+      ;(pacs || []).forEach((p: any) => {
+        const cpfNorm = String(p.cpf_cns || '').replace(/\D/g, '')
+        if (cpfNorm) mapaPacientesPorCpf[cpfNorm] = p
+      })
+    }
+  }
+
+  // Busca por Nomes
+  if (todosNomes.size > 0) {
+    const nomesArray = Array.from(todosNomes)
+    for (let i = 0; i < nomesArray.length; i += LOTE) {
+      const lote = nomesArray.slice(i, i + LOTE)
+      const { data: pacs } = await supabase.from('pacientes').select('*').in('nome', lote)
+      ;(pacs || []).forEach((p: any) => {
+        const nomeNorm = String(p.nome || '').trim().toUpperCase()
+        if (nomeNorm) mapaPacientesPorNome[nomeNorm] = p
+      })
+    }
+  }
+  // ----------------------------------
 
   // Separa registros por tipo
   const agrupados: Record<string, number> = {} // chave: procedimento → quantidade (BPA-C)
@@ -337,14 +384,22 @@ function consolidarLaboratorio(linhas: any[], competencia: string, fixos: any) {
     }
 
     // BPA Individualizado: precisa de dados completos
+    const cpfCSV = String(linha.cpf || linha.cns || '').replace(/\D/g, '')
+    const nomeCSV = nomePaciente.toUpperCase()
+    const pacDb = mapaPacientesPorCpf[cpfCSV] || mapaPacientesPorNome[nomeCSV] || {}
+
     const dtNascRaw = String(linha.dtNasc || '')
-    const dataNasc = new Date(dtNascRaw.includes('/')
+    let dataNasc = new Date(dtNascRaw.includes('/')
       ? dtNascRaw.split('/').reverse().join('-') + 'T12:00:00'
       : dtNascRaw + 'T12:00:00')
 
     if (isNaN(dataNasc.getTime())) {
-      erros.push({ nome: nomePaciente, data: dtAtendRaw, motivo: 'Data de nascimento inválida', valor: dtNascRaw })
-      continue
+      if (pacDb.dt_nasc) {
+        dataNasc = new Date(pacDb.dt_nasc + 'T12:00:00')
+      } else {
+        erros.push({ nome: nomePaciente, data: dtAtendRaw, motivo: 'Data de nascimento inválida/ausente', valor: dtNascRaw })
+        continue
+      }
     }
 
     const idade = calcularIdade(dataNasc, dataAtend)
@@ -353,16 +408,21 @@ function consolidarLaboratorio(linhas: any[], competencia: string, fixos: any) {
       continue
     }
 
-    const sexoTratado = tratarSexo(linha.sexo || '')
+    const sexoTratado = tratarSexo(linha.sexo || '') || tratarSexo(pacDb.sexo || '')
     if (!sexoTratado) {
       erros.push({ nome: nomePaciente, data: dtAtendRaw, motivo: 'Sexo não informado', valor: linha.sexo || '' })
       continue
     }
 
-    const doc = extrairDocumento(linha.cpf || linha.cns || '')
-    if (!doc.cpf && !doc.cns) {
-      erros.push({ nome: nomePaciente, data: dtAtendRaw, motivo: 'CPF/CNS ausente ou inválido', valor: linha.cpf || '' })
-      continue
+    let doc = extrairDocumento(cpfCSV)
+    if ((!doc.cpf && !doc.cns) || cpfInvalidoObvio(doc.cpf)) {
+      const docDb = extrairDocumento(pacDb.cpf_cns || '')
+      if (docDb.cpf || docDb.cns) {
+        doc = docDb
+      } else {
+        erros.push({ nome: nomePaciente, data: dtAtendRaw, motivo: 'CPF/CNS ausente/inválido e não achou na base', valor: linha.cpf || '' })
+        continue
+      }
     }
 
     individualizados.push({
@@ -373,11 +433,11 @@ function consolidarLaboratorio(linhas: any[], competencia: string, fixos: any) {
       sexoTratado,
       doc,
       procedimento,
-      endereco: String(linha.endereco || ''),
-      bairro: String(linha.bairro || ''),
-      cep: String(linha.cep || fixos.CEP_PADRAO).replace(/\D/g, '').padStart(8, '0'),
+      endereco: String(linha.endereco || pacDb.endereco || ''),
+      bairro: String(linha.bairro || pacDb.bairro || ''),
+      cep: String(linha.cep || pacDb.cep || fixos.CEP_PADRAO).replace(/\D/g, '').padStart(8, '0'),
       numero: String(linha.numero || 'SN').substring(0, 5),
-      telefone: String(linha.telefone || '').replace(/\D/g, ''),
+      telefone: String(linha.telefone || pacDb.telefone || '').replace(/\D/g, ''),
     })
   }
 
@@ -479,7 +539,7 @@ export async function POST(request: NextRequest) {
     let resultado
     if (perfil === 'laboratorio') {
       if (!linhasLab?.length) return NextResponse.json({ error: 'Nenhum dado de laboratório enviado.' }, { status: 400 })
-      resultado = consolidarLaboratorio(linhasLab, competencia, fixos)
+      resultado = await consolidarLaboratorio(linhasLab, competencia, fixos)
     } else {
       resultado = await consolidarUrgencia(competencia, fixos)
     }

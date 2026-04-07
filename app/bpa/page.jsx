@@ -92,8 +92,8 @@ export default function BPA() {
         const idxNome = cabecalho.findIndex(c => c.includes('nome') && c.includes('cliente') || c === 'nome' || c.includes('paciente'))
         const idxNasc = cabecalho.findIndex(c => c.includes('nasc') || c.includes('nascimento'))
         const idxCpf = cabecalho.findIndex(c => c === 'cpf' || c.includes('cpfcliente') || c.includes('documento'))
-        const idxExame = cabecalho.findIndex(c => c.includes('exame') || c.includes('codigo') || c.includes('procedimento'))
-        const idxData = cabecalho.findIndex(c => c.includes('atend') || c.includes('dataatend') || c.includes('data') && !c.includes('nasc'))
+        const idxExame = cabecalho.findIndex(c => c.includes('exame') || (c.includes('codigo') && !c.includes('procedencia')) || c.includes('procedimento'))
+        const idxData = cabecalho.findIndex(c => c.includes('inclusao') || c.includes('dataatend') || (c.includes('data') && !c.includes('nasc')))
         const idxSexo = cabecalho.findIndex(c => c === 'sexo' || c.includes('genero'))
         const idxEndereco = cabecalho.findIndex(c => c.includes('endereco') || c.includes('logradouro'))
         const idxBairro = cabecalho.findIndex(c => c === 'bairro')
@@ -383,14 +383,26 @@ export default function BPA() {
 
         {/* Erros */}
         {erros.length > 0 && (
-          <div className="card" style={{ padding: '20px', border: '1px solid #fecaca' }}>
-            <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700', color: '#991b1b', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              ⚠️ {erros.length} registro(s) com erro
+          <div className="card print-area" style={{ padding: '20px', border: '1px solid #fecaca' }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700', color: '#991b1b', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                ⚠️ {erros.length} registro(s) com erro
+              </h3>
+              <button 
+                onClick={() => window.print()}
+                style={{ padding: '6px 12px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', fontSize: '11px', cursor: 'pointer', fontWeight: '600', fontFamily: 'Sora, sans-serif' }}>
+                🖨️ Imprimir Erros
+              </button>
+            </div>
+            
+            <h3 style={{ display: 'none', color: '#000', fontSize: '16px', marginBottom: '15px', fontFamily: 'Sora, sans-serif' }} className="print-title">
+               Relatório de Cuidados Cadastrais - BPA ({labelCompetencia()})
             </h3>
-            <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #fee2e2', borderRadius: '8px' }}>
+
+            <div className="print-container" style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #fee2e2', borderRadius: '8px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
-                  <tr style={{ background: 'linear-gradient(135deg, #991b1b, #ef4444)' }}>
+                  <tr style={{ background: 'linear-gradient(135deg, #991b1b, #ef4444)', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                     {['Nome', 'Data', 'Motivo do Erro', 'Valor encontrado'].map(h => (
                       <th key={h} style={{ padding: '8px', color: 'white', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '10px', fontWeight: '600', letterSpacing: '0.06em' }}>{h}</th>
                     ))}
@@ -398,7 +410,7 @@ export default function BPA() {
                 </thead>
                 <tbody>
                   {erros.map((e, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #fee2e2', background: i % 2 === 0 ? '#fff' : '#fff5f5' }}>
+                    <tr key={i} style={{ borderBottom: '1px solid #fee2e2', background: i % 2 === 0 ? '#fff' : '#fff5f5', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                       <td style={{ padding: '7px 8px', fontWeight: '600', color: '#0f172a' }}>{e.nome}</td>
                       <td style={{ padding: '7px 8px', whiteSpace: 'nowrap', color: '#64748b' }}>{e.data}</td>
                       <td style={{ padding: '7px 8px', color: '#991b1b', fontWeight: '500' }}>{e.motivo}</td>
@@ -410,6 +422,17 @@ export default function BPA() {
             </div>
           </div>
         )}
+        
+        <style dangerouslySetInnerHTML={{__html: `
+          @media print {
+            body * { visibility: hidden; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; padding: 0 !important; }
+            .print-container { max-height: none !important; overflow: visible !important; border: none !important; }
+            .no-print { display: none !important; }
+            .print-title { display: block !important; }
+          }
+        `}} />
       </div>
     </Layout>
   )
