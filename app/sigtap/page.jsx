@@ -8,7 +8,7 @@ const GRAD = 'linear-gradient(135deg, #022c22, #064e3b)'
 
 function formatarCompetencia(c) {
   if (!c || c.length !== 6) return c
-  return `${c.slice(4,6)}/${c.slice(0,4)}`
+  return `${c.slice(4, 6)}/${c.slice(0, 4)}`
 }
 function complexidade(c) {
   const m = { '1': 'AB', '2': 'MC', '3': 'AC', '4': 'AP' }
@@ -62,7 +62,7 @@ export default function Sigtap() {
         setImportadas(data.importadas || [])
         if (data.importadas?.length > 0) setCompetenciaBusca(data.importadas[0])
       }
-    } catch {}
+    } catch { }
     setCarregandoLista(false)
   }
 
@@ -101,6 +101,7 @@ export default function Sigtap() {
     setBuscando(false)
   }
 
+  const top5 = disponiveis.slice(0, 5)
   const maisRecente = disponiveis[0]?.competencia
   const jaTem = (c) => importadas.includes(c)
 
@@ -119,13 +120,18 @@ export default function Sigtap() {
 
         {/* ── SINCRONIZAÇÃO ── */}
         <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 8px rgba(0,0,0,0.07)', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h2 style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '14px', color: '#1e293b', margin: 0 }}>
-              🔄 Competências disponíveis no DATASUS
-            </h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div>
+              <h2 style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '14px', color: '#1e293b', margin: '0 0 2px' }}>
+                🔄 Sincronização de competências
+              </h2>
+              <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: '#94a3b8', margin: 0 }}>
+                5 competências mais recentes do DATASUS
+              </p>
+            </div>
             <button onClick={carregarLista} disabled={carregandoLista}
-              style={{ padding: '7px 14px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', color: '#475569' }}>
-              {carregandoLista ? 'Atualizando...' : '↻ Atualizar lista'}
+              style={{ padding: '7px 14px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', color: '#475569', whiteSpace: 'nowrap' }}>
+              {carregandoLista ? 'Atualizando...' : '↻ Atualizar'}
             </button>
           </div>
 
@@ -135,42 +141,45 @@ export default function Sigtap() {
             </div>
           )}
 
-          {carregandoLista && disponiveis.length === 0 ? (
-            <p style={{ color: '#94a3b8', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>Buscando competências no FTP do DATASUS...</p>
+          {carregandoLista && top5.length === 0 ? (
+            <p style={{ color: '#94a3b8', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>Buscando no FTP do DATASUS...</p>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
-              {disponiveis.map(({ competencia }) => {
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {top5.map(({ competencia }) => {
                 const importada = jaTem(competencia)
                 const isLatest = competencia === maisRecente
                 const loading = sincronizando === competencia
                 return (
                   <div key={competencia} style={{
-                    borderRadius: '12px', padding: '14px',
-                    background: importada ? 'rgba(52,211,153,0.06)' : '#f8fafc',
-                    border: `1px solid ${importada ? '#34d39950' : '#e2e8f0'}`,
-                    display: 'flex', flexDirection: 'column', gap: '8px'
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    borderRadius: '10px', padding: '12px 16px',
+                    background: importada ? 'rgba(52,211,153,0.05)' : '#f8fafc',
+                    border: `1px solid ${importada ? '#34d39940' : '#e2e8f0'}`,
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '14px', color: '#1e293b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '15px', color: '#1e293b', minWidth: '72px' }}>
                         {formatarCompetencia(competencia)}
                       </span>
                       {isLatest && (
-                        <span style={{ fontSize: '9px', fontWeight: '700', background: '#0d9488', color: '#fff', borderRadius: '4px', padding: '2px 5px' }}>NOVO</span>
+                        <span style={{ fontSize: '9px', fontWeight: '700', background: '#0d9488', color: '#fff', borderRadius: '4px', padding: '2px 6px', letterSpacing: '0.05em' }}>MAIS RECENTE</span>
                       )}
                     </div>
-                    <span style={{ fontSize: '11px', color: importada ? '#059669' : '#94a3b8', fontFamily: 'DM Sans, sans-serif', fontWeight: importada ? '600' : '400' }}>
-                      {importada ? '✓ Importada' : 'Não importada'}
-                    </span>
-                    <button onClick={() => sincronizar(competencia)} disabled={!!sincronizando}
-                      style={{
-                        padding: '6px', borderRadius: '8px', fontSize: '11px',
-                        fontWeight: '700', cursor: sincronizando ? 'wait' : 'pointer',
-                        border: 'none', fontFamily: 'DM Sans, sans-serif',
-                        background: importada ? 'rgba(52,211,153,0.15)' : GRAD,
-                        color: importada ? '#059669' : '#fff',
-                      }}>
-                      {loading ? 'Sincronizando...' : importada ? '↻ Atualizar' : '↓ Importar'}
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <span style={{ fontSize: '12px', color: importada ? '#059669' : '#94a3b8', fontFamily: 'DM Sans, sans-serif', fontWeight: importada ? '600' : '400' }}>
+                        {importada ? '✓ Importada' : 'Não importada'}
+                      </span>
+                      <button onClick={() => sincronizar(competencia)} disabled={!!sincronizando}
+                        style={{
+                          padding: '7px 18px', borderRadius: '8px', fontSize: '12px',
+                          fontWeight: '700', cursor: sincronizando ? 'wait' : 'pointer',
+                          border: 'none', fontFamily: 'DM Sans, sans-serif',
+                          background: importada ? 'rgba(52,211,153,0.15)' : GRAD,
+                          color: importada ? '#059669' : '#fff',
+                          minWidth: '110px', textAlign: 'center',
+                        }}>
+                        {loading ? 'Sincronizando...' : importada ? '↻ Atualizar' : '↓ Importar'}
+                      </button>
+                    </div>
                   </div>
                 )
               })}
@@ -180,9 +189,24 @@ export default function Sigtap() {
 
         {/* ── BUSCA ── */}
         <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 8px rgba(0,0,0,0.07)', border: '1px solid #e2e8f0' }}>
-          <h2 style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '14px', color: '#1e293b', margin: '0 0 16px' }}>
-            🔍 Consultar procedimentos
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
+            <h2 style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '14px', color: '#1e293b', margin: 0 }}>
+              🔍 Consultar procedimentos
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', color: '#000000ff', fontFamily: 'DM Sans, sans-serif', marginRight: '2px' }}>Complexidade:</span>
+              {[['AB', 'Atenção Básica'], ['MC', 'Média Complexidade'], ['AC', 'Alta Complexidade'], ['AP', 'Atenção Primária']].map(([sigla, label]) => (
+                <span key={sigla} title={label} style={{
+                  fontSize: '12px', fontFamily: 'DM Sans, sans-serif',
+                  background: '#f1f5f9', border: '1px solid #e2e8f0',
+                  borderRadius: '4px', padding: '2px 7px', color: '#475569',
+                  cursor: 'default', whiteSpace: 'nowrap',
+                }}>
+                  <strong>{sigla}</strong> = {label}
+                </span>
+              ))}
+            </div>
+          </div>
 
           {importadas.length === 0 ? (
             <p style={{ color: '#94a3b8', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>
@@ -215,7 +239,7 @@ export default function Sigtap() {
                   <table className="table-modern">
                     <thead>
                       <tr style={{ background: GRAD }}>
-                        {['Código', 'Procedimento', 'Compl.', 'Sexo', 'Idade Mín.', 'Idade Máx.', 'Valor SH', 'Valor SA', 'Valor SP'].map(h => (
+                        {['Código', 'Procedimento', 'Complexidade', 'Sexo', 'Idade Mín.', 'Idade Máx.', 'Valor SH', 'Valor SA', 'Valor SP'].map(h => (
                           <th key={h} style={{ color: '#fff', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
@@ -236,7 +260,7 @@ export default function Sigtap() {
                       ))}
                     </tbody>
                   </table>
-                  <p style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'DM Sans, sans-serif', marginTop: '8px' }}>
+                  <p style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'DM Sans, sans-serif', marginTop: '10px', margin: '10px 0 0' }}>
                     {resultados.length} resultado{resultados.length !== 1 ? 's' : ''} — competência {formatarCompetencia(competenciaBusca)}
                   </p>
                 </div>

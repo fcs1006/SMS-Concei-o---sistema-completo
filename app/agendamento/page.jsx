@@ -153,7 +153,10 @@ export default function Agendamento() {
   useEffect(() => {
     const u = localStorage.getItem('sms_user')
     if (!u) { router.push('/'); return }
-    setUsuario(JSON.parse(u))
+    const parsed = JSON.parse(u)
+    setUsuario(parsed)
+    const primeiroNome = (parsed.nome || '').split(' ')[0].toUpperCase()
+    if (primeiroNome) setForm(f => ({ ...f, agendadoPor: primeiroNome }))
   }, [])
 
   useEffect(() => {

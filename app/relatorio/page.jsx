@@ -128,18 +128,18 @@ export default function Relatorio() {
   }, 0)
 
 async function abrirEditar(v) {
-  // Busca dados frescos do banco para garantir todos os campos
   const { data: fresco } = await supabase
     .from('viagens')
     .select('*')
     .eq('id', v.id)
     .single()
 
+  const primeiroNome = (usuario?.nome || '').split(' ')[0].toUpperCase()
+
   if (fresco) {
-    // Recoloca o telefone que vem do join com pacientes
-    setViagemEditando({ ...fresco, telefone: v.telefone || '' })
+    setViagemEditando({ ...fresco, telefone: v.telefone || '', agendado_por: primeiroNome || fresco.agendado_por || '' })
   } else {
-    setViagemEditando({ ...v })
+    setViagemEditando({ ...v, agendado_por: primeiroNome || v.agendado_por || '' })
   }
 
   setModalEditar(true)
@@ -279,8 +279,8 @@ async function abrirEditar(v) {
 
         {/* Filtros */}
         <div className="card" style={{ padding: '16px', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end' }}>
-            <div style={{ flex: '2', minWidth: '180px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px,1fr) 148px 148px 180px', gap: '10px', alignItems: 'end', marginBottom: '10px' }}>
+            <div>
               <label className="label-modern">Buscar</label>
               <input className="input-modern" value={filtros.busca}
                 onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))}
@@ -296,7 +296,7 @@ async function abrirEditar(v) {
               <input type="date" className="input-modern" value={filtros.dataFim}
                 onChange={e => setFiltros(f => ({ ...f, dataFim: e.target.value }))} />
             </div>
-            <div style={{ minWidth: '140px' }}>
+            <div>
               <label className="label-modern">Destino</label>
               <select className="input-modern" value={filtros.destino}
                 onChange={e => setFiltros(f => ({ ...f, destino: e.target.value }))}>
@@ -304,42 +304,42 @@ async function abrirEditar(v) {
                 {destinos.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'nowrap' }}>
-              <button type="button" onClick={filtrarHoje} style={{
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button type="button" onClick={filtrarHoje} style={{
+              padding: '9px 14px', borderRadius: '8px', border: 'none',
+              background: '#ea6c00', color: 'white', fontWeight: '600',
+              fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap',
+              fontFamily: 'Sora, sans-serif'
+            }}>Hoje</button>
+            <button type="button" onClick={limparFiltros} style={{
+              padding: '9px 14px', borderRadius: '8px', border: 'none',
+              background: '#1d4ed8', color: 'white', fontWeight: '600',
+              fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap',
+              fontFamily: 'Sora, sans-serif'
+            }}>Limpar</button>
+            <button type="button"
+              onClick={() => linhaSelecionada ? abrirEditar(linhaSelecionada) : alert('Selecione uma linha!')}
+              style={{
                 padding: '9px 14px', borderRadius: '8px', border: 'none',
-                background: '#ea6c00', color: 'white', fontWeight: '600',
-                fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap',
-                fontFamily: 'Sora, sans-serif'
-              }}>Hoje</button>
-              <button type="button" onClick={limparFiltros} style={{
+                background: linhaSelecionada ? '#16a34a' : '#9ca3af',
+                color: 'white', fontWeight: '600', fontSize: '12px',
+                cursor: linhaSelecionada ? 'pointer' : 'not-allowed',
+                whiteSpace: 'nowrap', fontFamily: 'Sora, sans-serif'
+              }}>✏️ Editar</button>
+            <button type="button"
+              onClick={() => {
+                if (!linhaSelecionada) { alert('Selecione uma linha!'); return }
+                setViagemExcluindo(linhaSelecionada)
+                setModalExcluir(true)
+              }}
+              style={{
                 padding: '9px 14px', borderRadius: '8px', border: 'none',
-                background: '#1d4ed8', color: 'white', fontWeight: '600',
-                fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap',
-                fontFamily: 'Sora, sans-serif'
-              }}>Limpar</button>
-              <button type="button"
-                onClick={() => linhaSelecionada ? abrirEditar(linhaSelecionada) : alert('Selecione uma linha!')}
-                style={{
-                  padding: '9px 14px', borderRadius: '8px', border: 'none',
-                  background: linhaSelecionada ? '#16a34a' : '#9ca3af',
-                  color: 'white', fontWeight: '600', fontSize: '12px',
-                  cursor: linhaSelecionada ? 'pointer' : 'not-allowed',
-                  whiteSpace: 'nowrap', fontFamily: 'Sora, sans-serif'
-                }}>✏️ Editar</button>
-              <button type="button"
-                onClick={() => {
-                  if (!linhaSelecionada) { alert('Selecione uma linha!'); return }
-                  setViagemExcluindo(linhaSelecionada)
-                  setModalExcluir(true)
-                }}
-                style={{
-                  padding: '9px 14px', borderRadius: '8px', border: 'none',
-                  background: linhaSelecionada ? '#ef4444' : '#9ca3af',
-                  color: 'white', fontWeight: '600', fontSize: '12px',
-                  cursor: linhaSelecionada ? 'pointer' : 'not-allowed',
-                  whiteSpace: 'nowrap', fontFamily: 'Sora, sans-serif'
-                }}>🗑️ Excluir</button>
-            </div>
+                background: linhaSelecionada ? '#ef4444' : '#9ca3af',
+                color: 'white', fontWeight: '600', fontSize: '12px',
+                cursor: linhaSelecionada ? 'pointer' : 'not-allowed',
+                whiteSpace: 'nowrap', fontFamily: 'Sora, sans-serif'
+              }}>🗑️ Excluir</button>
           </div>
         </div>
 

@@ -233,7 +233,6 @@ export default function BPA() {
                 { key: 'CNES_UNIDADE', label: 'CNES', max: 7 },
                 { key: 'CNS_PROFISSIONAL', label: 'CNS Profissional', max: 15 },
                 { key: 'CBO', label: 'CBO', max: 6 },
-                { key: 'PROCEDIMENTO', label: 'Procedimento SIGTAP', max: 10 },
                 { key: 'IBGE', label: 'Código IBGE', max: 7 },
                 { key: 'CEP_PADRAO', label: 'CEP Padrão', max: 8 },
               ].map(({ key, label, max }) => (

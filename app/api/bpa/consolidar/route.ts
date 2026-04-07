@@ -134,13 +134,15 @@ async function consolidarUrgencia(competencia: string, fixos: any) {
   let seq = 1
 
   // Expande cada viagem em pessoas: paciente + acompanhantes
-  interface Pessoa { nome: string; cpfRaw: string; dtNascViagem: string; sexoViagem: string; endViagem: string }
+  const PROC_PACIENTE     = '0803010125'
+  const PROC_ACOMPANHANTE = '0803010109'
+  interface Pessoa { nome: string; cpfRaw: string; dtNascViagem: string; sexoViagem: string; endViagem: string; isAcompanhante: boolean }
   const expandirViagem = (v: any): Pessoa[] => {
     const pessoas: Pessoa[] = [
-      { nome: v.paciente_nome, cpfRaw: v.paciente_cpf, dtNascViagem: '', sexoViagem: '', endViagem: '' }
+      { nome: v.paciente_nome, cpfRaw: v.paciente_cpf, dtNascViagem: '', sexoViagem: '', endViagem: '', isAcompanhante: false }
     ]
-    if (v.acomp1_nome) pessoas.push({ nome: v.acomp1_nome, cpfRaw: v.acomp1_cpf, dtNascViagem: '', sexoViagem: '', endViagem: '' })
-    if (v.acomp2_nome) pessoas.push({ nome: v.acomp2_nome, cpfRaw: v.acomp2_cpf, dtNascViagem: '', sexoViagem: '', endViagem: '' })
+    if (v.acomp1_nome) pessoas.push({ nome: v.acomp1_nome, cpfRaw: v.acomp1_cpf, dtNascViagem: '', sexoViagem: '', endViagem: '', isAcompanhante: true })
+    if (v.acomp2_nome) pessoas.push({ nome: v.acomp2_nome, cpfRaw: v.acomp2_cpf, dtNascViagem: '', sexoViagem: '', endViagem: '', isAcompanhante: true })
     return pessoas
   }
 
@@ -201,7 +203,7 @@ async function consolidarUrgencia(competencia: string, fixos: any) {
         dataAtendimento: formatarData(dataAtend),
         folha: String(folha).padStart(3, '0'),
         sequencia: String(seq).padStart(2, '0'),
-        procedimento: fixos.PROCEDIMENTO,
+        procedimento: pessoa.isAcompanhante ? PROC_ACOMPANHANTE : PROC_PACIENTE,
         cnsPaciente: doc.cns,
         sexo: sexoTratado,
         ibge: fixos.IBGE,
