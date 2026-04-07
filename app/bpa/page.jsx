@@ -28,7 +28,7 @@ const FIXOS_PADRAO = {
   }
 }
 
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 export default function BPA() {
   const router = useRouter()
@@ -53,7 +53,7 @@ export default function BPA() {
     // Carregar config salva
     const cfgSalva = localStorage.getItem('bpa_config')
     if (cfgSalva) {
-      try { setConfig(JSON.parse(cfgSalva)) } catch {}
+      try { setConfig(JSON.parse(cfgSalva)) } catch { }
     }
   }, [])
 
@@ -85,7 +85,9 @@ export default function BPA() {
     reader.onload = (ev) => {
       try {
         const texto = ev.target.result
-        const linhas = texto.split('\n').map(l => l.split('\t').map(c => c.trim().replace(/^"|"$/g, '')))
+        const primeiraLinha = texto.split('\n')[0] || ''
+        const separador = primeiraLinha.includes(';') ? ';' : (primeiraLinha.includes('\t') ? '\t' : ',')
+        const linhas = texto.split('\n').map(l => l.split(separador).map(c => c.trim().replace(/^"|"$/g, '')))
         const cabecalho = linhas[0].map(c => c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ''))
         const idxNome = cabecalho.findIndex(c => c.includes('nome') && c.includes('cliente') || c === 'nome' || c.includes('paciente'))
         const idxNasc = cabecalho.findIndex(c => c.includes('nasc') || c.includes('nascimento'))
