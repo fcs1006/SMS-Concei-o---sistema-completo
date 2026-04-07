@@ -46,6 +46,13 @@ export default function BPA() {
   const [nomeArquivoLab, setNomeArquivoLab] = useState('')
   const fileRef = useRef(null)
 
+  // Estados Histórico
+  const [aba, setAba] = useState('importacao') // importacao | historico
+  const [historicoDados, setHistoricoDados] = useState([])
+  const [historicoLoading, setHistoricoLoading] = useState(false)
+  const [pesquisaHist, setPesquisaHist] = useState('')
+  const [compHist, setCompHist] = useState('')
+
   useEffect(() => {
     const u = localStorage.getItem('sms_user')
     if (!u) { router.push('/'); return }
@@ -192,6 +199,32 @@ export default function BPA() {
     }
   }
 
+  async function buscarHistorico() {
+    setHistoricoLoading(true)
+    setHistoricoDados([])
+    try {
+      const p = new URLSearchParams()
+      p.append('perfil', perfil)
+      if (compHist) p.append('competencia', compHist)
+      if (pesquisaHist) p.append('pesquisa', pesquisaHist)
+      
+      const res = await fetch('/api/bpa/historico?' + p.toString())
+      const json = await res.json()
+      if (json.ok) {
+        setHistoricoDados(json.data || [])
+      } else {
+        mostrarMsg('Erro: ' + json.error, false)
+      }
+    } catch (e) {
+      mostrarMsg('Erro ao buscar histórico', false)
+    }
+    setHistoricoLoading(false)
+  }
+
+  useEffect(() => {
+    if (aba === 'historico') buscarHistorico()
+  }, [aba])
+
   const corPerfil = perfil === 'laboratorio' ? '#065f46' : '#064e3b'
   const gradPerfil = perfil === 'laboratorio'
     ? 'linear-gradient(135deg, #065f46, #059669)'
@@ -218,12 +251,30 @@ export default function BPA() {
           </button>
         </div>
 
+        {/* Abas */}
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>
+          <button 
+            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'importacao' ? corPerfil : '#64748b', borderBottom: aba === 'importacao' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif' }}
+            onClick={() => setAba('importacao')}
+          >
+            📥 Nova Importação
+          </button>
+          <button 
+            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'historico' ? corPerfil : '#64748b', borderBottom: aba === 'historico' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif' }}
+            onClick={() => setAba('historico')}
+          >
+            📊 Relatório Histórico
+          </button>
+        </div>
+
         {msg.txt && (
           <div className={msg.ok ? 'status-ok' : 'status-err'} style={{ marginBottom: '16px' }}>
             {msg.txt}
           </div>
         )}
 
+        {aba === 'importacao' && (
+          <>
         {/* Config */}
         {mostrarConfig && (
           <div className="card" style={{ padding: '20px', marginBottom: '20px', border: '1px solid #d1fae5' }}>
@@ -430,9 +481,92 @@ export default function BPA() {
             .print-area { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; padding: 0 !important; }
             .print-container { max-height: none !important; overflow: visible !important; border: none !important; }
             .no-print { display: none !important; }
-            .print-title { display: block !important; }
+            .print-title { display: block !important; margin-bottom: 20px !important; }
           }
         `}} />
+        </>
+        )}
+
+        {aba === 'historico' && (
+          <div className="card" style={{ padding: '20px' }}>
+            <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '15px', fontWeight: '700', color: corPerfil, margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Base de Registros Processados ({perfil})
+            </h3>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '20px' }}>
+              <div>
+                <label className="label-modern">Período/Competência</label>
+                <input className="input-modern" type="text" placeholder="Ex: 202603 ou vazio" value={compHist} onChange={e => setCompHist(e.target.value)} style={{ width: '160px' }} />
+              </div>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label className="label-modern">Pesquisar Paciente, CPF ou Procedimento</label>
+                <input className="input-modern" type="text" placeholder="Digite para filtrar..." value={pesquisaHist} onChange={e => setPesquisaHist(e.target.value)} style={{ width: '100%' }} onKeyDown={e => e.key === 'Enter' && buscarHistorico()} />
+              </div>
+              <div>
+                <button className="btn-primary" style={{ background: gradPerfil }} onClick={buscarHistorico}>
+                  🔍 Buscar
+                </button>
+              </div>
+            </div>
+
+            {historicoLoading ? (
+              <p style={{ color: '#64748b', fontSize: '13px' }}>Carregando registros...</p>
+            ) : historicoDados.length === 0 ? (
+              <p style={{ color: '#64748b', fontSize: '13px' }}>Nenhum registro encontrado para estes filtros.</p>
+            ) : (
+              <div className="print-area">
+                <style dangerouslySetInnerHTML={{__html: `
+                  @media print {
+                    body * { visibility: hidden; }
+                    .print-area, .print-area * { visibility: visible; }
+                    .print-area { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+                    .no-print { display: none !important; }
+                    .print-title { display: block !important; }
+                  }
+                `}} />
+                <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
+                    Encontrados: {historicoDados.length}
+                  </span>
+                  <button onClick={() => window.print()} style={{ padding: '6px 12px', background: '#e2e8f0', border: 'none', borderRadius: '6px', color: '#1e293b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
+                    🖨️ Imprimir
+                  </button>
+                </div>
+                
+                <h3 style={{ display: 'none', color: '#000', fontSize: '16px', marginBottom: '15px' }} className="print-title">
+                   Relatório BPA-Histórico: {perfil} {compHist}
+                </h3>
+                
+                <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc' }}>
+                        <th style={{ padding: '8px', color: '#475569', textAlign: 'left', fontWeight: '600' }}>Atendimento</th>
+                        <th style={{ padding: '8px', color: '#475569', textAlign: 'left', fontWeight: '600' }}>Competência</th>
+                        <th style={{ padding: '8px', color: '#475569', textAlign: 'left', fontWeight: '600' }}>Procedimento</th>
+                        <th style={{ padding: '8px', color: '#475569', textAlign: 'left', fontWeight: '600' }}>Paciente</th>
+                        <th style={{ padding: '8px', color: '#475569', textAlign: 'left', fontWeight: '600' }}>CPF/CNS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historicoDados.map((r) => (
+                        <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px', whiteSpace: 'nowrap', color: '#64748b' }}>
+                            {r.data_atendimento ? r.data_atendimento.split('-').reverse().join('/') : '-'}
+                          </td>
+                          <td style={{ padding: '8px', color: '#64748b', fontWeight: '600' }}>{r.competencia}</td>
+                          <td style={{ padding: '8px', fontFamily: 'monospace' }}>{r.procedimento}</td>
+                          <td style={{ padding: '8px', fontWeight: '500', color: '#0f172a' }}>{r.nome_paciente}</td>
+                          <td style={{ padding: '8px', color: '#64748b' }}>{r.cpf_cns}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </Layout>
   )

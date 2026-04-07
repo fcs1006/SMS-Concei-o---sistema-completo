@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+)
 
 function padNum(v: any, t: number) {
   const s = String(v).replace(/\D/g, '')
@@ -26,6 +32,12 @@ function formatarDataYMD(dataStr: string) {
     if (parseInt(dd) <= 31) return yyyy + mm + dd
   }
   return '00000000'
+}
+
+function formatarDataSQL(dataStr: string) {
+  if (!dataStr || dataStr.length < 10) return null;
+  const [dd, mm, yyyy] = dataStr.split('/');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function montarRegistro02(r: any, folha: number, seq: number) {
@@ -114,6 +126,9 @@ export async function POST(request: NextRequest) {
     let folha = 1
     let seq = 0
 
+    const registrosDb = []
+    const perfilDb = prefixoArquivo === 'BPA_LABORATORIO' ? 'laboratorio' : 'urgencia'
+
     for (const r of consolidados) {
       seq++
       if (seq > 99) { folha++; seq = 1 }
@@ -121,6 +136,30 @@ export async function POST(request: NextRequest) {
         ? montarRegistro02(r, folha, seq)
         : montarRegistro03(r, folha, seq)
       if (linha) txt += linha + '\r\n'
+
+      registrosDb.push({
+        competencia,
+        perfil: perfilDb,
+        procedimento: r.procedimento || '',
+        nome_paciente: r.nomePaciente || '',
+        cpf_cns: r.cpf || r.cnsPaciente || '',
+        data_atendimento: formatarDataSQL(r.dataAtendimento),
+        quantidade: parseInt(r.quantidade, 10) || 1
+      })
+    }
+
+    // Salvar o histórico de forma assíncrona deletando os anteriores (Opcional, ou apenas inserir novos)
+    // Nesse fluxo, apagamos a mesma competência/perfil importada previamente para evitar duplicações
+    if (registrosDb.length > 0) {
+      await supabase.from('historico_bpa').delete()
+        .eq('competencia', competencia)
+        .eq('perfil', perfilDb)
+
+      // Lote de 1000 se for muito grande
+      const LOTE = 1000;
+      for(let i = 0; i < registrosDb.length; i += LOTE) {
+         await supabase.from('historico_bpa').insert(registrosDb.slice(i, i + LOTE));
+      }
     }
 
     const nomeArquivo = `${prefixoArquivo || 'BPA'}_${competencia}.txt`
