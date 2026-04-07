@@ -8,11 +8,11 @@ import { cabecalhoImpressao } from '@/lib/printHeader'
 /* ─── IMPRESSÃO ─────────────────────────────────────────────────── */
 function gerarHtmlAgendamento(d) {
   const hoje = new Date()
-  const dataLocal = `CONCEIÇÃO DO TOCANTINS-TO, ${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`
+  const dataLocal = `CONCEIÇÃO DO TOCANTINS-TO, ${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`
 
   function formatarData(v) {
     if (!v) return '-'
-    const [a,m,dia] = v.split('-')
+    const [a, m, dia] = v.split('-')
     return `${dia}/${m}/${a}`
   }
 
@@ -263,7 +263,7 @@ export default function Agendamento() {
     e.preventDefault()
     const faltando = []
     if (!form.tipoViagem) faltando.push('Tipo de Viagem')
-    if (!form.temAcomp)   faltando.push('Acompanhante')
+    if (!form.temAcomp) faltando.push('Acompanhante')
     if (!form.agendadoPor) faltando.push('Agendado por')
     if (faltando.length > 0) {
       setStatus({ msg: `⚠️ Preencha os campos obrigatórios: ${faltando.join(', ')}`, tipo: 'erro' })
@@ -281,7 +281,7 @@ export default function Agendamento() {
       destino: form.destino, local_destino: form.local,
       motivo: form.motivo, tipo_viagem: form.tipoViagem,
       agendado_por: form.agendadoPor,
-      competencia: form.data ? form.data.substring(5,7) + '/' + form.data.substring(0,4) : ''
+      competencia: form.data ? form.data.substring(5, 7) + '/' + form.data.substring(0, 4) : ''
     }])
     if (error) {
       setStatus({ msg: '❌ Erro: ' + error.message, tipo: 'erro' })
@@ -315,8 +315,8 @@ export default function Agendamento() {
     }
 
     const pac = mapa[viagem.paciente_cpf] || {}
-    const a1  = mapa[viagem.acomp1_cpf]  || {}
-    const a2  = mapa[viagem.acomp2_cpf]  || {}
+    const a1 = mapa[viagem.acomp1_cpf] || {}
+    const a2 = mapa[viagem.acomp2_cpf] || {}
 
     imprimirAgendamento({
       ...viagem,
@@ -334,14 +334,14 @@ export default function Agendamento() {
 
   function formatarDataBr(v) {
     if (!v) return '-'
-    const [a,m,d] = v.split('-')
+    const [a, m, d] = v.split('-')
     return `${d}/${m}/${a}`
   }
 
   const inp = "input-modern"
   const lbl = "label-modern"
   const hoje = new Date()
-  const dataHoje = `CONCEIÇÃO DO TOCANTINS-TO, ${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`
+  const dataHoje = `CONCEIÇÃO DO TOCANTINS-TO, ${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`
 
   const SectionHeader = ({ title, icon }) => (
     <div style={{
@@ -369,7 +369,7 @@ export default function Agendamento() {
           <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
             <button onClick={() => { setModalReimprimir(true); setBuscaRe(''); setDataRe(''); setResultadosRe([]) }}
               style={{
-                padding: '9px 16px', background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+                padding: '9px 16px', background: 'linear-gradient(135deg, #172554, #1e3a8a)',
                 border: 'none', borderRadius: '10px', fontSize: '13px', color: 'white',
                 cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: '600',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.2)', whiteSpace: 'nowrap'
@@ -402,9 +402,9 @@ export default function Agendamento() {
                 <label className={lbl}>Hora *</label>
                 <select className={inp} value={form.hora} onChange={e => setField('hora', e.target.value)}>
                   <option value="">--:--</option>
-                  {['06:00','06:30','07:00','07:30','08:00','08:30','09:00','09:30',
-                    '10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30',
-                    '14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00']
+                  {['06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30',
+                    '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
+                    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00']
                     .map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
               </div>
@@ -462,7 +462,7 @@ export default function Agendamento() {
               <div><label className={lbl}>Tipo de Viagem *</label>
                 <select className={inp} value={form.tipoViagem} onChange={e => setField('tipoViagem', e.target.value)}>
                   <option value="">-- Selecione --</option>
-                  {['IDA E VOLTA','SÓ IDA','SÓ VOLTA'].map(o => <option key={o} value={o}>{o}</option>)}
+                  {['IDA E VOLTA', 'SÓ IDA', 'SÓ VOLTA'].map(o => <option key={o} value={o}>{o}</option>)}
                 </select></div>
               <div><label className={lbl}>Acompanhante?</label>
                 <select className={inp} value={form.temAcomp} onChange={e => setField('temAcomp', e.target.value)}>
@@ -553,10 +553,10 @@ export default function Agendamento() {
               <div><label className={lbl}>Destino *</label>
                 <select className={inp} value={form.destino} onChange={e => setField('destino', e.target.value)}>
                   <option value="">-- Selecione --</option>
-                  {['CONCEIÇÃO/PALMAS','CONCEIÇÃO/PALMAS - CARRO','PALMAS/CONCEIÇÃO','PALMAS/CONCEIÇÃO - CARRO',
-                    'CONCEIÇÃO/PORTO NACIONAL','CONCEIÇÃO/PORTO NACIONAL - CARRO','PORTO NACIONAL/CONCEIÇÃO',
-                    'PORTO NACIONAL/CONCEIÇÃO - CARRO','CONCEIÇÃO/ARRAIAS','ARRAIAS/CONCEIÇÃO',
-                    'CONCEIÇÃO/DIANÓPOLIS','DIANÓPOLIS/CONCEIÇÃO','CONCEIÇÃO/CAMPOS BELOS','CONCEIÇÃO/GURUPI']
+                  {['CONCEIÇÃO/PALMAS', 'CONCEIÇÃO/PALMAS - CARRO', 'PALMAS/CONCEIÇÃO', 'PALMAS/CONCEIÇÃO - CARRO',
+                    'CONCEIÇÃO/PORTO NACIONAL', 'CONCEIÇÃO/PORTO NACIONAL - CARRO', 'PORTO NACIONAL/CONCEIÇÃO',
+                    'PORTO NACIONAL/CONCEIÇÃO - CARRO', 'CONCEIÇÃO/ARRAIAS', 'ARRAIAS/CONCEIÇÃO',
+                    'CONCEIÇÃO/DIANÓPOLIS', 'DIANÓPOLIS/CONCEIÇÃO', 'CONCEIÇÃO/CAMPOS BELOS', 'CONCEIÇÃO/GURUPI']
                     .map(o => <option key={o} value={o}>{o}</option>)}
                 </select></div>
               <div><label className={lbl}>Local *</label>
@@ -565,14 +565,14 @@ export default function Agendamento() {
               <div><label className={lbl}>Motivo *</label>
                 <select className={inp} value={form.motivo} onChange={e => setField('motivo', e.target.value)}>
                   <option value="">-- Selecione --</option>
-                  {['CONSULTA','EXAME','CIRURGIA - INTERNAÇÃO','RETORNO CIR. - PÓS OP',
-                    'PERÍCIA MÉDICA','ALTA HOSPITALAR','CAPACITAÇÃO','ESTUDANTE','SÓ RETORNO']
+                  {['CONSULTA', 'EXAME', 'CIRURGIA - INTERNAÇÃO', 'RETORNO CIR. - PÓS OP',
+                    'PERÍCIA MÉDICA', 'ALTA HOSPITALAR', 'CAPACITAÇÃO', 'ESTUDANTE', 'SÓ RETORNO']
                     .map(o => <option key={o} value={o}>{o}</option>)}
                 </select></div>
               <div><label className={lbl}>Agendado por *</label>
                 <select className={inp} value={form.agendadoPor} onChange={e => setField('agendadoPor', e.target.value)}>
                   <option value="">-- Selecione --</option>
-                  {['GLEICYANE','FERNANDO','ALSIONY'].map(o => <option key={o} value={o}>{o}</option>)}
+                  {['GLEICYANE', 'FERNANDO', 'ALSIONY'].map(o => <option key={o} value={o}>{o}</option>)}
                 </select></div>
             </div>
 
@@ -646,7 +646,7 @@ export default function Agendamento() {
                     </div>
                     <button onClick={() => reimprimirViagem(v)}
                       style={{
-                        padding: '6px 14px', background: 'linear-gradient(135deg, #b45309, #f59e0b)',
+                        padding: '6px 14px', background: 'linear-gradient(135deg, #172554, #1e3a8a)',
                         border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px',
                         fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap'
                       }}>
