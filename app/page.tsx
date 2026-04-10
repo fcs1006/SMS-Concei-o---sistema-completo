@@ -49,7 +49,7 @@ function FormLogin({ irPara, router }: { irPara: (t: Tela) => void; router: any 
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario: usuario.trim(), senha: senha.trim() })
+        body: JSON.stringify({ usuario: usuario.replace(/\D/g, ''), senha: senha.trim() })
       })
       const data = await res.json()
       if (!data?.ok) { setErro('Usuário ou senha incorretos.'); setCarregando(false); return }
@@ -136,7 +136,7 @@ function FormCadastro({ irPara }: { irPara: (t: Tela) => void }) {
       <div style={{ fontSize: '40px' }}>✅</div>
       <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', color: '#0f172a', margin: 0 }}>Cadastro realizado!</p>
       <p style={{ color: '#64748b', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', margin: 0 }}>
-        Sua conta foi criada. Você já pode fazer login.
+        Sua conta foi criada e está aguardando aprovação do administrador. Após a liberação, você poderá fazer login.
       </p>
       <button className="btn-primary" onClick={() => irPara('login')} style={{ padding: '12px', fontSize: '14px' }}>
         IR PARA O LOGIN

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
-    if (!data?.ok) return NextResponse.json({ ok: false, error: 'Usuário ou senha incorretos.' }, { status: 401 })
+    if (!data?.ok) return NextResponse.json({ ok: false, error: data?.error || 'Usuário ou senha incorretos.' }, { status: 401 })
 
     return NextResponse.json(data)
   } catch (e: any) {

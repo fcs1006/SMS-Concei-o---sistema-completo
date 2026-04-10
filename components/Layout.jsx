@@ -52,6 +52,11 @@ export default function Layout({ children, usuario }) {
       cor: '#fcd34d', corBg: 'rgba(252,211,77,0.15)',
       bg1: '#451a03', bg2: '#92400e', acento: '#f59e0b'
     },
+    {
+      label: 'Usuários', icon: '👥', path: '/usuarios', adminOnly: true,
+      cor: '#f9a8d4', corBg: 'rgba(249,168,212,0.15)',
+      bg1: '#4a044e', bg2: '#701a75', acento: '#e879f9'
+    },
   ]
 
   const aliasMap = { '/resumo': '/tfd', '/bpa/config': '/bpa' }
@@ -85,7 +90,7 @@ export default function Layout({ children, usuario }) {
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {menus.map(m => {
+          {menus.filter(m => !m.adminOnly || usuario?.perfil === 'admin').map(m => {
             const ativo = pathname === m.path
             return (
               <button key={m.path} onClick={() => router.push(m.path)}
