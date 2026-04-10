@@ -6,13 +6,15 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 )
 
-// GET /api/especialidades?especialidade=ortopedia&mes=04&ano=2026
+// GET /api/especialidades?especialidade=ortopedia&mes=04&ano=2026&incluir_excluidos=1
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const especialidade = searchParams.get('especialidade')
     const mes = searchParams.get('mes')
     const ano = searchParams.get('ano')
+    const incluirExcluidos = searchParams.get('incluir_excluidos') === '1'
+    const statusFiltro = searchParams.get('status') // para relatório detalhado
 
     let query = supabase
       .from('especialidades_agendamentos')
@@ -23,6 +25,8 @@ export async function GET(request: NextRequest) {
     if (especialidade) query = query.eq('especialidade', especialidade)
     if (mes) query = query.eq('mes', mes)
     if (ano) query = query.eq('ano', ano)
+    if (statusFiltro) query = query.eq('status', statusFiltro)
+    if (!incluirExcluidos && !statusFiltro) query = query.neq('status', 'excluido')
 
     const { data, error } = await query
     if (error) throw error
@@ -34,7 +38,6 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/especialidades
-// Body: { especialidade, paciente_nome, paciente_cns, telefone, data_consulta, tipo_exame, observacao, mes, ano, criado_por, profissional_nome? }
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -66,23 +69,53 @@ export async function POST(request: NextRequest) {
 }
 
 // PATCH /api/especialidades
-// Body: { id, status, motivo_cancelamento? }
+// Body: { id, status, motivo_cancelamento?, motivo_exclusao? }  — atualiza status
+// Body: { id, campos: { paciente_nome, ... } }                  — atualiza campos
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, status, motivo_cancelamento } = body
+    const { id, status, motivo_cancelamento, motivo_exclusao, campos } = body
 
-    if (!id || !status) {
-      return NextResponse.json({ ok: false, error: 'ID e status obrigatórios' }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ ok: false, error: 'ID obrigatório' }, { status: 400 })
     }
 
-    if (!['pendente', 'autorizado', 'negado'].includes(status)) {
+    // Atualização de campos livres (edição)
+    if (campos) {
+      const camposPermitidos = ['paciente_nome', 'paciente_cns', 'telefone', 'sexo', 'data_consulta', 'tipo_exame', 'observacao', 'profissional_nome']
+      const update: Record<string, any> = {}
+      for (const k of camposPermitidos) {
+        if (k in campos) update[k] = campos[k]
+      }
+      if (update.telefone) update.telefone = String(update.telefone).replace(/\D/g, '')
+
+      const { data, error } = await supabase
+        .from('especialidades_agendamentos')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return NextResponse.json({ ok: true, data })
+    }
+
+    // Atualização de status
+    if (!status) {
+      return NextResponse.json({ ok: false, error: 'Status ou campos obrigatórios' }, { status: 400 })
+    }
+
+    if (!['pendente', 'autorizado', 'negado', 'excluido'].includes(status)) {
       return NextResponse.json({ ok: false, error: 'Status inválido' }, { status: 400 })
     }
 
     const update: Record<string, any> = { status }
     if (status === 'negado' && motivo_cancelamento) update.motivo_cancelamento = motivo_cancelamento
-    if (status !== 'negado') update.motivo_cancelamento = null
+    if (status === 'excluido' && motivo_exclusao) update.motivo_exclusao = motivo_exclusao
+    if (status === 'pendente' || status === 'autorizado') {
+      update.motivo_cancelamento = null
+      update.motivo_exclusao = null
+    }
 
     const { data, error } = await supabase
       .from('especialidades_agendamentos')
@@ -99,23 +132,7 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// DELETE /api/especialidades?id=uuid
+// DELETE não é mais usado — exclusão via PATCH status='excluido'
 export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-
-    if (!id) return NextResponse.json({ ok: false, error: 'ID não informado' }, { status: 400 })
-
-    const { error } = await supabase
-      .from('especialidades_agendamentos')
-      .delete()
-      .eq('id', id)
-
-    if (error) throw error
-
-    return NextResponse.json({ ok: true })
-  } catch (error: any) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
-  }
+  return NextResponse.json({ ok: false, error: 'Use PATCH com status=excluido' }, { status: 405 })
 }

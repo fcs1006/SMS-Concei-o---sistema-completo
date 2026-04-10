@@ -51,7 +51,7 @@ export async function DELETE(request: NextRequest) {
     if (!id) return NextResponse.json({ ok: false, error: 'ID não informado' }, { status: 400 })
     const { error } = await supabase
       .from('especialidades_profissionais')
-      .update({ ativo: false })
+      .delete()
       .eq('id', id)
     if (error) throw error
     return NextResponse.json({ ok: true })

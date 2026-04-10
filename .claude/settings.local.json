@@ -48,7 +48,8 @@
       "Bash(python3:*)",
       "Bash(npx eslint:*)",
       "Bash(status=$?)",
-      "Bash(exit $status)"
+      "Bash(exit $status)",
+      "Bash(node --input-type=module --eval ':*)"
     ]
   }
 }

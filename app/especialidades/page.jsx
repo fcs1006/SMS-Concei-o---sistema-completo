@@ -23,12 +23,14 @@ const STATUS_STYLE = {
   pendente:   { bg: '#fef9c3', cor: '#854d0e', borda: '#fde047' },
   autorizado: { bg: '#dcfce7', cor: '#166534', borda: '#86efac' },
   negado:     { bg: '#fee2e2', cor: '#991b1b', borda: '#fca5a5' },
+  excluido:   { bg: '#f1f5f9', cor: '#475569', borda: '#cbd5e1' },
 }
-const STATUS_LABEL = { pendente: 'Pendente', autorizado: 'Autorizado', negado: 'Negado' }
+const STATUS_LABEL = { pendente: 'Pendente', autorizado: 'Autorizado', negado: 'Negado', excluido: 'Excluído' }
 
 const CONSELHOS = ['CRM','CRO','CREFITO','CRM-RJ','CRM-GO','CRM-DF','Outro']
 
-const TIPOS_USG = [
+// Ordem original de atendimento (usada na impressão e na lista)
+const TIPOS_USG_ORDEM = [
   'ABDOMEN TOTAL',
   'ABDOMEN SUPERIOR',
   'VIAS URINÁRIAS',
@@ -46,6 +48,8 @@ const TIPOS_USG = [
   'TRANSVAGINAL',
   'ARTICULAÇÃO',
 ]
+// Ordem alfabética para o select
+const TIPOS_USG = [...TIPOS_USG_ORDEM].sort((a, b) => a.localeCompare(b, 'pt-BR'))
 const TIPOS_CONSULTA = ['Primeira Consulta','Retorno','Outro']
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -89,7 +93,7 @@ function BuscaPaciente({ onSelect }) {
     if (v.trim().length < 2) { setSugestoes([]); setAberto(false); return }
     timer.current = setTimeout(async () => {
       const soDigitos = v.replace(/\D/g, '')
-      let query = supabase.from('pacientes').select('id, nome, cpf_cns, telefone').order('nome').limit(8)
+      let query = supabase.from('pacientes').select('id, nome, cpf_cns, telefone, sexo').order('nome').limit(8)
       if (soDigitos.length >= 3 && !/[a-zA-ZÀ-ÿ]/.test(v)) {
         query = query.ilike('cpf_cns', `%${soDigitos}%`)
       } else {
@@ -167,13 +171,16 @@ export default function Especialidades() {
 
   // Formulário de agendamento
   const [mostrarForm, setMostrarForm] = useState(false)
-  const [form, setForm] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' })
+  const [form, setForm] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' })
   const [salvando, setSalvando] = useState(false)
 
   // Modal profissionais
   const [modalProf, setModalProf] = useState(false)
   const [formProf, setFormProf] = useState({ nome: '', conselho_tipo: 'CRM', conselho_numero: '' })
   const [salvandoProf, setSalvandoProf] = useState(false)
+
+  // Profissional ativo (selecionado no card da escala)
+  const [profissionalAtivo, setProfissionalAtivo] = useState(null) // { id, profissional_nome, data_atendimento }
 
   // Modal escala
   const [modalEscala, setModalEscala] = useState(false)
@@ -185,11 +192,23 @@ export default function Especialidades() {
   const [modalCancel, setModalCancel] = useState({ show: false, id: null })
   const [motivoCancel, setMotivoCancel] = useState('')
 
+  // Modal exclusão
+  const [modalExcluir, setModalExcluir] = useState({ show: false, id: null })
+  const [motivoExclusao, setMotivoExclusao] = useState('')
+
+  // Modal edição
+  const [modalEditar, setModalEditar] = useState({ show: false, id: null })
+  const [formEditar, setFormEditar] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' })
+
   // Relatório
   const [relatorio, setRelatorio] = useState([])
+  const [relDetalhes, setRelDetalhes] = useState([])
   const [relMes, setRelMes] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'))
   const [relAno, setRelAno] = useState(() => String(new Date().getFullYear()))
   const [relLoading, setRelLoading] = useState(false)
+  const [relFiltroEsp, setRelFiltroEsp] = useState('')
+  const [relFiltroStatus, setRelFiltroStatus] = useState('')
+  const [relFiltroProf, setRelFiltroProf] = useState('')
 
   useEffect(() => {
     const u = localStorage.getItem('sms_user')
@@ -198,7 +217,12 @@ export default function Especialidades() {
   }, [])
 
   // Carregar dados ao mudar especialidade/mes/ano
-  useEffect(() => { if (abaMain === 'agendamento') { buscarAgendamentos(); buscarEscala(); buscarProfissionais() } }, [esp, mes, ano, abaMain])
+  useEffect(() => {
+    if (abaMain === 'agendamento') {
+      setProfissionalAtivo(null)
+      buscarAgendamentos(); buscarEscala(); buscarProfissionais()
+    }
+  }, [esp, mes, ano, abaMain])
 
   useEffect(() => { if (abaMain === 'relatorio') buscarRelatorio() }, [abaMain, relMes, relAno])
 
@@ -241,15 +265,17 @@ export default function Especialidades() {
   async function buscarRelatorio() {
     setRelLoading(true)
     try {
-      const { data } = await supabase
-        .from('especialidades_agendamentos')
-        .select('especialidade, status')
-        .eq('mes', relMes)
-        .eq('ano', relAno)
+      const p = new URLSearchParams({ mes: relMes, ano: relAno, incluir_excluidos: '1' })
+      const res = await fetch('/api/especialidades?' + p)
+      const json = await res.json()
+      const todos = json.data || []
+
+      // Resumo por especialidade
       const mapa = {}
-      ESPECIALIDADES.forEach(e => { mapa[e.id] = { label: e.label, icon: e.icon, cota: e.cota, pendente: 0, autorizado: 0, negado: 0 } })
-      ;(data || []).forEach(r => { if (mapa[r.especialidade]) mapa[r.especialidade][r.status]++ })
+      ESPECIALIDADES.forEach(e => { mapa[e.id] = { label: e.label, icon: e.icon, cota: e.cota, pendente: 0, autorizado: 0, negado: 0, excluido: 0 } })
+      todos.forEach(r => { if (mapa[r.especialidade]) mapa[r.especialidade][r.status] = (mapa[r.especialidade][r.status] || 0) + 1 })
       setRelatorio(Object.values(mapa))
+      setRelDetalhes(todos)
     } catch { mostrarMsg('Erro ao gerar relatório', false) }
     setRelLoading(false)
   }
@@ -261,16 +287,29 @@ export default function Especialidades() {
       paciente_nome: p.nome,
       paciente_cns: p.cpf_cns || '',
       telefone: p.telefone || '',
+      sexo: p.sexo || '',
+      // limpa tipo de exame se o sexo mudou e o exame selecionado fosse incompatível
+      tipo_exame: '',
     }))
   }
 
   async function salvarAgendamento() {
     const isUsg = esp === 'usg'
-    if (!form.paciente_nome.trim() || !form.telefone.trim() || !form.data_consulta) {
-      mostrarMsg('Preencha nome, telefone e data', false); return
-    }
-    if (isUsg && !form.tipo_exame) {
-      mostrarMsg('Selecione o tipo de exame', false); return
+    if (!form.paciente_nome.trim()) { mostrarMsg('Informe o nome do paciente', false); return }
+    if (!form.telefone.trim()) { mostrarMsg('Informe o telefone', false); return }
+    if (!form.data_consulta) { mostrarMsg('Informe a data de solicitação', false); return }
+    if (!form.tipo_exame) { mostrarMsg(isUsg ? 'Selecione o tipo de exame' : 'Selecione o tipo de consulta', false); return }
+    if (escala.length > 0 && !form.profissional_nome) { mostrarMsg('Selecione o profissional', false); return }
+    // Restrições por sexo (USG)
+    if (isUsg && form.sexo) {
+      const sexoM = ['M','MASCULINO','Masculino','m'].includes(form.sexo)
+      const sexoF = ['F','FEMININO','Feminino','f'].includes(form.sexo)
+      if (form.tipo_exame === 'TRANSVAGINAL' && !sexoF) {
+        mostrarMsg('❌ Exame de Transvaginal é exclusivo para pacientes do sexo feminino', false); return
+      }
+      if (['PRÓSTATA TRANSRETAL','PRÓSTATA ABDOMINAL'].includes(form.tipo_exame) && !sexoM) {
+        mostrarMsg('❌ Exame de Próstata é exclusivo para pacientes do sexo masculino', false); return
+      }
     }
     setSalvando(true)
     try {
@@ -293,7 +332,7 @@ export default function Especialidades() {
       const json = await res.json()
       if (!json.ok) throw new Error(json.error)
       mostrarMsg('✅ Agendamento registrado')
-      setForm({ paciente_nome: '', paciente_cns: '', telefone: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' })
+      setForm({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' })
       setMostrarForm(false)
       buscarAgendamentos()
     } catch (e) { mostrarMsg('❌ ' + e.message, false) }
@@ -344,13 +383,50 @@ export default function Especialidades() {
     } catch (e) { mostrarMsg('❌ ' + e.message, false) }
   }
 
-  async function excluir(id) {
-    if (!confirm('Remover este agendamento?')) return
+  async function confirmarExclusao() {
+    if (!motivoExclusao.trim()) { mostrarMsg('Informe o motivo', false); return }
     try {
-      const res = await fetch('/api/especialidades?id=' + id, { method: 'DELETE' })
+      const res = await fetch('/api/especialidades', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: modalExcluir.id, status: 'excluido', motivo_exclusao: motivoExclusao.trim() })
+      })
       const json = await res.json()
       if (!json.ok) throw new Error(json.error)
-      setAgendamentos(prev => prev.filter(a => a.id !== id))
+      setAgendamentos(prev => prev.filter(a => a.id !== modalExcluir.id))
+      setModalExcluir({ show: false, id: null })
+      setMotivoExclusao('')
+      mostrarMsg('Agendamento excluído')
+    } catch (e) { mostrarMsg('❌ ' + e.message, false) }
+  }
+
+  async function salvarEdicao() {
+    if (!formEditar.paciente_nome.trim()) { mostrarMsg('Nome é obrigatório', false); return }
+    if (!formEditar.telefone.trim()) { mostrarMsg('Telefone é obrigatório', false); return }
+    if (!formEditar.data_consulta) { mostrarMsg('Data de solicitação é obrigatória', false); return }
+    try {
+      const res = await fetch('/api/especialidades', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: modalEditar.id,
+          campos: {
+            paciente_nome: formEditar.paciente_nome.trim(),
+            paciente_cns: formEditar.paciente_cns || null,
+            telefone: formEditar.telefone.replace(/\D/g, ''),
+            sexo: formEditar.sexo || null,
+            data_consulta: formEditar.data_consulta,
+            tipo_exame: formEditar.tipo_exame || null,
+            observacao: formEditar.observacao || null,
+            profissional_nome: formEditar.profissional_nome || null,
+          }
+        })
+      })
+      const json = await res.json()
+      if (!json.ok) throw new Error(json.error)
+      setAgendamentos(prev => prev.map(a => a.id === modalEditar.id ? { ...a, ...json.data } : a))
+      setModalEditar({ show: false, id: null })
+      mostrarMsg('Agendamento atualizado')
     } catch (e) { mostrarMsg('❌ ' + e.message, false) }
   }
 
@@ -421,7 +497,7 @@ export default function Especialidades() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <Layout usuario={usuario}>
-      <div style={{ padding: '28px', maxWidth: '1000px', margin: '0 auto' }}>
+      <div style={{ padding: '28px 32px', maxWidth: '1400px', margin: '0 auto' }}>
 
         {/* Cabeçalho */}
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
@@ -506,26 +582,66 @@ export default function Especialidades() {
                 </div>
 
                 {/* Profissional(is) na escala */}
-                <div style={{ minWidth: '180px' }}>
+                <div style={{ minWidth: '200px' }}>
                   <p style={{ fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 6px' }}>
                     Escala {MESES[Number(mes) - 1]}/{ano}
                   </p>
                   {escala.length === 0
                     ? <p style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>Sem profissional escalado</p>
-                    : escala.map(e => (
-                      <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a' }}>👨‍⚕️ {e.profissional_nome}</span>
-                        {e.data_atendimento && (
-                          <span style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '6px' }}>
-                            {fmtData(e.data_atendimento)}
+                    : escala.map(e => {
+                      const ativo = profissionalAtivo?.id === e.id
+                      return (
+                        <button key={e.id} onClick={() => {
+                          const novo = ativo ? null : e
+                          setProfissionalAtivo(novo)
+                          if (mostrarForm) {
+                            setForm(f => ({
+                              ...f,
+                              profissional_nome: novo ? novo.profissional_nome : '',
+                              data_consulta: novo ? (novo.data_atendimento || '') : '',
+                            }))
+                          }
+                        }}
+                          title={ativo ? 'Clique para desmarcar' : 'Clique para selecionar este profissional'}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px',
+                            width: '100%', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer',
+                            border: ativo ? `2px solid ${COR}` : '2px solid transparent',
+                            background: ativo ? 'rgba(180,83,9,0.08)' : 'rgba(0,0,0,0.03)',
+                            textAlign: 'left', transition: 'all 0.15s',
+                          }}>
+                          <span style={{ fontSize: '13px' }}>👨‍⚕️</span>
+                          <span style={{ fontSize: '12px', fontWeight: ativo ? '700' : '600', color: ativo ? COR : '#0f172a' }}>
+                            {e.profissional_nome}
                           </span>
-                        )}
-                      </div>
-                    ))}
+                          {e.data_atendimento && (
+                            <span style={{ fontSize: '11px', color: ativo ? COR : '#64748b', background: ativo ? 'rgba(180,83,9,0.1)' : '#f1f5f9', padding: '1px 6px', borderRadius: '6px', marginLeft: 'auto' }}>
+                              {fmtData(e.data_atendimento)}
+                            </span>
+                          )}
+                          {ativo && <span style={{ fontSize: '10px', color: COR, fontWeight: '800' }}>✓</span>}
+                        </button>
+                      )
+                    })}
+                  {escala.length > 0 && (
+                    <p style={{ fontSize: '10px', color: '#94a3b8', margin: '4px 0 0', fontStyle: 'italic' }}>
+                      {profissionalAtivo ? `Selecionado: pré-preenche o form` : 'Clique para selecionar'}
+                    </p>
+                  )}
                 </div>
 
                 {/* Botão novo */}
-                <button onClick={() => setMostrarForm(v => !v)}
+                <button onClick={() => {
+                  const hoje = new Date().toISOString().slice(0, 10)
+                  if (!mostrarForm) {
+                    setForm(f => ({
+                      ...f,
+                      data_consulta: hoje,
+                      ...(profissionalAtivo ? { profissional_nome: profissionalAtivo.profissional_nome } : {})
+                    }))
+                  }
+                  setMostrarForm(v => !v)
+                }}
                   style={{ padding: '10px 20px', background: mostrarForm ? '#64748b' : GRAD, border: 'none', borderRadius: '10px', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif', alignSelf: 'flex-start' }}>
                   {mostrarForm ? '✕ Cancelar' : '+ Novo Agendamento'}
                 </button>
@@ -562,44 +678,82 @@ export default function Especialidades() {
                         onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))}
                         style={{ width: '100%', borderColor: !form.telefone ? '#fca5a5' : undefined }} />
                     </div>
-                    <div>
-                      <label className="label-modern">{esp === 'usg' ? 'Data do Exame *' : 'Data da Consulta *'}</label>
-                      <input className="input-modern" type="date"
-                        value={form.data_consulta}
-                        onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value }))}
-                        style={{ width: '100%' }} />
-                    </div>
+                    {escala.length === 0 && (
+                      <div>
+                        <label className="label-modern">{'Data de Solicitação *'}</label>
+                        <input className="input-modern" type="date"
+                          value={form.data_consulta}
+                          onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value }))}
+                          style={{ width: '100%' }} />
+                      </div>
+                    )}
                     <div>
                       <label className="label-modern">{esp === 'usg' ? 'Tipo de Exame *' : 'Tipo de Consulta'}</label>
                       <select className="input-modern" value={form.tipo_exame}
                         onChange={e => setForm(f => ({ ...f, tipo_exame: e.target.value }))}
                         style={{ width: '100%' }}>
                         <option value="">— Selecione —</option>
-                        {(esp === 'usg' ? TIPOS_USG : TIPOS_CONSULTA).map(t => (
+                        {(esp === 'usg' ? TIPOS_USG.filter(t => {
+                          const sexoM = ['M','MASCULINO','Masculino','m'].includes(form.sexo)
+                          const sexoF = ['F','FEMININO','Feminino','f'].includes(form.sexo)
+                          if (!form.sexo) return true // sem sexo cadastrado → mostra tudo
+                          if (t === 'TRANSVAGINAL') return sexoF
+                          if (['PRÓSTATA TRANSRETAL','PRÓSTATA ABDOMINAL'].includes(t)) return sexoM
+                          return true
+                        }) : TIPOS_CONSULTA).map(t => (
                           <option key={t} value={t}>{t}</option>
                         ))}
                       </select>
                     </div>
-                    {escala.length > 0 && (
-                      <div>
-                        <label className="label-modern">Profissional / Data de Atendimento</label>
-                        <select className="input-modern"
-                          value={escala.find(e => e.profissional_nome === form.profissional_nome && e.data_atendimento === form.data_consulta)?.id || ''}
-                          onChange={e => {
-                            const entrada = escala.find(x => x.id === e.target.value)
-                            if (entrada) setForm(f => ({ ...f, profissional_nome: entrada.profissional_nome, data_consulta: entrada.data_atendimento || f.data_consulta }))
-                            else setForm(f => ({ ...f, profissional_nome: '', data_consulta: '' }))
-                          }}
-                          style={{ width: '100%' }}>
-                          <option value="">— Selecione —</option>
-                          {escala.map(e => (
-                            <option key={e.id} value={e.id}>
-                              {e.profissional_nome}{e.data_atendimento ? ` — ${fmtData(e.data_atendimento)}` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
+                    {escala.length > 0 && (() => {
+                      // Nomes únicos na escala
+                      const profEscalaUnicos = [...new Map(escala.map(e => [e.profissional_nome, e])).values()]
+                      // Datas disponíveis para o profissional selecionado
+                      const datasDoProf = escala.filter(e => e.profissional_nome === form.profissional_nome)
+                      return (
+                        <>
+                          <div>
+                            <label className="label-modern">Profissional</label>
+                            <select className="input-modern"
+                              value={form.profissional_nome}
+                              onChange={e => {
+                                const nome = e.target.value
+                                const entradas = escala.filter(x => x.profissional_nome === nome)
+                                // auto-fill: se só tiver uma data, preenche; senão limpa para o usuário escolher
+                                const dataAuto = entradas.length === 1 ? (entradas[0].data_atendimento || '') : ''
+                                setForm(f => ({ ...f, profissional_nome: nome, data_consulta: dataAuto }))
+                              }}
+                              style={{ width: '100%' }}>
+                              <option value="">— Selecione —</option>
+                              {profEscalaUnicos.map(e => (
+                                <option key={e.profissional_nome} value={e.profissional_nome}>{e.profissional_nome}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="label-modern">{'Data de Solicitação *'}</label>
+                            {datasDoProf.length > 1 ? (
+                              // Profissional tem mais de uma data → select
+                              <select className="input-modern"
+                                value={form.data_consulta}
+                                onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value }))}
+                                style={{ width: '100%' }}>
+                                <option value="">— Selecione a data —</option>
+                                {datasDoProf.map(e => (
+                                  <option key={e.id} value={e.data_atendimento}>{fmtData(e.data_atendimento)}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              // Nenhum ou um profissional → input (preenchido automaticamente ou livre)
+                              <input className="input-modern" type="date"
+                                value={form.data_consulta}
+                                onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value }))}
+                                style={{ width: '100%' }} />
+                            )}
+                          </div>
+                        </>
+                      )
+                    })()}
                     <div style={{ gridColumn: '1 / -1' }}>
                       <label className="label-modern">Observação</label>
                       <input className="input-modern" type="text" placeholder="Opcional"
@@ -612,7 +766,7 @@ export default function Especialidades() {
                     <button className="btn-primary" style={{ background: GRAD }} onClick={salvarAgendamento} disabled={salvando}>
                       {salvando ? '⏳ Salvando...' : '💾 Salvar'}
                     </button>
-                    <button className="btn-secondary" onClick={() => { setMostrarForm(false); setForm({ paciente_nome: '', paciente_cns: '', telefone: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' }) }}>Cancelar</button>
+                    <button className="btn-secondary" onClick={() => { setMostrarForm(false); setForm({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' }) }}>Cancelar</button>
                   </div>
                 </div>
               )}
@@ -662,133 +816,222 @@ export default function Especialidades() {
                   Nenhum agendamento registrado para este período.
                 </p>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <>
+                <div className="screen-only">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: 'Sora, sans-serif', fontSize: '12px' }}>
+                    <colgroup>
+                      <col style={{ width: '28px' }} />
+                      <col style={{ width: '20%' }} />
+                      <col style={{ width: '9%' }} />
+                      <col style={{ width: '9%' }} />
+                      <col style={{ width: '13%' }} />
+                      <col style={{ width: '9%' }} />
+                      <col style={{ width: '7%' }} />
+                      <col style={{ width: '8%' }} />
+                      <col style={{ width: '9%' }} />
+                      <col style={{ width: '130px' }} />
+                    </colgroup>
                     <thead>
                       <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                        {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Profissional', 'Data', 'Status', 'Obs / Motivo', 'Ações'].map(h => (
-                          <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                        {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Profissional', 'Data', 'Status', 'Obs', 'Ações'].map(h => (
+                          <th key={h} style={{ padding: '7px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {agendamentos.map((a, i) => {
-                        const st = STATUS_STYLE[a.status] || STATUS_STYLE.pendente
-                        return (
-                          <tr key={a.id} style={{ borderBottom: '1px solid #f1f5f9' }}
+                      {(() => {
+                        const sorted = [...agendamentos].sort((a, b) => {
+                          const d = (a.data_consulta || '').localeCompare(b.data_consulta || '')
+                          if (d !== 0) return d
+                          return (a.created_at || '').localeCompare(b.created_at || '')
+                        })
+                        let printNum = 0
+                        const btn = (onClick, title, bg, borda, cor, label) => (
+                          <button onClick={onClick} title={title}
+                            style={{ padding: '3px 0', width: '26px', fontSize: '12px', fontWeight: '700', background: bg, border: `1px solid ${borda}`, borderRadius: '5px', color: cor, cursor: 'pointer', textAlign: 'center', lineHeight: 1 }}>
+                            {label}
+                          </button>
+                        )
+                        return sorted.map((a, i) => {
+                          if (a.status === 'autorizado') printNum++
+                          const numExibir = a.status === 'autorizado' ? printNum : i + 1
+                          const st = STATUS_STYLE[a.status] || STATUS_STYLE.pendente
+                          const doisNomes = a.profissional_nome ? a.profissional_nome.split(' ').slice(0, 2).join(' ') : '—'
+                          return (
+                          <tr key={a.id}
+                            className={a.status !== 'autorizado' ? 'no-print' : ''}
+                            style={{ borderBottom: '1px solid #f1f5f9' }}
                             onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                            <td style={{ padding: '10px', color: '#94a3b8', fontSize: '12px' }}>{i + 1}</td>
-                            <td style={{ padding: '10px', fontWeight: '600', color: '#0f172a', whiteSpace: 'nowrap' }}>{a.paciente_nome}</td>
-                            <td style={{ padding: '10px', color: '#64748b', fontFamily: 'monospace', fontSize: '11px' }}>{a.paciente_cns || '—'}</td>
-                            <td style={{ padding: '10px', color: '#475569', fontSize: '12px', whiteSpace: 'nowrap' }}>{a.telefone || '—'}</td>
-                            <td style={{ padding: '10px', fontSize: '12px', color: '#0f172a', whiteSpace: 'nowrap', fontWeight: a.tipo_exame ? '500' : '400' }}>{a.tipo_exame || '—'}</td>
-                            <td style={{ padding: '10px', fontSize: '12px', color: '#475569', whiteSpace: 'nowrap' }}>{a.profissional_nome || '—'}</td>
-                            <td style={{ padding: '10px', whiteSpace: 'nowrap', color: '#475569' }}>{fmtData(a.data_consulta)}</td>
-                            <td style={{ padding: '10px' }}>
-                              <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px', background: st.bg, color: st.cor, border: `1px solid ${st.borda}`, whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '8px', color: '#94a3b8', fontSize: '11px' }}>{numExibir}</td>
+                            <td style={{ padding: '8px', fontWeight: '700', color: '#0f172a', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.paciente_nome}</td>
+                            <td style={{ padding: '8px', color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.paciente_cns || '—'}</td>
+                            <td style={{ padding: '8px', color: '#475569', fontSize: '11px' }}>{a.telefone || '—'}</td>
+                            <td style={{ padding: '8px', fontSize: '11px', color: '#0f172a', fontWeight: a.tipo_exame ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.tipo_exame || '—'}</td>
+                            <td style={{ padding: '8px', fontSize: '11px', color: '#475569', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.profissional_nome || ''}>{doisNomes}</td>
+                            <td style={{ padding: '8px', color: '#475569', fontSize: '11px', whiteSpace: 'nowrap' }}>{fmtData(a.data_consulta)}</td>
+                            <td style={{ padding: '8px' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '20px', background: st.bg, color: st.cor, border: `1px solid ${st.borda}`, whiteSpace: 'nowrap' }}>
                                 {STATUS_LABEL[a.status]}
                               </span>
                             </td>
-                            <td style={{ padding: '10px', maxWidth: '160px' }}>
+                            <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {a.status === 'negado' && a.motivo_cancelamento
                                 ? <span style={{ fontSize: '11px', color: '#991b1b', fontStyle: 'italic' }} title={a.motivo_cancelamento}>
-                                    {a.motivo_cancelamento.length > 28 ? a.motivo_cancelamento.slice(0, 28) + '…' : a.motivo_cancelamento}
+                                    {a.motivo_cancelamento.length > 18 ? a.motivo_cancelamento.slice(0, 18) + '…' : a.motivo_cancelamento}
                                   </span>
                                 : <span style={{ fontSize: '11px', color: '#94a3b8' }}>{a.observacao || '—'}</span>
                               }
                             </td>
-                            <td style={{ padding: '10px' }}>
-                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
-                                {a.status !== 'autorizado' && (
-                                  <button onClick={() => autorizar(a.id)} title="Autorizar"
-                                    style={{ padding: '4px 8px', fontSize: '11px', fontWeight: '700', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', color: '#166534', cursor: 'pointer' }}>
-                                    ✓ Autorizar
-                                  </button>
-                                )}
-                                {a.status !== 'negado' && (
-                                  <button onClick={() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }} title="Cancelar"
-                                    style={{ padding: '4px 8px', fontSize: '11px', fontWeight: '700', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', cursor: 'pointer' }}>
-                                    ✗ Negar
-                                  </button>
-                                )}
-                                {a.status !== 'pendente' && (
-                                  <button onClick={() => voltarPendente(a.id)} title="Voltar para pendente"
-                                    style={{ padding: '4px 8px', fontSize: '11px', fontWeight: '700', background: '#fef9c3', border: '1px solid #fde047', borderRadius: '6px', color: '#854d0e', cursor: 'pointer' }}>
-                                    ↩
-                                  </button>
-                                )}
-                                <button onClick={() => excluir(a.id)} title="Excluir"
-                                  style={{ padding: '4px 8px', fontSize: '11px', fontWeight: '700', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#64748b', cursor: 'pointer' }}>
-                                  🗑
-                                </button>
+                            <td style={{ padding: '6px 8px' }}>
+                              <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexWrap: 'nowrap' }}>
+                                {a.status !== 'autorizado' && btn(() => autorizar(a.id), 'Autorizar', '#dcfce7', '#86efac', '#166534', '✓')}
+                                {a.status !== 'negado' && btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', '✗')}
+                                {a.status !== 'pendente' && btn(() => voltarPendente(a.id), 'Voltar para pendente', '#fef9c3', '#fde047', '#854d0e', '↩')}
+                                {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', '✏')}
+                                {btn(() => { setModalExcluir({ show: true, id: a.id }); setMotivoExclusao('') }, 'Excluir', '#f1f5f9', '#cbd5e1', '#64748b', '🗑')}
                               </div>
                             </td>
                           </tr>
                         )
-                      })}
+                        })
+                      })()}
                     </tbody>
                   </table>
                 </div>
+
+                {/* Tabela exclusiva para impressão — ordem clínica (USG: por tipo; demais: por data) */}
+                {agendamentos.filter(a => a.status === 'autorizado').length > 0 && (() => {
+                  const printSorted = esp === 'usg'
+                    ? [...agendamentos].filter(a => a.status === 'autorizado').sort((a, b) => {
+                        const ia = TIPOS_USG_ORDEM.indexOf(a.tipo_exame)
+                        const ib = TIPOS_USG_ORDEM.indexOf(b.tipo_exame)
+                        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
+                      })
+                    : [...agendamentos].filter(a => a.status === 'autorizado').sort((a, b) =>
+                        (a.data_consulta || '').localeCompare(b.data_consulta || '') || (a.created_at || '').localeCompare(b.created_at || '')
+                      )
+                  return (
+                    <div className="print-only">
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Arial, sans-serif', fontSize: '11px' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid #000' }}>
+                            {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Data'].map(h => (
+                              <th key={h} style={{ padding: '5px 6px', textAlign: 'left', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {printSorted.map((a, i) => (
+                            <tr key={a.id} style={{ borderBottom: '1px solid #ccc' }}>
+                              <td style={{ padding: '5px 6px' }}>{i + 1}</td>
+                              <td style={{ padding: '5px 6px', fontWeight: '700' }}>{a.paciente_nome}</td>
+                              <td style={{ padding: '5px 6px' }}>{a.paciente_cns || '—'}</td>
+                              <td style={{ padding: '5px 6px' }}>{a.telefone || '—'}</td>
+                              <td style={{ padding: '5px 6px' }}>{a.tipo_exame || '—'}</td>
+                              <td style={{ padding: '5px 6px', whiteSpace: 'nowrap' }}>{fmtData(a.data_consulta)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })()}
+                </>
               )}
             </div>
           </>
         )}
 
         {/* ── ABA: RELATÓRIO ── */}
-        {abaMain === 'relatorio' && (
+        {abaMain === 'relatorio' && (() => {
+          const detalhesFiltrados = relDetalhes.filter(r => {
+            if (relFiltroEsp && r.especialidade !== relFiltroEsp) return false
+            if (relFiltroStatus && r.status !== relFiltroStatus) return false
+            if (relFiltroProf && !r.profissional_nome?.toLowerCase().includes(relFiltroProf.toLowerCase())) return false
+            return true
+          })
+          return (
           <div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', marginBottom: '20px', flexWrap: 'wrap' }}>
-              <div>
-                <label className="label-modern">Mês</label>
-                <select className="input-modern" value={relMes} onChange={e => setRelMes(e.target.value)} style={{ width: '150px' }}>
-                  {MESES.map((n, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{String(i + 1).padStart(2, '0')} — {n}</option>)}
-                </select>
+            {/* Filtros */}
+            <div className="card no-print" style={{ padding: '16px 20px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div>
+                  <label className="label-modern">Mês</label>
+                  <select className="input-modern" value={relMes} onChange={e => setRelMes(e.target.value)} style={{ width: '140px' }}>
+                    {MESES.map((n, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{String(i + 1).padStart(2, '0')} — {n}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label-modern">Ano</label>
+                  <input className="input-modern" type="number" value={relAno} onChange={e => setRelAno(e.target.value)} min="2020" max="2099" style={{ width: '90px' }} />
+                </div>
+                <div>
+                  <label className="label-modern">Especialidade</label>
+                  <select className="input-modern" value={relFiltroEsp} onChange={e => setRelFiltroEsp(e.target.value)} style={{ width: '160px' }}>
+                    <option value="">Todas</option>
+                    {ESPECIALIDADES.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label-modern">Status</label>
+                  <select className="input-modern" value={relFiltroStatus} onChange={e => setRelFiltroStatus(e.target.value)} style={{ width: '140px' }}>
+                    <option value="">Todos</option>
+                    {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label-modern">Profissional</label>
+                  <input className="input-modern" type="text" placeholder="Filtrar..." value={relFiltroProf} onChange={e => setRelFiltroProf(e.target.value)} style={{ width: '160px' }} />
+                </div>
+                <button className="btn-primary" style={{ background: GRAD }} onClick={buscarRelatorio}>🔄 Atualizar</button>
+                <button className="btn-secondary" onClick={() => window.print()}>🖨️ Imprimir</button>
               </div>
-              <div>
-                <label className="label-modern">Ano</label>
-                <input className="input-modern" type="number" value={relAno} onChange={e => setRelAno(e.target.value)} min="2020" max="2099" style={{ width: '90px' }} />
-              </div>
-              <button className="btn-primary" style={{ background: GRAD }} onClick={buscarRelatorio}>🔄 Atualizar</button>
-              <button className="btn-secondary" onClick={() => window.print()}>🖨️ Imprimir</button>
             </div>
 
-            <div className="card print-area" style={{ padding: '20px' }}>
-              <h3 className="print-title" style={{ fontFamily: 'Sora, sans-serif', fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: '0 0 16px' }}>
-                Relatório de Especialidades — {MESES[Number(relMes) - 1]}/{relAno}
+            <div className="card print-area" style={{ padding: '20px', marginBottom: '16px' }}>
+              {/* Cabeçalho impressão */}
+              <div className="print-title" style={{ display: 'none', marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
+                <p style={{ fontFamily: 'Arial', fontSize: '13px', fontWeight: '700', margin: '0 0 2px', textTransform: 'uppercase' }}>SECRETARIA MUNICIPAL DE SAÚDE — CONCEIÇÃO DO TOCANTINS/TO</p>
+                <p style={{ fontFamily: 'Arial', fontSize: '15px', fontWeight: '800', margin: '6px 0 2px' }}>RELATÓRIO DE ESPECIALIDADES</p>
+                <p style={{ fontFamily: 'Arial', fontSize: '12px', margin: 0, color: '#333' }}>
+                  Competência: {MESES[Number(relMes) - 1]}/{relAno}
+                  {relFiltroEsp ? ` · ${ESPECIALIDADES.find(e => e.id === relFiltroEsp)?.label}` : ''}
+                  {relFiltroStatus ? ` · ${STATUS_LABEL[relFiltroStatus]}` : ''}
+                </p>
+              </div>
+
+              <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '0 0 14px' }}>
+                Resumo — {MESES[Number(relMes) - 1]}/{relAno}
               </h3>
               {relLoading ? (
                 <p style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>Carregando...</p>
               ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginBottom: '28px' }}>
                   <thead>
                     <tr style={{ background: GRAD, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                      {['Especialidade', 'Cota', 'Pendente', 'Autorizado', 'Negado', 'Total (excl. negado)', '% da Cota'].map(h => (
-                        <th key={h} style={{ padding: '10px 12px', color: 'white', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', letterSpacing: '0.05em' }}>{h}</th>
+                      {['Especialidade', 'Cota', 'Pendente', 'Autorizado', 'Negado', 'Excluído', 'Usados', '% Cota'].map(h => (
+                        <th key={h} style={{ padding: '9px 12px', color: 'white', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', letterSpacing: '0.05em' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {relatorio.map((r, i) => {
+                    {relatorio.filter(r => !relFiltroEsp || ESPECIALIDADES.find(e => e.id === relFiltroEsp)?.label === r.label).map((r, i) => {
                       const total = r.pendente + r.autorizado
                       const pct2 = Math.round((total / r.cota) * 100)
                       return (
                         <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 0 ? '#fff' : '#f8fafc', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                          <td style={{ padding: '10px 12px', fontWeight: '700', color: '#0f172a' }}>{r.icon} {r.label}</td>
-                          <td style={{ padding: '10px 12px', color: '#475569', fontWeight: '600' }}>{r.cota}</td>
-                          <td style={{ padding: '10px 12px' }}>
-                            <span style={{ background: STATUS_STYLE.pendente.bg, color: STATUS_STYLE.pendente.cor, padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: '700' }}>{r.pendente}</span>
-                          </td>
-                          <td style={{ padding: '10px 12px' }}>
-                            <span style={{ background: STATUS_STYLE.autorizado.bg, color: STATUS_STYLE.autorizado.cor, padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: '700' }}>{r.autorizado}</span>
-                          </td>
-                          <td style={{ padding: '10px 12px' }}>
-                            <span style={{ background: STATUS_STYLE.negado.bg, color: STATUS_STYLE.negado.cor, padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: '700' }}>{r.negado}</span>
-                          </td>
-                          <td style={{ padding: '10px 12px', fontWeight: '700', color: total >= r.cota ? '#dc2626' : '#0f172a' }}>{total}</td>
-                          <td style={{ padding: '10px 12px' }}>
+                          <td style={{ padding: '9px 12px', fontWeight: '700', color: '#0f172a' }}>{r.icon} {r.label}</td>
+                          <td style={{ padding: '9px 12px', color: '#475569', fontWeight: '600' }}>{r.cota}</td>
+                          {['pendente','autorizado','negado','excluido'].map(s => (
+                            <td key={s} style={{ padding: '9px 12px' }}>
+                              <span style={{ background: STATUS_STYLE[s].bg, color: STATUS_STYLE[s].cor, padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: '700' }}>{r[s] || 0}</span>
+                            </td>
+                          ))}
+                          <td style={{ padding: '9px 12px', fontWeight: '700', color: total >= r.cota ? '#dc2626' : '#0f172a' }}>{total}</td>
+                          <td style={{ padding: '9px 12px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{ background: '#e2e8f0', borderRadius: '999px', height: '6px', width: '80px', overflow: 'hidden' }}>
+                              <div style={{ background: '#e2e8f0', borderRadius: '999px', height: '6px', width: '70px', overflow: 'hidden' }}>
                                 <div style={{ width: Math.min(100, pct2) + '%', height: '100%', borderRadius: '999px', background: pct2 >= 100 ? '#dc2626' : pct2 >= 80 ? '#f59e0b' : '#16a34a' }} />
                               </div>
                               <span style={{ fontSize: '12px', fontWeight: '700', color: pct2 >= 100 ? '#dc2626' : '#475569' }}>{pct2}%</span>
@@ -798,30 +1041,65 @@ export default function Especialidades() {
                       )
                     })}
                   </tbody>
-                  <tfoot>
-                    <tr style={{ borderTop: '2px solid #e2e8f0', background: '#f8fafc' }}>
-                      <td style={{ padding: '10px 12px', fontWeight: '700', fontFamily: 'Sora, sans-serif', color: '#0f172a' }}>TOTAL</td>
-                      <td style={{ padding: '10px 12px', fontWeight: '700', color: '#475569' }}>{relatorio.reduce((s, r) => s + r.cota, 0)}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: '700', color: STATUS_STYLE.pendente.cor }}>{relatorio.reduce((s, r) => s + r.pendente, 0)}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: '700', color: STATUS_STYLE.autorizado.cor }}>{relatorio.reduce((s, r) => s + r.autorizado, 0)}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: '700', color: STATUS_STYLE.negado.cor }}>{relatorio.reduce((s, r) => s + r.negado, 0)}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: '700', color: '#0f172a' }}>{relatorio.reduce((s, r) => s + r.pendente + r.autorizado, 0)}</td>
-                      <td />
-                    </tr>
-                  </tfoot>
                 </table>
+              )}
+
+              {/* Tabela detalhada */}
+              {detalhesFiltrados.length > 0 && (
+                <>
+                  <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '0 0 12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                    Detalhamento — {detalhesFiltrados.length} registro{detalhesFiltrados.length !== 1 ? 's' : ''}
+                  </h3>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                        {['#', 'Especialidade', 'Paciente', 'Telefone', 'Tipo', 'Profissional', 'Data', 'Status', 'Motivo'].map(h => (
+                          <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detalhesFiltrados.map((r, i) => {
+                        const st = STATUS_STYLE[r.status] || STATUS_STYLE.pendente
+                        const esp2 = ESPECIALIDADES.find(e => e.id === r.especialidade)
+                        const motivo = r.status === 'negado' ? r.motivo_cancelamento : r.status === 'excluido' ? r.motivo_exclusao : null
+                        return (
+                          <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9', background: r.status === 'excluido' ? '#f8fafc' : 'white' }}>
+                            <td style={{ padding: '8px 10px', color: '#94a3b8', fontSize: '11px' }}>{i + 1}</td>
+                            <td style={{ padding: '8px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}>{esp2?.icon} {esp2?.label}</td>
+                            <td style={{ padding: '8px 10px', fontWeight: '600', color: '#0f172a', whiteSpace: 'nowrap' }}>{r.paciente_nome}</td>
+                            <td style={{ padding: '8px 10px', color: '#64748b', fontSize: '11px' }}>{r.telefone || '—'}</td>
+                            <td style={{ padding: '8px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}>{r.tipo_exame || '—'}</td>
+                            <td style={{ padding: '8px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}>{r.profissional_nome || '—'}</td>
+                            <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', color: '#475569', fontSize: '11px' }}>{fmtData(r.data_consulta)}</td>
+                            <td style={{ padding: '8px 10px' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '12px', background: st.bg, color: st.cor, border: `1px solid ${st.borda}`, whiteSpace: 'nowrap' }}>
+                                {STATUS_LABEL[r.status]}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 10px', fontSize: '11px', color: r.status === 'excluido' ? '#475569' : '#991b1b', fontStyle: motivo ? 'italic' : 'normal', maxWidth: '200px' }}>
+                              {motivo || '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </>
               )}
             </div>
             <style dangerouslySetInnerHTML={{__html: `
               @media print {
                 body * { visibility: hidden; }
                 .print-area, .print-area * { visibility: visible; }
-                .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+                .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; border: none !important; box-shadow: none !important; }
                 .print-title { display: block !important; }
+                .no-print { display: none !important; }
               }
             `}} />
           </div>
-        )}
+          )
+        })()}
       </div>
 
       {/* ── MODAL: CANCELAMENTO ── */}
@@ -833,7 +1111,7 @@ export default function Especialidades() {
           <label className="label-modern">Motivo *</label>
           <textarea className="input-modern" rows={3} placeholder="Ex: Paciente desistiu, sem vaga na referência, duplicidade..."
             value={motivoCancel}
-            onChange={e => setMotivoCancel(e.target.value)}
+            onChange={e => setMotivoCancel(e.target.value.toUpperCase())}
             style={{ width: '100%', resize: 'vertical', minHeight: '80px' }} />
           <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
             <button className="btn-primary"
@@ -843,6 +1121,108 @@ export default function Especialidades() {
               ✗ Confirmar Cancelamento
             </button>
             <button className="btn-secondary" onClick={() => { setModalCancel({ show: false, id: null }); setMotivoCancel('') }}>Voltar</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── MODAL: EDIÇÃO ── */}
+      {modalEditar.show && (() => {
+        const espId = agendamentos.find(a => a.id === modalEditar.id)?.especialidade
+        const isUsgEdit = espId === 'usg'
+        return (
+          <Modal titulo="✏️ Alterar Agendamento" onClose={() => setModalEditar({ show: false, id: null })} largura="560px">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="label-modern">Nome do Paciente *</label>
+                <input className="input-modern" type="text" value={formEditar.paciente_nome}
+                  onChange={e => setFormEditar(f => ({ ...f, paciente_nome: e.target.value }))} style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label className="label-modern">CNS / CPF</label>
+                <input className="input-modern" type="text" value={formEditar.paciente_cns}
+                  onChange={e => setFormEditar(f => ({ ...f, paciente_cns: e.target.value }))} style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label className="label-modern">Telefone *</label>
+                <input className="input-modern" type="tel" value={formEditar.telefone}
+                  onChange={e => setFormEditar(f => ({ ...f, telefone: e.target.value }))} style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label className="label-modern">Sexo</label>
+                <select className="input-modern" value={formEditar.sexo} onChange={e => setFormEditar(f => ({ ...f, sexo: e.target.value, tipo_exame: '' }))} style={{ width: '100%' }}>
+                  <option value="">— Não informado —</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                </select>
+              </div>
+              <div>
+                <label className="label-modern">Data de Solicitação *</label>
+                <input className="input-modern" type="date" value={formEditar.data_consulta}
+                  onChange={e => setFormEditar(f => ({ ...f, data_consulta: e.target.value }))} style={{ width: '100%' }} />
+              </div>
+              {isUsgEdit && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label className="label-modern">Tipo de Exame</label>
+                  <select className="input-modern" value={formEditar.tipo_exame} onChange={e => setFormEditar(f => ({ ...f, tipo_exame: e.target.value }))} style={{ width: '100%' }}>
+                    <option value="">— Selecione —</option>
+                    {TIPOS_USG.filter(t => {
+                      if (formEditar.sexo === 'M' && t === 'TRANSVAGINAL') return false
+                      if (formEditar.sexo === 'F' && (t === 'PRÓSTATA TRANSRETAL' || t === 'PRÓSTATA ABDOMINAL' || t === 'BOLSA ESCROTAL')) return false
+                      return true
+                    }).map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              )}
+              {!isUsgEdit && (
+                <div>
+                  <label className="label-modern">Tipo de Consulta</label>
+                  <select className="input-modern" value={formEditar.tipo_exame} onChange={e => setFormEditar(f => ({ ...f, tipo_exame: e.target.value }))} style={{ width: '100%' }}>
+                    <option value="">— Selecione —</option>
+                    {TIPOS_CONSULTA.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              )}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="label-modern">Profissional</label>
+                <input className="input-modern" type="text" value={formEditar.profissional_nome}
+                  onChange={e => setFormEditar(f => ({ ...f, profissional_nome: e.target.value }))} style={{ width: '100%' }} />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="label-modern">Observação</label>
+                <textarea className="input-modern" rows={2} value={formEditar.observacao}
+                  onChange={e => setFormEditar(f => ({ ...f, observacao: e.target.value }))}
+                  style={{ width: '100%', resize: 'vertical' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+              <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #1d4ed8, #2563eb)' }} onClick={salvarEdicao}>
+                💾 Salvar Alterações
+              </button>
+              <button className="btn-secondary" onClick={() => setModalEditar({ show: false, id: null })}>Cancelar</button>
+            </div>
+          </Modal>
+        )
+      })()}
+
+      {/* ── MODAL: EXCLUSÃO ── */}
+      {modalExcluir.show && (
+        <Modal titulo="Excluir Agendamento" onClose={() => { setModalExcluir({ show: false, id: null }); setMotivoExclusao('') }}>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 14px' }}>
+            Informe o motivo da exclusão. Este campo é <strong>obrigatório</strong>.
+          </p>
+          <label className="label-modern">Motivo *</label>
+          <textarea className="input-modern" rows={3} placeholder="Ex: Cadastro duplicado, erro de digitação..."
+            value={motivoExclusao}
+            onChange={e => setMotivoExclusao(e.target.value.toUpperCase())}
+            style={{ width: '100%', resize: 'vertical', minHeight: '80px' }} />
+          <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+            <button className="btn-primary"
+              style={{ background: 'linear-gradient(135deg, #374151, #4b5563)' }}
+              onClick={confirmarExclusao}
+              disabled={!motivoExclusao.trim()}>
+              🗑 Confirmar Exclusão
+            </button>
+            <button className="btn-secondary" onClick={() => { setModalExcluir({ show: false, id: null }); setMotivoExclusao('') }}>Cancelar</button>
           </div>
         </Modal>
       )}
@@ -898,12 +1278,15 @@ export default function Especialidades() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
+        .print-only { display: none; }
         @media print {
           body * { visibility: hidden; }
           .esp-print-area, .esp-print-area * { visibility: visible; }
           .esp-print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; border: none !important; box-shadow: none !important; }
           .no-print { display: none !important; }
           .print-header-esp { display: block !important; }
+          .print-only { display: block !important; }
+          .screen-only { display: none !important; }
         }
       `}} />
 
