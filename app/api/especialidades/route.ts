@@ -33,21 +33,23 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/especialidades
-// Body: { especialidade, paciente_nome, paciente_cns, data_consulta, observacao, mes, ano, criado_por, profissional_nome? }
+// Body: { especialidade, paciente_nome, paciente_cns, telefone, data_consulta, tipo_exame, observacao, mes, ano, criado_por, profissional_nome? }
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { especialidade, paciente_nome, paciente_cns, data_consulta, observacao, mes, ano, criado_por, profissional_nome } = body
+    const { especialidade, paciente_nome, paciente_cns, telefone, data_consulta, tipo_exame, observacao, mes, ano, criado_por, profissional_nome } = body
 
-    if (!especialidade || !paciente_nome || !data_consulta || !mes || !ano) {
-      return NextResponse.json({ ok: false, error: 'Campos obrigatórios ausentes' }, { status: 400 })
+    if (!especialidade || !paciente_nome || !telefone || !data_consulta || !mes || !ano) {
+      return NextResponse.json({ ok: false, error: 'Campos obrigatórios ausentes (nome, telefone, data)' }, { status: 400 })
     }
 
     const { data, error } = await supabase
       .from('especialidades_agendamentos')
       .insert([{
         especialidade, paciente_nome, paciente_cns: paciente_cns || null,
-        data_consulta, status: 'pendente', observacao: observacao || null,
+        telefone: telefone.replace(/\D/g, ''),
+        data_consulta, tipo_exame: tipo_exame || null,
+        status: 'pendente', observacao: observacao || null,
         mes, ano, criado_por: criado_por || null,
         profissional_nome: profissional_nome || null
       }])

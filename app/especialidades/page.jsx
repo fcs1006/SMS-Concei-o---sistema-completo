@@ -27,6 +27,9 @@ const STATUS_LABEL = { pendente: 'Pendente', autorizado: 'Autorizado', negado: '
 
 const CONSELHOS = ['CRM','CRO','CREFITO','CRM-RJ','CRM-GO','CRM-DF','Outro']
 
+const TIPOS_USG = ['USG Abdominal','USG Pélvico','USG Obstétrico','USG Mamário','USG Tireoide','USG Renal','USG Transvaginal','USG de Partes Moles','Outro']
+const TIPOS_CONSULTA = ['Primeira Consulta','Retorno','Outro']
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmtData(v) {
   if (!v) return '—'
@@ -68,7 +71,7 @@ function BuscaPaciente({ onSelect }) {
     if (v.trim().length < 2) { setSugestoes([]); setAberto(false); return }
     timer.current = setTimeout(async () => {
       const soDigitos = v.replace(/\D/g, '')
-      let query = supabase.from('pacientes').select('id, nome, cpf_cns').order('nome').limit(8)
+      let query = supabase.from('pacientes').select('id, nome, cpf_cns, telefone').order('nome').limit(8)
       if (soDigitos.length >= 3 && !/[a-zA-ZÀ-ÿ]/.test(v)) {
         query = query.ilike('cpf_cns', `%${soDigitos}%`)
       } else {
@@ -110,7 +113,9 @@ function BuscaPaciente({ onSelect }) {
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
               <span style={{ fontWeight: '600', color: '#0f172a', fontSize: '13px', display: 'block' }}>{p.nome}</span>
-              <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>{fmtCns(p.cpf_cns)}</span>
+              <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
+                {fmtCns(p.cpf_cns)}{p.telefone ? ` · ${p.telefone}` : ''}
+              </span>
             </button>
           ))}
         </div>
@@ -144,7 +149,7 @@ export default function Especialidades() {
 
   // Formulário de agendamento
   const [mostrarForm, setMostrarForm] = useState(false)
-  const [form, setForm] = useState({ paciente_nome: '', paciente_cns: '', data_consulta: '', observacao: '', profissional_nome: '' })
+  const [form, setForm] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' })
   const [salvando, setSalvando] = useState(false)
 
   // Modal profissionais
@@ -236,12 +241,17 @@ export default function Especialidades() {
       ...f,
       paciente_nome: p.nome,
       paciente_cns: p.cpf_cns || '',
+      telefone: p.telefone || '',
     }))
   }
 
   async function salvarAgendamento() {
-    if (!form.paciente_nome.trim() || !form.data_consulta) {
-      mostrarMsg('Preencha nome e data', false); return
+    const isUsg = esp === 'usg'
+    if (!form.paciente_nome.trim() || !form.telefone.trim() || !form.data_consulta) {
+      mostrarMsg('Preencha nome, telefone e data', false); return
+    }
+    if (isUsg && !form.tipo_exame) {
+      mostrarMsg('Selecione o tipo de exame', false); return
     }
     setSalvando(true)
     try {
@@ -252,7 +262,9 @@ export default function Especialidades() {
           especialidade: esp,
           paciente_nome: form.paciente_nome.trim().toUpperCase(),
           paciente_cns: form.paciente_cns.replace(/\D/g, '') || null,
+          telefone: form.telefone,
           data_consulta: form.data_consulta,
+          tipo_exame: form.tipo_exame || null,
           observacao: form.observacao.trim() || null,
           profissional_nome: form.profissional_nome || null,
           mes, ano,
@@ -262,7 +274,7 @@ export default function Especialidades() {
       const json = await res.json()
       if (!json.ok) throw new Error(json.error)
       mostrarMsg('✅ Agendamento registrado')
-      setForm({ paciente_nome: '', paciente_cns: '', data_consulta: '', observacao: '', profissional_nome: '' })
+      setForm({ paciente_nome: '', paciente_cns: '', telefone: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' })
       setMostrarForm(false)
       buscarAgendamentos()
     } catch (e) { mostrarMsg('❌ ' + e.message, false) }
@@ -518,11 +530,29 @@ export default function Especialidades() {
                         style={{ width: '100%' }} />
                     </div>
                     <div>
-                      <label className="label-modern">Data da Consulta *</label>
+                      <label className="label-modern">Telefone *</label>
+                      <input className="input-modern" type="tel" placeholder="(63) 99999-9999"
+                        value={form.telefone}
+                        onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))}
+                        style={{ width: '100%', borderColor: !form.telefone ? '#fca5a5' : undefined }} />
+                    </div>
+                    <div>
+                      <label className="label-modern">{esp === 'usg' ? 'Data do Exame *' : 'Data da Consulta *'}</label>
                       <input className="input-modern" type="date"
                         value={form.data_consulta}
                         onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value }))}
                         style={{ width: '100%' }} />
+                    </div>
+                    <div>
+                      <label className="label-modern">{esp === 'usg' ? 'Tipo de Exame *' : 'Tipo de Consulta'}</label>
+                      <select className="input-modern" value={form.tipo_exame}
+                        onChange={e => setForm(f => ({ ...f, tipo_exame: e.target.value }))}
+                        style={{ width: '100%' }}>
+                        <option value="">— Selecione —</option>
+                        {(esp === 'usg' ? TIPOS_USG : TIPOS_CONSULTA).map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
                     </div>
                     {escala.length > 0 && (
                       <div>
@@ -547,7 +577,7 @@ export default function Especialidades() {
                     <button className="btn-primary" style={{ background: GRAD }} onClick={salvarAgendamento} disabled={salvando}>
                       {salvando ? '⏳ Salvando...' : '💾 Salvar'}
                     </button>
-                    <button className="btn-secondary" onClick={() => { setMostrarForm(false); setForm({ paciente_nome: '', paciente_cns: '', data_consulta: '', observacao: '', profissional_nome: '' }) }}>Cancelar</button>
+                    <button className="btn-secondary" onClick={() => { setMostrarForm(false); setForm({ paciente_nome: '', paciente_cns: '', telefone: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' }) }}>Cancelar</button>
                   </div>
                 </div>
               )}
@@ -582,7 +612,7 @@ export default function Especialidades() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                        {['#', 'Paciente', 'CPF/CNS', 'Profissional', 'Data', 'Status', 'Obs / Motivo', 'Ações'].map(h => (
+                        {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Profissional', 'Data', 'Status', 'Obs / Motivo', 'Ações'].map(h => (
                           <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
@@ -597,6 +627,8 @@ export default function Especialidades() {
                             <td style={{ padding: '10px', color: '#94a3b8', fontSize: '12px' }}>{i + 1}</td>
                             <td style={{ padding: '10px', fontWeight: '600', color: '#0f172a', whiteSpace: 'nowrap' }}>{a.paciente_nome}</td>
                             <td style={{ padding: '10px', color: '#64748b', fontFamily: 'monospace', fontSize: '11px' }}>{a.paciente_cns || '—'}</td>
+                            <td style={{ padding: '10px', color: '#475569', fontSize: '12px', whiteSpace: 'nowrap' }}>{a.telefone || '—'}</td>
+                            <td style={{ padding: '10px', fontSize: '12px', color: '#0f172a', whiteSpace: 'nowrap', fontWeight: a.tipo_exame ? '500' : '400' }}>{a.tipo_exame || '—'}</td>
                             <td style={{ padding: '10px', fontSize: '12px', color: '#475569', whiteSpace: 'nowrap' }}>{a.profissional_nome || '—'}</td>
                             <td style={{ padding: '10px', whiteSpace: 'nowrap', color: '#475569' }}>{fmtData(a.data_consulta)}</td>
                             <td style={{ padding: '10px' }}>
