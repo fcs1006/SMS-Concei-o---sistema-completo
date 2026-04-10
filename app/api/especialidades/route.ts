@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
       .from('especialidades_agendamentos')
       .select('*')
       .order('data_consulta', { ascending: true })
+      .order('created_at', { ascending: true })
 
     if (especialidade) query = query.eq('especialidade', especialidade)
     if (mes) query = query.eq('mes', mes)

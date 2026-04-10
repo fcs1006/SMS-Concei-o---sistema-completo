@@ -178,6 +178,7 @@ export default function Especialidades() {
   const [modalEscala, setModalEscala] = useState(false)
   const [salvandoEscala, setSalvandoEscala] = useState(false)
   const [profEscalaSel, setProfEscalaSel] = useState('')
+  const [dataEscala, setDataEscala] = useState('')
 
   // Modal cancelamento
   const [modalCancel, setModalCancel] = useState({ show: false, id: null })
@@ -385,17 +386,19 @@ export default function Especialidades() {
   // ── Escala ────────────────────────────────────────────────────────────────
   async function adicionarEscala() {
     if (!profEscalaSel) { mostrarMsg('Selecione um profissional', false); return }
+    if (!dataEscala) { mostrarMsg('Informe a data de atendimento', false); return }
     setSalvandoEscala(true)
     const prof = profissionais.find(p => p.id === profEscalaSel)
     try {
       const res = await fetch('/api/especialidades/escala', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ especialidade: esp, profissional_id: prof.id, profissional_nome: prof.nome, mes, ano })
+        body: JSON.stringify({ especialidade: esp, profissional_id: prof.id, profissional_nome: prof.nome, mes, ano, data_atendimento: dataEscala })
       })
       const json = await res.json()
       if (!json.ok) throw new Error(json.error)
       setProfEscalaSel('')
+      setDataEscala('')
       buscarEscala()
     } catch (e) { mostrarMsg('❌ ' + e.message, false) }
     setSalvandoEscala(false)
@@ -511,6 +514,11 @@ export default function Especialidades() {
                     : escala.map(e => (
                       <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                         <span style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a' }}>👨‍⚕️ {e.profissional_nome}</span>
+                        {e.data_atendimento && (
+                          <span style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '6px' }}>
+                            {fmtData(e.data_atendimento)}
+                          </span>
+                        )}
                       </div>
                     ))}
                 </div>
@@ -573,12 +581,21 @@ export default function Especialidades() {
                     </div>
                     {escala.length > 0 && (
                       <div>
-                        <label className="label-modern">Profissional</label>
-                        <select className="input-modern" value={form.profissional_nome}
-                          onChange={e => setForm(f => ({ ...f, profissional_nome: e.target.value }))}
+                        <label className="label-modern">Profissional / Data de Atendimento</label>
+                        <select className="input-modern"
+                          value={escala.find(e => e.profissional_nome === form.profissional_nome && e.data_atendimento === form.data_consulta)?.id || ''}
+                          onChange={e => {
+                            const entrada = escala.find(x => x.id === e.target.value)
+                            if (entrada) setForm(f => ({ ...f, profissional_nome: entrada.profissional_nome, data_consulta: entrada.data_atendimento || f.data_consulta }))
+                            else setForm(f => ({ ...f, profissional_nome: '', data_consulta: '' }))
+                          }}
                           style={{ width: '100%' }}>
                           <option value="">— Selecione —</option>
-                          {escala.map(e => <option key={e.id} value={e.profissional_nome}>{e.profissional_nome}</option>)}
+                          {escala.map(e => (
+                            <option key={e.id} value={e.id}>
+                              {e.profissional_nome}{e.data_atendimento ? ` — ${fmtData(e.data_atendimento)}` : ''}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     )}
@@ -601,12 +618,12 @@ export default function Especialidades() {
             </div>
 
             {/* Lista de agendamentos */}
-            <div className="card" style={{ padding: '20px' }}>
+            <div className="card esp-print-area" style={{ padding: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                 <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700', color: '#0f172a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {espAtiva.icon} {espAtiva.label} — {MESES[Number(mes) - 1]}/{ano}
                 </h3>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                   {['pendente', 'autorizado', 'negado'].map(s => {
                     const st = STATUS_STYLE[s]
                     return (
@@ -615,7 +632,26 @@ export default function Especialidades() {
                       </span>
                     )
                   })}
+                  {agendamentos.length > 0 && (
+                    <button className="no-print" onClick={() => window.print()}
+                      style={{ padding: '5px 12px', background: '#1e293b', border: 'none', borderRadius: '8px', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif' }}>
+                      🖨️ Imprimir Lista
+                    </button>
+                  )}
                 </div>
+              </div>
+              {/* Cabeçalho de impressão — oculto na tela */}
+              <div className="print-header-esp" style={{ display: 'none', marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
+                <p style={{ fontFamily: 'Arial, sans-serif', fontSize: '13px', fontWeight: '700', margin: '0 0 2px', textTransform: 'uppercase' }}>
+                  SECRETARIA MUNICIPAL DE SAÚDE — CONCEIÇÃO DO TOCANTINS/TO
+                </p>
+                <p style={{ fontFamily: 'Arial, sans-serif', fontSize: '15px', fontWeight: '800', margin: '6px 0 2px', textTransform: 'uppercase' }}>
+                  LISTA DE {esp === 'usg' ? 'EXAMES' : 'CONSULTAS'} — {espAtiva.label.toUpperCase()}
+                </p>
+                <p style={{ fontFamily: 'Arial, sans-serif', fontSize: '12px', margin: 0, color: '#333' }}>
+                  Competência: {MESES[Number(mes) - 1]}/{ano}
+                  {escala.length > 0 ? ` · Profissional(is): ${escala.map(e => `${e.profissional_nome}${e.data_atendimento ? ' (' + fmtData(e.data_atendimento) + ')' : ''}`).join(', ')}` : ''}
+                </p>
               </div>
 
               {loading ? (
@@ -860,6 +896,16 @@ export default function Especialidades() {
         </Modal>
       )}
 
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          body * { visibility: hidden; }
+          .esp-print-area, .esp-print-area * { visibility: visible; }
+          .esp-print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; border: none !important; box-shadow: none !important; }
+          .no-print { display: none !important; }
+          .print-header-esp { display: block !important; }
+        }
+      `}} />
+
       {/* ── MODAL: ESCALA ── */}
       {modalEscala && (
         <Modal titulo={`📅 Escala — ${espAtiva.label} / ${MESES[Number(mes) - 1]}/${ano}`} onClose={() => setModalEscala(false)}>
@@ -868,19 +914,26 @@ export default function Especialidades() {
               Nenhum profissional cadastrado. Cadastre profissionais primeiro em <strong>Profissionais</strong>.
             </p>
           ) : (
-            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
-              <div style={{ flex: 1 }}>
-                <label className="label-modern">Profissional</label>
-                <select className="input-modern" value={profEscalaSel} onChange={e => setProfEscalaSel(e.target.value)} style={{ width: '100%' }}>
-                  <option value="">— Selecione —</option>
-                  {profissionais.filter(p => !escala.some(e => e.profissional_id === p.id)).map(p => (
-                    <option key={p.id} value={p.id}>{p.nome}</option>
-                  ))}
-                </select>
+            <div style={{ marginBottom: '20px', padding: '14px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
+              <p style={{ fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Adicionar à escala</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                <div>
+                  <label className="label-modern">Profissional *</label>
+                  <select className="input-modern" value={profEscalaSel} onChange={e => setProfEscalaSel(e.target.value)} style={{ width: '100%' }}>
+                    <option value="">— Selecione —</option>
+                    {profissionais.map(p => (
+                      <option key={p.id} value={p.id}>{p.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label-modern">Data de Atendimento *</label>
+                  <input className="input-modern" type="date" value={dataEscala} onChange={e => setDataEscala(e.target.value)} style={{ width: '100%' }} />
+                </div>
               </div>
               <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #065f46, #047857)' }}
-                onClick={adicionarEscala} disabled={salvandoEscala || !profEscalaSel}>
-                {salvandoEscala ? '⏳...' : '+ Escalar'}
+                onClick={adicionarEscala} disabled={salvandoEscala || !profEscalaSel || !dataEscala}>
+                {salvandoEscala ? '⏳...' : '+ Adicionar à Escala'}
               </button>
             </div>
           )}
@@ -890,7 +943,14 @@ export default function Especialidades() {
             ? <p style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>Nenhum profissional escalado para este período.</p>
             : escala.map(e => (
               <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '8px', marginBottom: '6px', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                <span style={{ fontWeight: '700', fontSize: '13px', color: '#166534' }}>👨‍⚕️ {e.profissional_nome}</span>
+                <div>
+                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#166534' }}>👨‍⚕️ {e.profissional_nome}</span>
+                  {e.data_atendimento && (
+                    <span style={{ fontSize: '12px', color: '#047857', marginLeft: '10px', fontWeight: '600' }}>
+                      📅 {fmtData(e.data_atendimento)}
+                    </span>
+                  )}
+                </div>
                 <button onClick={() => removerEscala(e.id)}
                   style={{ padding: '4px 10px', fontSize: '11px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', cursor: 'pointer', fontWeight: '700' }}>
                   Remover

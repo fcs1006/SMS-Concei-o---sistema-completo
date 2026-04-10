@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const esp = p.get('especialidade')
     const mes = p.get('mes')
     const ano = p.get('ano')
-    let query = supabase.from('especialidades_escala').select('*').order('profissional_nome')
+    let query = supabase.from('especialidades_escala').select('*').order('data_atendimento', { ascending: true }).order('profissional_nome')
     if (esp) query = query.eq('especialidade', esp)
     if (mes) query = query.eq('mes', mes)
     if (ano) query = query.eq('ano', ano)
@@ -26,22 +26,21 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/especialidades/escala
-// Body: { especialidade, profissional_id, profissional_nome, mes, ano }
+// Body: { especialidade, profissional_id, profissional_nome, mes, ano, data_atendimento }
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { especialidade, profissional_id, profissional_nome, mes, ano } = body
-    if (!especialidade || !profissional_id || !mes || !ano) {
-      return NextResponse.json({ ok: false, error: 'Campos obrigatórios ausentes' }, { status: 400 })
+    const { especialidade, profissional_id, profissional_nome, mes, ano, data_atendimento } = body
+    if (!especialidade || !profissional_id || !mes || !ano || !data_atendimento) {
+      return NextResponse.json({ ok: false, error: 'Campos obrigatórios ausentes (incluindo data de atendimento)' }, { status: 400 })
     }
     const { data, error } = await supabase
       .from('especialidades_escala')
-      .insert([{ especialidade, profissional_id, profissional_nome, mes, ano }])
+      .insert([{ especialidade, profissional_id, profissional_nome, mes, ano, data_atendimento }])
       .select().single()
     if (error) {
-      // unique constraint → já escalado
       if (error.code === '23505') {
-        return NextResponse.json({ ok: false, error: 'Profissional já está na escala deste período' }, { status: 409 })
+        return NextResponse.json({ ok: false, error: 'Profissional já está escalado nesta data' }, { status: 409 })
       }
       throw error
     }
