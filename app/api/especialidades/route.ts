@@ -33,11 +33,11 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/especialidades
-// Body: { especialidade, paciente_nome, paciente_cns, data_consulta, observacao, mes, ano, criado_por }
+// Body: { especialidade, paciente_nome, paciente_cns, data_consulta, observacao, mes, ano, criado_por, profissional_nome? }
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { especialidade, paciente_nome, paciente_cns, data_consulta, observacao, mes, ano, criado_por } = body
+    const { especialidade, paciente_nome, paciente_cns, data_consulta, observacao, mes, ano, criado_por, profissional_nome } = body
 
     if (!especialidade || !paciente_nome || !data_consulta || !mes || !ano) {
       return NextResponse.json({ ok: false, error: 'Campos obrigatórios ausentes' }, { status: 400 })
@@ -45,7 +45,12 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('especialidades_agendamentos')
-      .insert([{ especialidade, paciente_nome, paciente_cns: paciente_cns || null, data_consulta, status: 'pendente', observacao: observacao || null, mes, ano, criado_por: criado_por || null }])
+      .insert([{
+        especialidade, paciente_nome, paciente_cns: paciente_cns || null,
+        data_consulta, status: 'pendente', observacao: observacao || null,
+        mes, ano, criado_por: criado_por || null,
+        profissional_nome: profissional_nome || null
+      }])
       .select()
       .single()
 
@@ -58,11 +63,11 @@ export async function POST(request: NextRequest) {
 }
 
 // PATCH /api/especialidades
-// Body: { id, status }
+// Body: { id, status, motivo_cancelamento? }
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, status } = body
+    const { id, status, motivo_cancelamento } = body
 
     if (!id || !status) {
       return NextResponse.json({ ok: false, error: 'ID e status obrigatórios' }, { status: 400 })
@@ -72,9 +77,13 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Status inválido' }, { status: 400 })
     }
 
+    const update: Record<string, any> = { status }
+    if (status === 'negado' && motivo_cancelamento) update.motivo_cancelamento = motivo_cancelamento
+    if (status !== 'negado') update.motivo_cancelamento = null
+
     const { data, error } = await supabase
       .from('especialidades_agendamentos')
-      .update({ status })
+      .update(update)
       .eq('id', id)
       .select()
       .single()
