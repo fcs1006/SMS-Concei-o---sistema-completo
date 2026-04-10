@@ -10,6 +10,7 @@ const ESPECIALIDADES = [
   { id: 'oftalmologia', label: 'Oftalmologia', icon: '👁️', cota: 30 },
   { id: 'urologia',     label: 'Urologia',     icon: '🔬', cota: 30 },
   { id: 'usg',          label: 'USG',          icon: '📡', cota: 60 },
+  { id: 'psiquiatria',  label: 'Psiquiatria',  icon: '🧠', cota: 30 },
 ]
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
