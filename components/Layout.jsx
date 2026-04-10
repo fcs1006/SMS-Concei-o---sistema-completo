@@ -47,6 +47,11 @@ export default function Layout({ children, usuario }) {
       cor: '#6ee7b7', corBg: 'rgba(110,231,183,0.15)',
       bg1: '#022c22', bg2: '#064e3b', acento: '#34d399'
     },
+    {
+      label: 'Especialidades', icon: '🏥', path: '/especialidades',
+      cor: '#fcd34d', corBg: 'rgba(252,211,77,0.15)',
+      bg1: '#451a03', bg2: '#92400e', acento: '#f59e0b'
+    },
   ]
 
   const aliasMap = { '/resumo': '/tfd', '/bpa/config': '/bpa' }
