@@ -81,72 +81,88 @@ export default function Usuarios() {
           ) : lista.length === 0 ? (
             <p style={{ padding: '24px', color: '#64748b', fontSize: '13px', margin: 0 }}>Nenhum usuário encontrado.</p>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '28%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '13%' }} />
+              </colgroup>
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  {['Nome', 'CPF (usuário)', 'Cadastro', 'Perfil', 'Situação', 'Ações'].map(h => (
+                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  {['Nome', 'CPF', 'Cadastro', 'Perfil', 'Situação', 'Ações'].map(h => (
                     <th key={h} style={{
-                      padding: '12px 16px', textAlign: 'left',
-                      fontSize: '11px', fontWeight: '700',
-                      color: '#64748b', fontFamily: 'DM Sans, sans-serif',
-                      textTransform: 'uppercase', letterSpacing: '0.05em'
+                      padding: '11px 14px', textAlign: 'left',
+                      fontSize: '10px', fontWeight: '700',
+                      color: '#94a3b8', fontFamily: 'DM Sans, sans-serif',
+                      textTransform: 'uppercase', letterSpacing: '0.06em'
                     }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {lista.map((u, i) => (
-                  <tr key={u.id} style={{
+                  <tr key={u.usuario} style={{
                     borderBottom: '1px solid #f1f5f9',
                     background: i % 2 === 0 ? '#fff' : '#fafafa'
                   }}>
-                    <td style={{ padding: '14px 16px' }}>
-                      <p style={{ margin: 0, fontWeight: '600', fontSize: '13px', color: '#0f172a', fontFamily: 'Sora, sans-serif' }}>
+                    <td style={{ padding: '12px 14px', overflow: 'hidden' }}>
+                      <p style={{
+                        margin: 0, fontWeight: '600', fontSize: '13px',
+                        color: '#0f172a', fontFamily: 'Sora, sans-serif',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                      }}>
                         {u.nome}
                       </p>
                     </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{ fontSize: '13px', color: '#475569', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ fontSize: '12px', color: '#475569', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                         {mascaraCPF(u.usuario)}
                       </span>
                     </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{formatarData(u.criado_em)}</span>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>{formatarData(u.criado_em)}</span>
                     </td>
-                    <td style={{ padding: '14px 16px' }}>
+                    <td style={{ padding: '12px 14px' }}>
                       <select
                         value={u.perfil}
                         onChange={e => atualizar(u.usuario, u.ativo, e.target.value)}
                         disabled={u.usuario === usuario?.usuario}
                         style={{
-                          fontSize: '12px', padding: '4px 8px', borderRadius: '6px',
-                          border: '1px solid #e2e8f0', background: '#fff',
+                          fontSize: '11px', padding: '4px 6px', borderRadius: '6px',
+                          border: '1px solid #e2e8f0', background: '#fff', width: '100%',
                           cursor: u.usuario === usuario?.usuario ? 'not-allowed' : 'pointer',
                           color: u.perfil === 'admin' ? '#7c3aed' : '#475569',
-                          fontWeight: u.perfil === 'admin' ? '700' : '400'
+                          fontWeight: u.perfil === 'admin' ? '700' : '400',
+                          fontFamily: 'DM Sans, sans-serif'
                         }}
                       >
                         <option value="usuario">Usuário</option>
                         <option value="admin">Admin</option>
                       </select>
                     </td>
-                    <td style={{ padding: '14px 16px' }}>
+                    <td style={{ padding: '12px 14px' }}>
                       <span style={{
                         display: 'inline-block', padding: '3px 10px',
                         borderRadius: '20px', fontSize: '11px', fontWeight: '700',
+                        whiteSpace: 'nowrap',
                         background: u.ativo ? '#dcfce7' : '#fef9c3',
-                        color: u.ativo ? '#16a34a' : '#92400e'
+                        color: u.ativo ? '#16a34a' : '#92400e',
+                        fontFamily: 'DM Sans, sans-serif'
                       }}>
                         {u.ativo ? 'Ativo' : 'Pendente'}
                       </span>
                     </td>
-                    <td style={{ padding: '14px 16px' }}>
+                    <td style={{ padding: '12px 14px' }}>
                       {u.usuario !== usuario?.usuario && (
                         <button
                           onClick={() => atualizar(u.usuario, !u.ativo, u.perfil)}
                           style={{
-                            fontSize: '12px', fontWeight: '600', padding: '6px 14px',
+                            fontSize: '11px', fontWeight: '700', padding: '5px 12px',
                             borderRadius: '8px', border: 'none', cursor: 'pointer',
+                            whiteSpace: 'nowrap', fontFamily: 'DM Sans, sans-serif',
                             background: u.ativo ? '#fee2e2' : '#dcfce7',
                             color: u.ativo ? '#dc2626' : '#16a34a'
                           }}
@@ -155,7 +171,7 @@ export default function Usuarios() {
                         </button>
                       )}
                       {u.usuario === usuario?.usuario && (
-                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>você</span>
+                        <span style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'DM Sans, sans-serif' }}>você</span>
                       )}
                     </td>
                   </tr>
