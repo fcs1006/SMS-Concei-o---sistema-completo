@@ -35,11 +35,11 @@ export default function Usuarios() {
     setCarregando(false)
   }
 
-  async function atualizar(id, ativo, perfil) {
+  async function atualizar(cpfAlvo, ativo, perfil) {
     setStatus({ msg: '', tipo: '' })
     const { data, error } = await supabase.rpc('atualizar_usuario', {
       p_admin_cpf: usuario.usuario,
-      p_id: id,
+      p_cpf_alvo: cpfAlvo,
       p_ativo: ativo,
       p_perfil: perfil
     })
@@ -116,7 +116,7 @@ export default function Usuarios() {
                     <td style={{ padding: '14px 16px' }}>
                       <select
                         value={u.perfil}
-                        onChange={e => atualizar(u.id, u.ativo, e.target.value)}
+                        onChange={e => atualizar(u.usuario, u.ativo, e.target.value)}
                         disabled={u.usuario === usuario?.usuario}
                         style={{
                           fontSize: '12px', padding: '4px 8px', borderRadius: '6px',
@@ -143,7 +143,7 @@ export default function Usuarios() {
                     <td style={{ padding: '14px 16px' }}>
                       {u.usuario !== usuario?.usuario && (
                         <button
-                          onClick={() => atualizar(u.id, !u.ativo, u.perfil)}
+                          onClick={() => atualizar(u.usuario, !u.ativo, u.perfil)}
                           style={{
                             fontSize: '12px', fontWeight: '600', padding: '6px 14px',
                             borderRadius: '8px', border: 'none', cursor: 'pointer',

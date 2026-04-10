@@ -98,7 +98,7 @@ END; $$;
 -- ── atualizar_usuario (admin) ─────────────────────────────────
 CREATE OR REPLACE FUNCTION atualizar_usuario(
   p_admin_cpf text,
-  p_id        uuid,
+  p_cpf_alvo  text,
   p_ativo     boolean,
   p_perfil    text
 )
@@ -110,7 +110,7 @@ BEGIN
     RETURN json_build_object('ok', false, 'error', 'Acesso negado.');
   END IF;
 
-  UPDATE usuarios SET ativo = p_ativo, perfil = p_perfil WHERE id = p_id;
+  UPDATE usuarios SET ativo = p_ativo, perfil = p_perfil WHERE usuario = p_cpf_alvo;
   RETURN json_build_object('ok', true);
 END; $$;
 
