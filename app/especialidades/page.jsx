@@ -27,7 +27,24 @@ const STATUS_LABEL = { pendente: 'Pendente', autorizado: 'Autorizado', negado: '
 
 const CONSELHOS = ['CRM','CRO','CREFITO','CRM-RJ','CRM-GO','CRM-DF','Outro']
 
-const TIPOS_USG = ['USG Abdominal','USG Pélvico','USG Obstétrico','USG Mamário','USG Tireoide','USG Renal','USG Transvaginal','USG de Partes Moles','Outro']
+const TIPOS_USG = [
+  'ABDOMEN TOTAL',
+  'ABDOMEN SUPERIOR',
+  'VIAS URINÁRIAS',
+  'PÉLVICA',
+  'PRÓSTATA TRANSRETAL',
+  'PRÓSTATA ABDOMINAL',
+  'OBSTÉTRICA',
+  'MAMAS',
+  'TIREOIDE',
+  'BOLSA ESCROTAL',
+  'PARTES MOLES',
+  'PAREDE ABDOMINAL',
+  'REGIÃO INGUINAL',
+  'CERVICAL',
+  'TRANSVAGINAL',
+  'ARTICULAÇÃO',
+]
 const TIPOS_CONSULTA = ['Primeira Consulta','Retorno','Outro']
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
