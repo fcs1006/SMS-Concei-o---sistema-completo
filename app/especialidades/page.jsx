@@ -80,11 +80,14 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #fff; padding: 28px 32px; }
     .borda { border: 2px solid #000; border-radius: 4px; padding: 20px 24px; }
-    .cabecalho { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 14px; }
-    .cabecalho .linha1 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #333; }
-    .cabecalho .linha2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #333; margin-top: 2px; }
-    .cabecalho h2 { font-size: 15px; font-weight: 800; text-transform: uppercase; margin: 8px 0 6px; letter-spacing: 0.03em; }
-    .num { font-size: 10px; color: #555; }
+    .cabecalho { margin-bottom: 14px; }
+    .cab-topo { display: flex; align-items: center; gap: 16px; padding-bottom: 10px; }
+    .cab-logo { width: 60px; height: 60px; object-fit: contain; flex-shrink: 0; }
+    .cab-texto p { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.6; }
+    .cab-linha { border: none; border-top: 2px solid #1a7a3c; margin: 0 0 12px; }
+    .cab-titulo { text-align: center; }
+    .cab-titulo h2 { font-size: 15px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.03em; }
+    .num { font-size: 10px; color: #555; text-align: center; }
     .secao { margin-bottom: 14px; }
     .secao-titulo { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #555; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-bottom: 8px; }
     .linha-campos { display: flex; gap: 24px; flex-wrap: nowrap; }
@@ -102,10 +105,19 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
 <body>
   <div class="borda">
     <div class="cabecalho">
-      <div class="linha1">Prefeitura Municipal de Conceição do Tocantins</div>
-      <div class="linha2">Secretaria Municipal de Saúde</div>
-      <h2>Comprovante de Autorização de ${tipoDoc}</h2>
-      <div class="num">Nº ${numComp} &nbsp;|&nbsp; Emitido em: ${dataEmissao} às ${horaEmissao}</div>
+      <div class="cab-topo">
+        <img class="cab-logo" src="/logo.jpg" alt="Logo" />
+        <div class="cab-texto">
+          <p>Prefeitura Municipal de Conceição do Tocantins</p>
+          <p>Fundo Municipal de Saúde</p>
+          <p>Secretaria Municipal de Saúde</p>
+        </div>
+      </div>
+      <hr class="cab-linha" />
+      <div class="cab-titulo">
+        <h2>Comprovante de Autorização de ${tipoDoc}</h2>
+        <div class="num">Nº ${numComp} &nbsp;|&nbsp; Emitido em: ${dataEmissao} às ${horaEmissao}</div>
+      </div>
     </div>
 
     <div class="secao">
