@@ -345,7 +345,7 @@ QUANDO ESCALAR PARA HUMANO (use a ferramenta escalar_para_humano):
       tentativas++
 
       const response = await groq.chat.completions.create({
-        model: 'llama3-groq-70b-8192-tool-use-preview',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 1024,
         messages: [{ role: 'system', content: systemPrompt }, ...mensagens],
         tools,
