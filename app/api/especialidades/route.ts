@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { especialidade, paciente_nome, paciente_cns, telefone, data_consulta, tipo_exame, observacao, mes, ano, criado_por, profissional_nome } = body
+    const { especialidade, paciente_nome, paciente_cns, telefone, data_consulta, data_atendimento, tipo_exame, observacao, mes, ano, criado_por, profissional_nome } = body
 
     if (!especialidade || !paciente_nome || !telefone || !data_consulta || !mes || !ano) {
       return NextResponse.json({ ok: false, error: 'Campos obrigatórios ausentes (nome, telefone, data)' }, { status: 400 })
@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
       .insert([{
         especialidade, paciente_nome, paciente_cns: paciente_cns || null,
         telefone: telefone.replace(/\D/g, ''),
-        data_consulta, tipo_exame: tipo_exame || null,
+        data_consulta, data_atendimento: data_atendimento || null,
+        tipo_exame: tipo_exame || null,
         status: 'pendente', observacao: observacao || null,
         mes, ano, criado_por: criado_por || null,
         profissional_nome: profissional_nome || null
@@ -82,7 +83,7 @@ export async function PATCH(request: NextRequest) {
 
     // Atualização de campos livres (edição)
     if (campos) {
-      const camposPermitidos = ['paciente_nome', 'paciente_cns', 'telefone', 'sexo', 'data_consulta', 'tipo_exame', 'observacao', 'profissional_nome']
+      const camposPermitidos = ['paciente_nome', 'paciente_cns', 'telefone', 'sexo', 'data_consulta', 'data_atendimento', 'tipo_exame', 'observacao', 'profissional_nome']
       const update: Record<string, any> = {}
       for (const k of camposPermitidos) {
         if (k in campos) update[k] = campos[k]

@@ -60,7 +60,7 @@ function fmtData(v) {
 }
 
 // ── Comprovante de Autorização ────────────────────────────────────────────────
-function imprimirComprovante(ag, espLabel, escalaData = [], municipio = 'Conceição do Tocantins/TO') {
+function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins/TO') {
   const hoje = new Date()
   const dataEmissao = hoje.toLocaleDateString('pt-BR')
   const horaEmissao = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -68,9 +68,8 @@ function imprimirComprovante(ag, espLabel, escalaData = [], municipio = 'Concei�
   const tipoDoc = isUsg ? 'EXAME' : 'CONSULTA'
   const numComp = String(ag.id).slice(-8).toUpperCase()
 
-  // Busca a data de atendimento do médico na escala
-  const escalaEntry = escalaData.find(e => e.profissional_nome === ag.profissional_nome)
-  const dataAtendimento = escalaEntry?.data_atendimento || ag.data_consulta
+  // Usa data_atendimento salva no agendamento (data real do médico na escala)
+  const dataAtendimento = ag.data_atendimento || ag.data_consulta
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -271,7 +270,7 @@ export default function Especialidades() {
 
   // Formulário de agendamento
   const [mostrarForm, setMostrarForm] = useState(false)
-  const [form, setForm] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' })
+  const [form, setForm] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '', data_atendimento: '' })
   const [salvando, setSalvando] = useState(false)
 
   // Modal profissionais
@@ -422,6 +421,7 @@ export default function Especialidades() {
           paciente_cns: form.paciente_cns.replace(/\D/g, '') || null,
           telefone: form.telefone,
           data_consulta: form.data_consulta,
+          data_atendimento: form.data_atendimento || null,
           tipo_exame: form.tipo_exame || null,
           observacao: form.observacao.trim() || null,
           profissional_nome: form.profissional_nome || null,
@@ -432,7 +432,7 @@ export default function Especialidades() {
       const json = await res.json()
       if (!json.ok) throw new Error(json.error)
       mostrarMsg('✅ Agendamento registrado')
-      setForm({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' })
+      setForm({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '', data_atendimento: '' })
       setMostrarForm(false)
       buscarAgendamentos()
     } catch (e) { mostrarMsg('❌ ' + e.message, false) }
@@ -821,7 +821,7 @@ export default function Especialidades() {
                                 const entradas = escala.filter(x => x.profissional_nome === nome)
                                 // auto-fill: se só tiver uma data, preenche; senão limpa para o usuário escolher
                                 const dataAuto = entradas.length === 1 ? (entradas[0].data_atendimento || '') : ''
-                                setForm(f => ({ ...f, profissional_nome: nome, data_consulta: dataAuto }))
+                                setForm(f => ({ ...f, profissional_nome: nome, data_consulta: dataAuto, data_atendimento: dataAuto }))
                               }}
                               style={{ width: '100%' }}>
                               <option value="">— Selecione —</option>
@@ -836,7 +836,7 @@ export default function Especialidades() {
                               // Profissional tem mais de uma data → select
                               <select className="input-modern"
                                 value={form.data_consulta}
-                                onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value }))}
+                                onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value, data_atendimento: e.target.value }))}
                                 style={{ width: '100%' }}>
                                 <option value="">— Selecione a data —</option>
                                 {datasDoProf.map(e => (
@@ -866,7 +866,7 @@ export default function Especialidades() {
                     <button className="btn-primary" style={{ background: GRAD }} onClick={salvarAgendamento} disabled={salvando}>
                       {salvando ? '⏳ Salvando...' : '💾 Salvar'}
                     </button>
-                    <button className="btn-secondary" onClick={() => { setMostrarForm(false); setForm({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '' }) }}>Cancelar</button>
+                    <button className="btn-secondary" onClick={() => { setMostrarForm(false); setForm({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '', data_atendimento: '' }) }}>Cancelar</button>
                   </div>
                 </div>
               )}
@@ -986,7 +986,7 @@ export default function Especialidades() {
                             <td style={{ padding: '6px 8px' }}>
                               <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexWrap: 'nowrap' }}>
                                 {a.status !== 'autorizado' && btn(() => autorizar(a.id), 'Autorizar', '#dcfce7', '#86efac', '#166534', '✓')}
-                                {a.status === 'autorizado' && btn(() => imprimirComprovante(a, espAtiva.label, escala), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', '🖨')}
+                                {a.status === 'autorizado' && btn(() => imprimirComprovante(a, espAtiva.label), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', '🖨')}
                                 {a.status !== 'negado' && btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', '✗')}
                                 {a.status !== 'pendente' && btn(() => voltarPendente(a.id), 'Voltar para pendente', '#fef9c3', '#fde047', '#854d0e', '↩')}
                                 {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', '✏')}
