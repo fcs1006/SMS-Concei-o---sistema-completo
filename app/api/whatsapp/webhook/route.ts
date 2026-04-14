@@ -263,7 +263,6 @@ export async function POST(request: NextRequest) {
 
     // Fora do horário de funcionamento
     if (!dentroDoHorario()) {
-      const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Araguaina' })
       const respFechado = `Olá! 👋 Sou o Francisco, assistente virtual da SMS Conceição do Tocantins.\n\n⏰ No momento a secretaria está *fechada*.\n\n🕐 Horário de atendimento:\nSegunda a sexta: 7h–11h e 13h–17h\n\n🚨 Em caso de urgência ou emergência, entre em contato *imediatamente*:\n📞 *(63) 99130-6916*`
       await salvarMensagem(telefone, 'assistant', respFechado)
       await enviarMensagem(telefone, respFechado)
@@ -308,6 +307,13 @@ ASSUNTOS PERMITIDOS (somente):
   • Cuidados com hipertensão, diabetes, saúde bucal, vacinação
   • Prevenção e autocuidado
 
+USO DAS FERRAMENTAS — REGRAS OBRIGATÓRIAS:
+- Quando o usuário fornecer um nome ou número (CPF, CNS), chame IMEDIATAMENTE a ferramenta sem pedir mais informações
+- CPF pode vir com ou sem máscara (ex: 137.325.047-00 ou 13732504700) — ambos são válidos, use direto na busca
+- NUNCA pergunte o motivo da consulta — não é necessário para buscar dados
+- NUNCA escreva <function=...> no texto — use apenas as ferramentas estruturadas
+- Se o usuário já forneceu nome ou CPF, não peça novamente
+
 ASSUNTOS PROIBIDOS:
 - Diagnósticos, prescrições ou orientações médicas específicas
 - Assuntos fora da área de saúde (política, jurídico, financeiro, etc.)
@@ -339,7 +345,7 @@ QUANDO ESCALAR PARA HUMANO (use a ferramenta escalar_para_humano):
       tentativas++
 
       const response = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama3-groq-70b-8192-tool-use-preview',
         max_tokens: 1024,
         messages: [{ role: 'system', content: systemPrompt }, ...mensagens],
         tools,
@@ -350,7 +356,9 @@ QUANDO ESCALAR PARA HUMANO (use a ferramenta escalar_para_humano):
       const toolCalls = msg.tool_calls
 
       if (!toolCalls || toolCalls.length === 0) {
-        resposta = msg.content || 'Desculpe, não consegui processar sua mensagem.'
+        // Remove vazamento de chamadas de ferramenta no texto
+        const texto_resp = (msg.content || '').replace(/<function=[^>]*>[^<]*<\/function>/g, '').trim()
+        resposta = texto_resp || 'Desculpe, não consegui processar sua mensagem.'
         break
       }
 
