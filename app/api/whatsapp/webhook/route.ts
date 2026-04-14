@@ -24,7 +24,7 @@ function dentroDoHorario(): boolean {
 }
 
 // ── Ferramentas do Francisco ─────────────────────────────────────────────────
-const tools: Groq.Chat.CompletionCreateParams['tools'] = [
+const tools: Groq.Chat.Completions.ChatCompletionTool[] = [
   {
     type: 'function',
     function: {
@@ -218,7 +218,7 @@ async function enviarMensagem(numero: string, texto: string) {
 }
 
 // ── Carrega histórico da conversa ────────────────────────────────────────────
-async function carregarHistorico(telefone: string): Promise<Groq.Chat.MessageParam[]> {
+async function carregarHistorico(telefone: string): Promise<Groq.Chat.Completions.ChatCompletionMessageParam[]> {
   const { data } = await supabase
     .from('whatsapp_conversas')
     .select('papel, mensagem')
@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
     // Primeira mensagem — aviso obrigatório
     const primeiraMsg = historico.length === 0
 
-    const mensagens: Groq.Chat.MessageParam[] = [
+    const mensagens: Groq.Chat.Completions.ChatCompletionMessageParam[] = [
       ...historico,
       {
         role: 'user',
@@ -293,7 +293,7 @@ IDENTIDADE E TOM:
 - Nunca se apresente como médico ou profissional de saúde
 
 AVISO INICIAL (primeira mensagem de cada conversa):
-Sempre inicie informando: "📋 Este canal é exclusivo para assuntos da Secretaria Municipal de Saúde. Em caso de urgência ou emergência, entre em contato IMEDIATAMENTE pelo: *📞 (63) 99130-6916*"
+Sempre inicie informando: "📋 Este canal é exclusivo para assuntos da Secretaria Municipal de Saúde. Em caso de urgência ou emergência, entre em contato IMEDIATAMENTE pelo: 📞 *(63) 99130-6916*"
 
 HORÁRIO DE FUNCIONAMENTO (segunda a sexta, 7h–11h e 13h–17h):
 - Fora desse horário: informe que a secretaria está fechada e oriente a retornar no próximo horário de atendimento
