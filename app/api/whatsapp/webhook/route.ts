@@ -13,8 +13,32 @@ const EVOLUTION_URL = process.env.EVOLUTION_API_URL!
 const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY!
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE!
 
+// ── Verifica horário de funcionamento ───────────────────────────────────────
+function dentroDoHorario(): boolean {
+  const agora = new Date().toLocaleString('en-US', { timeZone: 'America/Araguaina' })
+  const hora = new Date(agora)
+  const h = hora.getHours()
+  const diaSemana = hora.getDay() // 0=dom, 6=sáb
+  if (diaSemana === 0 || diaSemana === 6) return false
+  return (h >= 7 && h < 11) || (h >= 13 && h < 17)
+}
+
 // ── Ferramentas do Francisco ─────────────────────────────────────────────────
 const tools: Groq.Chat.CompletionCreateParams['tools'] = [
+  {
+    type: 'function',
+    function: {
+      name: 'escalar_para_humano',
+      description: 'Chama um atendente humano quando Francisco não consegue resolver a solicitação, quando o assunto é muito específico, sensível ou requer intervenção humana.',
+      parameters: {
+        type: 'object',
+        properties: {
+          motivo: { type: 'string', description: 'Motivo pelo qual está escalando para atendimento humano' }
+        },
+        required: ['motivo']
+      }
+    }
+  },
   {
     type: 'function',
     function: {
@@ -75,8 +99,17 @@ const tools: Groq.Chat.CompletionCreateParams['tools'] = [
 ]
 
 // ── Execução das ferramentas ─────────────────────────────────────────────────
-async function executarFerramenta(nome: string, input: any): Promise<string> {
+async function executarFerramenta(nome: string, input: any, telefone: string): Promise<string> {
   try {
+    if (nome === 'escalar_para_humano') {
+      await supabase.from('whatsapp_conversas').insert([{
+        telefone,
+        papel: 'sistema',
+        mensagem: `🔴 ESCALONADO: ${input.motivo}`
+      }])
+      return 'ESCALONADO'
+    }
+
     if (nome === 'buscar_agendamentos') {
       const soDigitos = input.busca.replace(/\D/g, '')
       let query = supabase
@@ -159,7 +192,7 @@ async function executarFerramenta(nome: string, input: any): Promise<string> {
         servicos: 'Oferecemos: agendamento de consultas e exames especializados, TFD (Tratamento Fora do Domicílio), BPA, cadastro de pacientes, almoxarifado de medicamentos e insumos.',
         tfd: 'O TFD (Tratamento Fora do Domicílio) oferece transporte para pacientes que necessitam de atendimento em outros municípios como Palmas e Porto Nacional.',
         agendamento: 'Para agendar consultas em especialidades (ortopedia, ginecologia, oftalmologia, urologia, USG, psiquiatria), procure a SMS com encaminhamento médico do PSF.',
-        contato: 'Entre em contato com a Secretaria Municipal de Saúde de Conceição do Tocantins pelo WhatsApp ou presencialmente.',
+        contato: `📞 *Contatos da Saúde — Conceição do Tocantins*\n\n🏥 *Secretaria Municipal de Saúde (urgências):*\n(63) 99130-6916\n\n🏨 *UBS Urbana (Postinho):*\n(63) 99130-2450\n\n🔬 *Laboratório:*\n(63) 99132-7974\n\n🛡️ *Vigilância Sanitária:*\n(63) 99131-4490\n\n⏰ Atendimento: seg–sex, 7h–11h e 13h–17h`,
       }
 
       const assunto = input.assunto.toLowerCase()
@@ -228,18 +261,75 @@ export async function POST(request: NextRequest) {
     const historico = await carregarHistorico(telefone)
     await salvarMensagem(telefone, 'user', texto)
 
+    // Fora do horário de funcionamento
+    if (!dentroDoHorario()) {
+      const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Araguaina' })
+      const respFechado = `Olá! 👋 Sou o Francisco, assistente virtual da SMS Conceição do Tocantins.\n\n⏰ No momento a secretaria está *fechada*.\n\n🕐 Horário de atendimento:\nSegunda a sexta: 7h–11h e 13h–17h\n\n🚨 Em caso de urgência ou emergência, entre em contato *imediatamente*:\n📞 *(63) 99130-6916*`
+      await salvarMensagem(telefone, 'assistant', respFechado)
+      await enviarMensagem(telefone, respFechado)
+      return NextResponse.json({ ok: true })
+    }
+
+    // Primeira mensagem — aviso obrigatório
+    const primeiraMsg = historico.length === 0
+
     const mensagens: Groq.Chat.MessageParam[] = [
       ...historico,
-      { role: 'user', content: texto }
+      {
+        role: 'user',
+        content: primeiraMsg
+          ? `[PRIMEIRA MENSAGEM DO USUÁRIO — inclua o aviso do canal e do número de emergência no início da sua resposta]\n\n${texto}`
+          : texto
+      }
     ]
 
     const systemPrompt = `Você é Francisco, o assistente virtual da Secretaria Municipal de Saúde de Conceição do Tocantins - TO.
-Você é simpático, prestativo e fala de forma clara e objetiva, como um atendente profissional.
-Responda sempre em português brasileiro.
-Seja conciso — mensagens de WhatsApp devem ser curtas e diretas.
-Quando não souber algo, diga honestamente e oriente o paciente a ligar ou ir pessoalmente à secretaria.
-Não invente informações médicas ou datas que não estejam no sistema.
-Data e hora atual: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Araguaina' })}`
+Data e hora atual: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Araguaina' })}
+
+IDENTIDADE E TOM:
+- Simpático, prestativo, claro e objetivo como um atendente profissional de saúde pública
+- Responda sempre em português brasileiro, linguagem simples e acessível
+- Mensagens curtas e diretas (formato WhatsApp)
+- Nunca se apresente como médico ou profissional de saúde
+
+AVISO INICIAL (primeira mensagem de cada conversa):
+Sempre inicie informando: "📋 Este canal é exclusivo para assuntos da Secretaria Municipal de Saúde. Em caso de urgência ou emergência, entre em contato IMEDIATAMENTE pelo: *📞 (63) 99130-6916*"
+
+HORÁRIO DE FUNCIONAMENTO (segunda a sexta, 7h–11h e 13h–17h):
+- Fora desse horário: informe que a secretaria está fechada e oriente a retornar no próximo horário de atendimento
+- Urgências e emergências: sempre redirecione para o *📞 (63) 99130-6916*, independente do horário
+
+ASSUNTOS PERMITIDOS (somente):
+- Agendamentos, consultas, exames e retornos da secretaria
+- TFD — Tratamento Fora do Domicílio
+- Informações sobre serviços da SMS
+- Orientações gerais de saúde baseadas em diretrizes do Ministério da Saúde:
+  • Hábitos saudáveis, alimentação, atividade física
+  • Cuidados com hipertensão, diabetes, saúde bucal, vacinação
+  • Prevenção e autocuidado
+
+ASSUNTOS PROIBIDOS:
+- Diagnósticos, prescrições ou orientações médicas específicas
+- Assuntos fora da área de saúde (política, jurídico, financeiro, etc.)
+- Para esses casos: "Este canal é exclusivo para assuntos de saúde. Para essa dúvida, procure o serviço adequado."
+
+DADOS SENSÍVEIS — NUNCA compartilhe:
+- CPF completo, endereço residencial, diagnósticos, prontuários
+- Apenas confirme dados de agendamento para o próprio paciente (nome + data de nascimento)
+
+CONTATOS DA SAÚDE (responda diretamente quando perguntarem):
+- 🚨 Urgências/Emergências: (63) 99130-6916
+- 🏥 Secretaria Municipal de Saúde: (63) 99130-6916
+- 🏨 UBS Urbana (Postinho): (63) 99130-2450
+- 🔬 Laboratório: (63) 99132-7974
+- 🛡️ Vigilância Sanitária: (63) 99131-4490
+
+QUANDO ESCALAR PARA HUMANO (use a ferramenta escalar_para_humano):
+- Situação de risco ou sofrimento emocional relatado
+- Reclamação ou denúncia grave
+- Solicitação explícita de falar com atendente
+- Após 3 tentativas sem resolver o problema do usuário
+- Assunto muito específico que exige análise humana`
 
     // Loop do agente com ferramentas
     let resposta = ''
@@ -269,7 +359,7 @@ Data e hora atual: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Ara
 
       for (const tc of toolCalls) {
         const input = JSON.parse(tc.function.arguments || '{}')
-        const resultado = await executarFerramenta(tc.function.name, input)
+        const resultado = await executarFerramenta(tc.function.name, input, telefone)
         mensagens.push({
           role: 'tool',
           tool_call_id: tc.id,

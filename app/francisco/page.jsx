@@ -57,9 +57,12 @@ export default function Francisco() {
     const mapa = {}
     data.forEach(m => {
       if (!mapa[m.telefone]) {
-        mapa[m.telefone] = { telefone: m.telefone, ultima: m.mensagem, hora: m.criado_em, total: 0 }
+        mapa[m.telefone] = { telefone: m.telefone, ultima: m.mensagem, hora: m.criado_em, total: 0, escalonado: false }
       }
       mapa[m.telefone].total++
+      if (m.papel === 'sistema' && m.mensagem.startsWith('🔴 ESCALONADO')) {
+        mapa[m.telefone].escalonado = true
+      }
     })
 
     const lista = Object.values(mapa).sort((a, b) => new Date(b.hora) - new Date(a.hora))
@@ -112,6 +115,10 @@ export default function Francisco() {
               style={{ padding: '7px 14px', background: '#1e293b', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
               🔄 Atualizar
             </button>
+            <button onClick={() => router.push('/francisco/teste')}
+              style={{ padding: '7px 14px', background: '#075e54', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+              🧪 Testar Francisco
+            </button>
           </div>
         </div>
 
@@ -140,9 +147,16 @@ export default function Francisco() {
                   }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                     <div style={{ overflow: 'hidden', flex: 1 }}>
-                      <p style={{ margin: '0 0 2px', fontWeight: '700', fontSize: '12px', color: '#0f172a', fontFamily: 'Sora, sans-serif' }}>
-                        {mascaraTel(c.telefone)}
-                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                        <p style={{ margin: 0, fontWeight: '700', fontSize: '12px', color: '#0f172a', fontFamily: 'Sora, sans-serif' }}>
+                          {mascaraTel(c.telefone)}
+                        </p>
+                        {c.escalonado && (
+                          <span style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '4px', fontSize: '10px', color: '#dc2626', fontWeight: '700', padding: '1px 5px' }}>
+                            🔴 Aguarda atendimento
+                          </span>
+                        )}
+                      </div>
                       <p style={{ margin: 0, fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {c.ultima}
                       </p>
@@ -180,6 +194,17 @@ export default function Francisco() {
 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', background: '#f8fafc' }}>
                   {mensagens.map((m, i) => (
+                    m.papel === 'sistema' ? (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'center' }}>
+                        <div style={{
+                          background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px',
+                          padding: '8px 14px', maxWidth: '90%', textAlign: 'center'
+                        }}>
+                          <p style={{ margin: '0 0 2px', fontSize: '12px', color: '#dc2626', fontWeight: '700' }}>{m.mensagem}</p>
+                          <p style={{ margin: 0, fontSize: '10px', color: '#94a3b8' }}>{formatarHora(m.criado_em)}</p>
+                        </div>
+                      </div>
+                    ) : (
                     <div key={i} style={{ display: 'flex', justifyContent: m.papel === 'user' ? 'flex-start' : 'flex-end' }}>
                       <div style={{
                         maxWidth: '75%', padding: '10px 14px', borderRadius: m.papel === 'user' ? '4px 14px 14px 14px' : '14px 4px 14px 14px',
@@ -195,6 +220,7 @@ export default function Francisco() {
                         </p>
                       </div>
                     </div>
+                    )
                   ))}
                   <div ref={msgEndRef} />
                 </div>
