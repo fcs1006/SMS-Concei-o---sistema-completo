@@ -591,7 +591,7 @@ export default function Especialidades() {
   // ── Cálculos de cota ──────────────────────────────────────────────────────
   const espAtiva = ESPECIALIDADES.find(e => e.id === esp)
   const autorizados = agendamentos.filter(a => a.status === 'autorizado').length
-  const usados = agendamentos.filter(a => a.status !== 'negado').length
+  const usados = autorizados
   const pct = Math.min(100, Math.round((usados / espAtiva.cota) * 100))
 
   // ── Render ────────────────────────────────────────────────────────────────

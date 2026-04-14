@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import Groq from 'groq-sdk'
 import { createClient } from '@supabase/supabase-js'
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,50 +14,62 @@ const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY!
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE!
 
 // ── Ferramentas do Francisco ─────────────────────────────────────────────────
-const tools: Anthropic.Tool[] = [
+const tools: Groq.Chat.CompletionCreateParams['tools'] = [
   {
-    name: 'buscar_agendamentos',
-    description: 'Busca agendamentos de consultas e exames de especialidades do paciente pelo nome ou CPF/CNS. Retorna especialidade, tipo de exame, data, status e profissional.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        busca: { type: 'string', description: 'Nome do paciente ou CPF/CNS (com ou sem máscara)' }
-      },
-      required: ['busca']
+    type: 'function',
+    function: {
+      name: 'buscar_agendamentos',
+      description: 'Busca agendamentos de consultas e exames de especialidades do paciente pelo nome ou CPF/CNS. Retorna especialidade, tipo de exame, data, status e profissional.',
+      parameters: {
+        type: 'object',
+        properties: {
+          busca: { type: 'string', description: 'Nome do paciente ou CPF/CNS (com ou sem máscara)' }
+        },
+        required: ['busca']
+      }
     }
   },
   {
-    name: 'buscar_paciente',
-    description: 'Busca dados cadastrais do paciente (nome, CPF/CNS, data de nascimento, telefone, endereço) na base da secretaria.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        busca: { type: 'string', description: 'Nome do paciente ou CPF/CNS' }
-      },
-      required: ['busca']
+    type: 'function',
+    function: {
+      name: 'buscar_paciente',
+      description: 'Busca dados cadastrais do paciente (nome, CPF/CNS, data de nascimento, telefone, endereço) na base da secretaria.',
+      parameters: {
+        type: 'object',
+        properties: {
+          busca: { type: 'string', description: 'Nome do paciente ou CPF/CNS' }
+        },
+        required: ['busca']
+      }
     }
   },
   {
-    name: 'buscar_tfd',
-    description: 'Busca viagens de TFD (Tratamento Fora do Domicílio) do paciente. Retorna destino, data e horário da viagem.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        busca: { type: 'string', description: 'Nome do paciente ou CPF' },
-        data: { type: 'string', description: 'Data no formato YYYY-MM-DD (opcional, para filtrar por data)' }
-      },
-      required: ['busca']
+    type: 'function',
+    function: {
+      name: 'buscar_tfd',
+      description: 'Busca viagens de TFD (Tratamento Fora do Domicílio) do paciente. Retorna destino, data e horário da viagem.',
+      parameters: {
+        type: 'object',
+        properties: {
+          busca: { type: 'string', description: 'Nome do paciente ou CPF' },
+          data: { type: 'string', description: 'Data no formato YYYY-MM-DD (opcional, para filtrar por data)' }
+        },
+        required: ['busca']
+      }
     }
   },
   {
-    name: 'informacoes_secretaria',
-    description: 'Retorna informações gerais sobre a Secretaria Municipal de Saúde de Conceição do Tocantins.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        assunto: { type: 'string', description: 'Assunto da dúvida (horário, endereço, serviços, contato, etc.)' }
-      },
-      required: ['assunto']
+    type: 'function',
+    function: {
+      name: 'informacoes_secretaria',
+      description: 'Retorna informações gerais sobre a Secretaria Municipal de Saúde de Conceição do Tocantins.',
+      parameters: {
+        type: 'object',
+        properties: {
+          assunto: { type: 'string', description: 'Assunto da dúvida (horário, endereço, serviços, contato, etc.)' }
+        },
+        required: ['assunto']
+      }
     }
   }
 ]
@@ -145,7 +157,7 @@ async function executarFerramenta(nome: string, input: any): Promise<string> {
         horario: 'A Secretaria Municipal de Saúde funciona de segunda a sexta-feira, das 7h às 13h.',
         endereco: 'A SMS fica localizada na sede do município de Conceição do Tocantins - TO.',
         servicos: 'Oferecemos: agendamento de consultas e exames especializados, TFD (Tratamento Fora do Domicílio), BPA, cadastro de pacientes, almoxarifado de medicamentos e insumos.',
-        tfd: 'O TFD (Tratamento Fora do Domicílio) oferece transporte para pacientes que necessitam de atendimento em outros municípios como Palmas e Porto Nacional. Para incluir uma viagem, procure a secretaria com o encaminhamento médico.',
+        tfd: 'O TFD (Tratamento Fora do Domicílio) oferece transporte para pacientes que necessitam de atendimento em outros municípios como Palmas e Porto Nacional.',
         agendamento: 'Para agendar consultas em especialidades (ortopedia, ginecologia, oftalmologia, urologia, USG, psiquiatria), procure a SMS com encaminhamento médico do PSF.',
         contato: 'Entre em contato com a Secretaria Municipal de Saúde de Conceição do Tocantins pelo WhatsApp ou presencialmente.',
       }
@@ -165,8 +177,7 @@ async function executarFerramenta(nome: string, input: any): Promise<string> {
 
 // ── Envia mensagem via Evolution API ────────────────────────────────────────
 async function enviarMensagem(numero: string, texto: string) {
-  const url = `${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`
-  await fetch(url, {
+  await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_KEY },
     body: JSON.stringify({ number: numero, text: texto })
@@ -174,7 +185,7 @@ async function enviarMensagem(numero: string, texto: string) {
 }
 
 // ── Carrega histórico da conversa ────────────────────────────────────────────
-async function carregarHistorico(telefone: string): Promise<Anthropic.MessageParam[]> {
+async function carregarHistorico(telefone: string): Promise<Groq.Chat.MessageParam[]> {
   const { data } = await supabase
     .from('whatsapp_conversas')
     .select('papel, mensagem')
@@ -199,13 +210,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    // Filtrar apenas mensagens recebidas (não enviadas pelo bot)
     if (body?.data?.key?.fromMe) return NextResponse.json({ ok: true })
     if (body?.event !== 'messages.upsert') return NextResponse.json({ ok: true })
 
     const remoteJid: string = body?.data?.key?.remoteJid || ''
     const telefone = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '')
-    if (!telefone || remoteJid.includes('@g.us')) return NextResponse.json({ ok: true }) // ignora grupos
+    if (!telefone || remoteJid.includes('@g.us')) return NextResponse.json({ ok: true })
 
     const msgObj = body?.data?.message
     const texto: string =
@@ -215,14 +225,21 @@ export async function POST(request: NextRequest) {
 
     if (!texto.trim()) return NextResponse.json({ ok: true })
 
-    // Carrega histórico e salva mensagem do usuário
     const historico = await carregarHistorico(telefone)
     await salvarMensagem(telefone, 'user', texto)
 
-    const mensagens: Anthropic.MessageParam[] = [
+    const mensagens: Groq.Chat.MessageParam[] = [
       ...historico,
       { role: 'user', content: texto }
     ]
+
+    const systemPrompt = `Você é Francisco, o assistente virtual da Secretaria Municipal de Saúde de Conceição do Tocantins - TO.
+Você é simpático, prestativo e fala de forma clara e objetiva, como um atendente profissional.
+Responda sempre em português brasileiro.
+Seja conciso — mensagens de WhatsApp devem ser curtas e diretas.
+Quando não souber algo, diga honestamente e oriente o paciente a ligar ou ir pessoalmente à secretaria.
+Não invente informações médicas ou datas que não estejam no sistema.
+Data e hora atual: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Araguaina' })}`
 
     // Loop do agente com ferramentas
     let resposta = ''
@@ -230,49 +247,39 @@ export async function POST(request: NextRequest) {
 
     while (tentativas < 5) {
       tentativas++
-      const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
+
+      const response = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 1024,
-        system: `Você é Francisco, o assistente virtual da Secretaria Municipal de Saúde de Conceição do Tocantins - TO.
-Você é simpático, prestativo e fala de forma clara e objetiva, como um atendente profissional.
-Responda sempre em português brasileiro.
-Seja conciso — mensagens de WhatsApp devem ser curtas e diretas.
-Quando não souber algo, diga honestamente e oriente o paciente a ligar ou ir pessoalmente à secretaria.
-Não invente informações médicas ou datas que não estejam no sistema.
-Data e hora atual: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Araguaina' })}`,
-        messages: mensagens,
-        tools
+        messages: [{ role: 'system', content: systemPrompt }, ...mensagens],
+        tools,
+        tool_choice: 'auto'
       })
 
-      // Verifica se tem chamadas de ferramentas
-      const toolUses = response.content.filter(b => b.type === 'tool_use')
+      const msg = response.choices[0].message
+      const toolCalls = msg.tool_calls
 
-      if (response.stop_reason === 'end_turn' || toolUses.length === 0) {
-        // Resposta final
-        const textBlock = response.content.find(b => b.type === 'text')
-        resposta = (textBlock as any)?.text || 'Desculpe, não consegui processar sua mensagem.'
+      if (!toolCalls || toolCalls.length === 0) {
+        resposta = msg.content || 'Desculpe, não consegui processar sua mensagem.'
         break
       }
 
-      // Executa ferramentas
-      mensagens.push({ role: 'assistant', content: response.content })
+      // Executa as ferramentas
+      mensagens.push({ role: 'assistant', content: msg.content || '', tool_calls: toolCalls })
 
-      const resultados: Anthropic.ToolResultBlockParam[] = []
-      for (const tool of toolUses) {
-        const resultado = await executarFerramenta(tool.name, (tool as any).input)
-        resultados.push({
-          type: 'tool_result',
-          tool_use_id: tool.id,
+      for (const tc of toolCalls) {
+        const input = JSON.parse(tc.function.arguments || '{}')
+        const resultado = await executarFerramenta(tc.function.name, input)
+        mensagens.push({
+          role: 'tool',
+          tool_call_id: tc.id,
           content: resultado
         })
       }
-
-      mensagens.push({ role: 'user', content: resultados })
     }
 
     if (!resposta) resposta = 'Desculpe, não consegui processar sua mensagem no momento. Tente novamente ou ligue para a secretaria.'
 
-    // Salva resposta e envia
     await salvarMensagem(telefone, 'assistant', resposta)
     await enviarMensagem(telefone, resposta)
 
@@ -284,5 +291,5 @@ Data e hora atual: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Ara
 }
 
 export async function GET() {
-  return NextResponse.json({ ok: true, agente: 'Francisco — SMS Conceição do Tocantins' })
+  return NextResponse.json({ ok: true, agente: 'Francisco — SMS Conceição do Tocantins (Groq)' })
 }
