@@ -345,7 +345,7 @@ QUANDO ESCALAR PARA HUMANO (use a ferramenta escalar_para_humano):
       tentativas++
 
       const response = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: 'moonshotai/kimi-k2-instruct',
         max_tokens: 1024,
         messages: [{ role: 'system', content: systemPrompt }, ...mensagens],
         tools,
