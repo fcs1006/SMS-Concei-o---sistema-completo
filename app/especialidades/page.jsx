@@ -1118,7 +1118,7 @@ export default function Especialidades() {
                   </thead>
                   <tbody>
                     {relatorio.filter(r => !relFiltroEsp || ESPECIALIDADES.find(e => e.id === relFiltroEsp)?.label === r.label).map((r, i) => {
-                      const total = r.pendente + r.autorizado
+                      const total = r.autorizado
                       const pct2 = Math.round((total / r.cota) * 100)
                       return (
                         <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 0 ? '#fff' : '#f8fafc', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
