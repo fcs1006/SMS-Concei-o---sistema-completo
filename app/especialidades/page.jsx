@@ -81,22 +81,20 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
     body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #fff; padding: 28px 32px; }
     .borda { border: 2px solid #000; border-radius: 4px; padding: 20px 24px; }
     .cabecalho { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 14px; }
-    .cabecalho h1 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-    .cabecalho h2 { font-size: 16px; font-weight: 800; text-transform: uppercase; margin: 6px 0 4px; }
-    .cabecalho p  { font-size: 11px; color: #333; }
-    .num { font-size: 10px; color: #555; margin-top: 4px; }
+    .cabecalho .linha1 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #333; }
+    .cabecalho .linha2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #333; margin-top: 2px; }
+    .cabecalho h2 { font-size: 15px; font-weight: 800; text-transform: uppercase; margin: 8px 0 6px; letter-spacing: 0.03em; }
+    .num { font-size: 10px; color: #555; }
     .secao { margin-bottom: 14px; }
     .secao-titulo { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #555; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-bottom: 8px; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
+    .linha-campos { display: flex; gap: 24px; flex-wrap: nowrap; }
+    .linha-campos .campo { flex: 1; min-width: 0; }
     .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 20px; }
     .campo label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #555; display: block; margin-bottom: 2px; }
-    .campo span  { font-size: 13px; font-weight: 600; }
+    .campo span  { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
     .destaque { background: #f0f0f0; border-radius: 4px; padding: 10px 14px; text-align: center; margin: 12px 0; }
     .destaque span { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; }
     .destaque small { font-size: 11px; display: block; color: #444; margin-top: 2px; }
-    .assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 28px; }
-    .linha-assin { border-top: 1px solid #000; padding-top: 6px; text-align: center; font-size: 10px; color: #333; }
-    .rodape { text-align: center; font-size: 10px; color: #777; margin-top: 18px; border-top: 1px dashed #ccc; padding-top: 10px; }
     .aviso { background: #fffbea; border: 1px solid #e5c000; border-radius: 4px; padding: 8px 12px; font-size: 11px; color: #7a5900; margin-top: 12px; }
     @media print { body { padding: 10px; } }
   </style>
@@ -104,19 +102,18 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
 <body>
   <div class="borda">
     <div class="cabecalho">
-      <h1>Prefeitura Municipal de ${municipio.split('/')[0]}</h1>
-      <h1>Secretaria Municipal de Saúde</h1>
+      <div class="linha1">Prefeitura Municipal de Conceição do Tocantins</div>
+      <div class="linha2">Secretaria Municipal de Saúde</div>
       <h2>Comprovante de Autorização de ${tipoDoc}</h2>
-      <p>${municipio}</p>
-      <p class="num">Nº ${numComp} &nbsp;|&nbsp; Emitido em: ${dataEmissao} às ${horaEmissao}</p>
+      <div class="num">Nº ${numComp} &nbsp;|&nbsp; Emitido em: ${dataEmissao} às ${horaEmissao}</div>
     </div>
 
     <div class="secao">
       <div class="secao-titulo">Dados do Paciente</div>
-      <div class="grid2">
+      <div class="linha-campos">
         <div class="campo"><label>Nome completo</label><span>${ag.paciente_nome || '—'}</span></div>
-        <div class="campo"><label>CPF / CNS</label><span>${ag.paciente_cns || '—'}</span></div>
-        <div class="campo"><label>Telefone</label><span>${ag.telefone || '—'}</span></div>
+        <div class="campo" style="max-width:160px"><label>CPF / CNS</label><span>${ag.paciente_cns || '—'}</span></div>
+        <div class="campo" style="max-width:130px"><label>Telefone</label><span>${ag.telefone || '—'}</span></div>
       </div>
     </div>
 
@@ -132,21 +129,12 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
         <div class="campo"><label>Especialidade</label><span>${espLabel}</span></div>
         <div class="campo"><label>Profissional</label><span>${ag.profissional_nome || 'A definir'}</span></div>
       </div>
-      ${ag.observacao ? `<div class="campo" style="margin-top:8px"><label>Observação</label><span>${ag.observacao}</span></div>` : ''}
+      ${ag.observacao ? `<div class="campo" style="margin-top:8px"><label>Observação</label><span style="white-space:normal">${ag.observacao}</span></div>` : ''}
     </div>
 
     <div class="aviso">
       ⚠️ <strong>Importante:</strong> Apresente este comprovante no dia do atendimento junto com documento de identidade e cartão SUS.
       Este comprovante é válido apenas para a data agendada.
-    </div>
-
-    <div class="assinaturas">
-      <div class="linha-assin">Assinatura e carimbo do responsável<br/>Secretaria Municipal de Saúde</div>
-      <div class="linha-assin">Assinatura do paciente ou responsável</div>
-    </div>
-
-    <div class="rodape">
-      Secretaria Municipal de Saúde de ${municipio} &nbsp;·&nbsp; Documento gerado em ${dataEmissao}
     </div>
   </div>
   <script>window.onload = () => { window.print(); }</script>
