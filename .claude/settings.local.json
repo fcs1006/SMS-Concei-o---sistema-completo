@@ -50,7 +50,8 @@
       "Bash(status=$?)",
       "Bash(exit $status)",
       "Bash(node --input-type=module --eval ':*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(pkill -f \"next dev\")"
     ]
   }
 }
