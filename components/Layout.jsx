@@ -117,20 +117,21 @@ export default function Layout({ children, usuario }) {
             onClick={toggleSidebar}
             title={recolhido ? 'Expandir menu' : 'Recolher menu'}
             style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.12)',
+              background: paginaAtiva.acento,
+              border: 'none',
               borderRadius: '8px',
-              color: 'rgba(255,255,255,0.7)',
+              color: '#0f172a',
               cursor: 'pointer',
-              width: '28px', height: '28px',
+              width: '32px', height: '32px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '13px', flexShrink: 0,
-              transition: 'background 0.2s'
+              fontSize: '16px', fontWeight: '800', flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              transition: 'opacity 0.2s'
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
-            {recolhido ? '›' : '‹'}
+            {recolhido ? '▶' : '◀'}
           </button>
         </div>
 
