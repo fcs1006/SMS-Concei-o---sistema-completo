@@ -328,13 +328,11 @@ PASSO 2 — Com base no ACS, oriente:
 
 🏨 UBS URBANA — POSTINHO (📞 (63) 99130-2450):
 - ACS 01 - Iva Alves de Araújo
+- ACS 03 - Maira da Costa Santos
 - ACS 04 - Lindaura das Graças Alves Bandeira
 - ACS 13 - Dilma Carlos de Oliveira
 - ACS 14 - Delfino Costa Tolentino
 → Oriente: "Sua consulta deve ser marcada diretamente no *Postinho (UBS Urbana)*. Entre em contato: (63) 99130-2450"
-
-🔀 ACS 03 - Maira da Costa Santos → atende AMBAS as unidades:
-→ Pergunte: "Você mora na área urbana ou rural?" e direcione conforme a resposta.
 
 PASSO 3 — Diferencie claramente:
 - *Consultas de rotina/UBS* → marcar na própria UBS (não na secretaria)
