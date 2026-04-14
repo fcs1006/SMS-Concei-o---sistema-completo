@@ -71,6 +71,11 @@ export default function Layout({ children, usuario }) {
       cor: '#f9a8d4', corBg: 'rgba(249,168,212,0.15)',
       bg1: '#4a044e', bg2: '#701a75', acento: '#e879f9'
     },
+    {
+      label: 'Francisco IA', icon: '🤖', path: '/francisco', adminOnly: true,
+      cor: '#6ee7b7', corBg: 'rgba(110,231,183,0.15)',
+      bg1: '#064e3b', bg2: '#065f46', acento: '#34d399'
+    },
   ]
 
   const aliasMap = { '/resumo': '/tfd', '/bpa/config': '/bpa' }
@@ -117,21 +122,20 @@ export default function Layout({ children, usuario }) {
             onClick={toggleSidebar}
             title={recolhido ? 'Expandir menu' : 'Recolher menu'}
             style={{
-              background: paginaAtiva.acento,
-              border: 'none',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '8px',
-              color: '#0f172a',
+              color: 'rgba(255,255,255,0.7)',
               cursor: 'pointer',
-              width: '32px', height: '32px',
+              width: '26px', height: '26px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '16px', fontWeight: '800', flexShrink: 0,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-              transition: 'opacity 0.2s'
+              fontSize: '12px', flexShrink: 0,
+              transition: 'background 0.2s'
             }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
           >
-            {recolhido ? '▶' : '◀'}
+            {recolhido ? '›' : '‹'}
           </button>
         </div>
 

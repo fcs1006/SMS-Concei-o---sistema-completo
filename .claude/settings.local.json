@@ -51,7 +51,12 @@
       "Bash(exit $status)",
       "Bash(node --input-type=module --eval ':*)",
       "Bash(npx next:*)",
-      "Bash(pkill -f \"next dev\")"
+      "Bash(pkill -f \"next dev\")",
+      "Bash(xdg-open /home/fernando/sms-conceicao/qrcode.html)",
+      "Bash(curl -s https://evolution-api-production-a76e.up.railway.app/instance/connect/francisco -H 'apikey: 352bf9d14da540d8c4bece1f077fad9d2293e6d169a29079468de3a114411475')",
+      "Bash(curl -s https://evolution-api-production-a76e.up.railway.app/instance/fetchInstances -H 'apikey: 352bf9d14da540d8c4bece1f077fad9d2293e6d169a29079468de3a114411475')",
+      "Bash(curl -s https://evolution-api-production-a76e.up.railway.app/webhook/find/Francisco -H 'apikey: 352bf9d14da540d8c4bece1f077fad9d2293e6d169a29079468de3a114411475')",
+      "Bash(curl -s -X POST https://evolution-api-production-a76e.up.railway.app/webhook/set/Francisco -H 'apikey: 352bf9d14da540d8c4bece1f077fad9d2293e6d169a29079468de3a114411475' -H 'Content-Type: application/json' -d '{:*)"
     ]
   }
 }

@@ -60,13 +60,17 @@ function fmtData(v) {
 }
 
 // ── Comprovante de Autorização ────────────────────────────────────────────────
-function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins/TO') {
+function imprimirComprovante(ag, espLabel, escalaData = [], municipio = 'Conceição do Tocantins/TO') {
   const hoje = new Date()
   const dataEmissao = hoje.toLocaleDateString('pt-BR')
   const horaEmissao = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   const isUsg = ag.tipo_exame && !['Primeira Consulta','Retorno','Outro'].includes(ag.tipo_exame)
   const tipoDoc = isUsg ? 'EXAME' : 'CONSULTA'
   const numComp = String(ag.id).slice(-8).toUpperCase()
+
+  // Busca a data de atendimento do médico na escala
+  const escalaEntry = escalaData.find(e => e.profissional_nome === ag.profissional_nome)
+  const dataAtendimento = escalaEntry?.data_atendimento || ag.data_consulta
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -125,7 +129,7 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
     <div class="secao">
       <div class="secao-titulo">Informações do Atendimento</div>
       <div class="grid3">
-        <div class="campo"><label>Data agendada</label><span>${ag.data_consulta ? ag.data_consulta.split('-').reverse().join('/') : '—'}</span></div>
+        <div class="campo"><label>Data agendada</label><span>${dataAtendimento ? dataAtendimento.split('-').reverse().join('/') : '—'}</span></div>
         <div class="campo"><label>Especialidade</label><span>${espLabel}</span></div>
         <div class="campo"><label>Profissional</label><span>${ag.profissional_nome || 'A definir'}</span></div>
       </div>
@@ -982,7 +986,7 @@ export default function Especialidades() {
                             <td style={{ padding: '6px 8px' }}>
                               <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexWrap: 'nowrap' }}>
                                 {a.status !== 'autorizado' && btn(() => autorizar(a.id), 'Autorizar', '#dcfce7', '#86efac', '#166534', '✓')}
-                                {a.status === 'autorizado' && btn(() => imprimirComprovante(a, espAtiva.label), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', '🖨')}
+                                {a.status === 'autorizado' && btn(() => imprimirComprovante(a, espAtiva.label, escala), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', '🖨')}
                                 {a.status !== 'negado' && btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', '✗')}
                                 {a.status !== 'pendente' && btn(() => voltarPendente(a.id), 'Voltar para pendente', '#fef9c3', '#fde047', '#854d0e', '↩')}
                                 {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', '✏')}
