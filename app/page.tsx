@@ -1,21 +1,83 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Tela = 'login' | 'cadastro' | 'esqueci'
 
+const FUNDOS = [
+  { id: 'foto',      label: '🏙️ Foto',      style: { backgroundImage: 'url(/conceicao-bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' } },
+  { id: 'gradient',  label: '🎨 Padrão',    style: { background: 'linear-gradient(135deg, #0f172a 0%, #134e4a 100%)' } },
+  { id: 'azul',      label: '🔵 Azul',      style: { background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)' } },
+  { id: 'roxo',      label: '🟣 Roxo',      style: { background: 'linear-gradient(135deg, #1e1b4b 0%, #4f46e5 100%)' } },
+]
+
 export default function Login() {
   const [tela, setTela] = useState<Tela>('login')
+  const [fundoId, setFundoId] = useState('foto')
+  const [mostrarFundos, setMostrarFundos] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    const salvo = localStorage.getItem('login_fundo')
+    if (salvo) setFundoId(salvo)
+  }, [])
+
+  function trocarFundo(id: string) {
+    setFundoId(id)
+    localStorage.setItem('login_fundo', id)
+    setMostrarFundos(false)
+  }
+
+  const fundo = FUNDOS.find(f => f.id === fundoId) || FUNDOS[0]
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #134e4a 100%)',
+      ...fundo.style,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '20px'
+      padding: '20px', position: 'relative'
     }}>
-      <div className="login-card">
+      {/* Overlay escuro quando foto */}
+      {fundoId === 'foto' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 0 }} />
+      )}
+
+      {/* Ícone trocar fundo — canto inferior esquerdo */}
+      <div style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 10 }}>
+        {mostrarFundos && (
+          <div style={{
+            position: 'absolute', bottom: '52px', left: 0,
+            background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(8px)',
+            borderRadius: '12px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px',
+            border: '1px solid rgba(255,255,255,0.1)', minWidth: '140px'
+          }}>
+            {FUNDOS.map(f => (
+              <button key={f.id} onClick={() => trocarFundo(f.id)} style={{
+                background: fundoId === f.id ? 'rgba(255,255,255,0.15)' : 'none',
+                border: 'none', borderRadius: '8px', padding: '8px 12px',
+                color: 'white', fontSize: '13px', fontWeight: fundoId === f.id ? '700' : '400',
+                cursor: 'pointer', textAlign: 'left', fontFamily: 'DM Sans, sans-serif'
+              }}>
+                {f.label} {fundoId === f.id ? '✓' : ''}
+              </button>
+            ))}
+          </div>
+        )}
+        <button
+          onClick={() => setMostrarFundos(v => !v)}
+          title="Trocar fundo"
+          style={{
+            width: '40px', height: '40px', borderRadius: '50%',
+            background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            cursor: 'pointer', fontSize: '18px', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.2s'
+          }}>
+          🖼️
+        </button>
+      </div>
+      <div className="login-card" style={{ position: 'relative', zIndex: 1 }}>
         {/* Logo / Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <img src="/logo.jpg" alt="SMS Conceição"
