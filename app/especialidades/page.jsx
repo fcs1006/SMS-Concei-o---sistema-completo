@@ -69,14 +69,14 @@ function fmtData(v) {
 }
 
 // ── Comprovante de Autorização ────────────────────────────────────────────────
-function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins/TO') {
+function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins/TO', preparos = PREPARO_USG) {
   const hoje = new Date()
   const dataEmissao = hoje.toLocaleDateString('pt-BR')
   const horaEmissao = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   const isUsg = ag.tipo_exame && !['Primeira Consulta','Retorno','Outro'].includes(ag.tipo_exame)
   const tipoDoc = isUsg ? 'EXAME' : 'CONSULTA'
   const numComp = String(ag.id).slice(-8).toUpperCase()
-  const preparo = isUsg ? (PREPARO_USG[ag.tipo_exame] || null) : null
+  const preparo = isUsg ? (preparos[ag.tipo_exame] || null) : null
 
   // Usa data_atendimento salva no agendamento (data real do médico na escala)
   const dataAtendimento = ag.data_atendimento || ag.data_consulta
@@ -324,11 +324,48 @@ export default function Especialidades() {
   const [relFiltroStatus, setRelFiltroStatus] = useState('')
   const [relFiltroProf, setRelFiltroProf] = useState('')
 
+  // Config dinâmica
+  const [especialidades, setEspecialidades] = useState(ESPECIALIDADES)
+  const [especialidadesConfig, setEspecialidadesConfig] = useState([])
+  const [preparosDb, setPreparosDb] = useState(PREPARO_USG)
+  const [preparosList, setPreparosList] = useState([])
+  const [modalConfig, setModalConfig] = useState(false)
+  const [abaConfig, setAbaConfig] = useState('especialidades')
+  // form nova especialidade
+  const [formEsp, setFormEsp] = useState({ label: '', icon: '🏥', cota: '30' })
+  const [salvandoEsp, setSalvandoEsp] = useState(false)
+  // form novo preparo
+  const [formPreparo, setFormPreparo] = useState({ especialidade_slug: 'usg', tipo_exame: '', instrucoes: '' })
+  const [salvandoPreparo, setSalvandoPreparo] = useState(false)
+  const [editandoPreparo, setEditandoPreparo] = useState(null) // id sendo editado
+
   useEffect(() => {
     const u = localStorage.getItem('sms_user')
     if (!u) { router.push('/'); return }
     setUsuario(JSON.parse(u))
+    carregarConfig()
   }, [])
+
+  async function carregarConfig() {
+    try {
+      const [resEsp, resPre] = await Promise.all([
+        fetch('/api/config/especialidades'),
+        fetch('/api/config/preparos')
+      ])
+      const dataEsp = await resEsp.json()
+      const dataPre = await resPre.json()
+      if (Array.isArray(dataEsp) && dataEsp.length > 0) {
+        setEspecialidadesConfig(dataEsp)
+        setEspecialidades(dataEsp.filter(e => e.ativo).map(e => ({ id: e.slug, label: e.label, icon: e.icon, cota: e.cota })))
+      }
+      if (Array.isArray(dataPre) && dataPre.length > 0) {
+        setPreparosList(dataPre)
+        const mapa = {}
+        dataPre.filter(p => p.ativo).forEach(p => { mapa[p.tipo_exame] = p.instrucoes })
+        setPreparosDb(mapa)
+      }
+    } catch (_) {}
+  }
 
   // Carregar dados ao mudar especialidade/mes/ano
   useEffect(() => {
@@ -498,6 +535,65 @@ export default function Especialidades() {
     } catch (e) { mostrarMsg('❌ ' + e.message, false) }
   }
 
+  async function salvarEspecialidade() {
+    if (!formEsp.label.trim()) { mostrarMsg('Informe o nome da especialidade', false); return }
+    setSalvandoEsp(true)
+    try {
+      const res = await fetch('/api/config/especialidades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: formEsp.label, label: formEsp.label.trim(), icon: formEsp.icon, cota: Number(formEsp.cota) || 30 })
+      })
+      const json = await res.json()
+      if (json.error) throw new Error(json.error)
+      setFormEsp({ label: '', icon: '🏥', cota: '30' })
+      mostrarMsg('✅ Especialidade cadastrada')
+      await carregarConfig()
+    } catch (e) { mostrarMsg('❌ ' + e.message, false) }
+    setSalvandoEsp(false)
+  }
+
+  async function toggleEspecialidade(slug, ativo) {
+    try {
+      await fetch('/api/config/especialidades', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, ativo: !ativo })
+      })
+      await carregarConfig()
+    } catch (e) { mostrarMsg('❌ ' + e.message, false) }
+  }
+
+  async function salvarPreparo() {
+    if (!formPreparo.tipo_exame.trim() || !formPreparo.instrucoes.trim()) {
+      mostrarMsg('Tipo de exame e instruções são obrigatórios', false); return
+    }
+    setSalvandoPreparo(true)
+    try {
+      const res = await fetch('/api/config/preparos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formPreparo)
+      })
+      const json = await res.json()
+      if (json.error) throw new Error(json.error)
+      setFormPreparo({ especialidade_slug: formPreparo.especialidade_slug, tipo_exame: '', instrucoes: '' })
+      setEditandoPreparo(null)
+      mostrarMsg('✅ Preparo salvo')
+      await carregarConfig()
+    } catch (e) { mostrarMsg('❌ ' + e.message, false) }
+    setSalvandoPreparo(false)
+  }
+
+  async function excluirPreparo(id) {
+    if (!confirm('Remover este preparo?')) return
+    try {
+      await fetch('/api/config/preparos?id=' + id, { method: 'DELETE' })
+      mostrarMsg('Preparo removido')
+      await carregarConfig()
+    } catch (e) { mostrarMsg('❌ ' + e.message, false) }
+  }
+
   async function confirmarExclusao() {
     if (!motivoExclusao.trim()) { mostrarMsg('Informe o motivo', false); return }
     try {
@@ -604,7 +700,7 @@ export default function Especialidades() {
   }
 
   // ── Cálculos de cota ──────────────────────────────────────────────────────
-  const espAtiva = ESPECIALIDADES.find(e => e.id === esp)
+  const espAtiva = especialidades.find(e => e.id === esp) || ESPECIALIDADES.find(e => e.id === esp) || ESPECIALIDADES[0]
   const autorizados = agendamentos.filter(a => a.status === 'autorizado').length
   const usados = autorizados
   const pct = Math.min(100, Math.round((usados / espAtiva.cota) * 100))
@@ -613,6 +709,123 @@ export default function Especialidades() {
   return (
     <Layout usuario={usuario}>
       <div style={{ padding: '28px 32px', maxWidth: '1400px', margin: '0 auto' }}>
+
+        {/* Modal Configurações */}
+        {modalConfig && (
+          <Modal titulo="⚙️ Configurações de Especialidades" onClose={() => setModalConfig(false)} largura="640px">
+            {/* Abas */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              {[['especialidades','🏥 Especialidades'],['preparos','🧪 Preparos']].map(([id, lbl]) => (
+                <button key={id} onClick={() => setAbaConfig(id)} style={{
+                  background: abaConfig === id ? '#b45309' : 'none',
+                  color: abaConfig === id ? 'white' : '#64748b',
+                  border: abaConfig === id ? 'none' : '1px solid #e2e8f0',
+                  borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600',
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
+                }}>{lbl}</button>
+              ))}
+            </div>
+
+            {abaConfig === 'especialidades' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Lista */}
+                <div>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especialidades cadastradas</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
+                    {especialidadesConfig.map(e => (
+                      <div key={e.slug} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: e.ativo ? '#f0fdf4' : '#f8fafc', borderRadius: '8px', border: `1px solid ${e.ativo ? '#bbf7d0' : '#e2e8f0'}` }}>
+                        <span style={{ fontSize: '18px' }}>{e.icon}</span>
+                        <span style={{ flex: 1, fontWeight: '600', fontSize: '13px', color: e.ativo ? '#166534' : '#94a3b8' }}>{e.label}</span>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>cota {e.cota}</span>
+                        <button onClick={() => toggleEspecialidade(e.slug, e.ativo)} style={{
+                          background: e.ativo ? '#fee2e2' : '#dcfce7', border: 'none', borderRadius: '6px',
+                          padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
+                          color: e.ativo ? '#991b1b' : '#166534'
+                        }}>{e.ativo ? 'Desativar' : 'Reativar'}</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Nova especialidade */}
+                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nova especialidade</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px auto', gap: '8px', alignItems: 'end' }}>
+                    <div><label className="label-modern">Nome</label><input className="input-modern" placeholder="Ex.: Cardiologia" value={formEsp.label} onChange={e => setFormEsp(f => ({ ...f, label: e.target.value }))} /></div>
+                    <div><label className="label-modern">Ícone</label><input className="input-modern" value={formEsp.icon} onChange={e => setFormEsp(f => ({ ...f, icon: e.target.value }))} style={{ textAlign: 'center' }} /></div>
+                    <div><label className="label-modern">Cota/mês</label><input className="input-modern" type="number" min="1" value={formEsp.cota} onChange={e => setFormEsp(f => ({ ...f, cota: e.target.value }))} /></div>
+                    <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={salvarEspecialidade} disabled={salvandoEsp}>
+                      {salvandoEsp ? '...' : '+ Adicionar'}
+                    </button>
+                  </div>
+                </div>
+                <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
+                  Desativar uma especialidade a esconde da lista mas mantém todo o histórico de agendamentos preservado.
+                </p>
+              </div>
+            )}
+
+            {abaConfig === 'preparos' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Lista de preparos */}
+                <div>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Preparos cadastrados</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
+                    {preparosList.length === 0 && <p style={{ fontSize: '12px', color: '#94a3b8' }}>Nenhum preparo cadastrado ainda.</p>}
+                    {preparosList.map(p => (
+                      <div key={p.id} style={{ padding: '8px 12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                          <div style={{ flex: 1 }}>
+                            <span style={{ fontWeight: '700', fontSize: '12px', color: '#92400e', display: 'block' }}>{p.tipo_exame} <span style={{ fontWeight: '400', color: '#b45309' }}>({p.especialidade_slug.toUpperCase()})</span></span>
+                            <span style={{ fontSize: '11px', color: '#78350f', display: 'block', marginTop: '2px' }}>{p.instrucoes}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                            <button onClick={() => { setEditandoPreparo(p.id); setFormPreparo({ especialidade_slug: p.especialidade_slug, tipo_exame: p.tipo_exame, instrucoes: p.instrucoes }) }} style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#1d4ed8' }}>✏️</button>
+                            <button onClick={() => excluirPreparo(p.id)} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#991b1b' }}>🗑</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Formulário */}
+                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {editandoPreparo ? '✏️ Editando preparo' : 'Novo preparo'}
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div>
+                        <label className="label-modern">Especialidade</label>
+                        <select className="input-modern" value={formPreparo.especialidade_slug} onChange={e => setFormPreparo(f => ({ ...f, especialidade_slug: e.target.value }))}>
+                          {especialidades.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label-modern">Tipo de exame</label>
+                        <input className="input-modern" placeholder="Ex.: ABDOMEN TOTAL" value={formPreparo.tipo_exame} onChange={e => setFormPreparo(f => ({ ...f, tipo_exame: e.target.value.toUpperCase() }))} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label-modern">Instruções de preparo</label>
+                      <textarea className="input-modern" rows={3} placeholder="Ex.: JEJUM DE 8 HORAS..." value={formPreparo.instrucoes} onChange={e => setFormPreparo(f => ({ ...f, instrucoes: e.target.value }))} style={{ resize: 'vertical' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {editandoPreparo && (
+                        <button className="btn-secondary" onClick={() => { setEditandoPreparo(null); setFormPreparo({ especialidade_slug: 'usg', tipo_exame: '', instrucoes: '' }) }}>
+                          Cancelar
+                        </button>
+                      )}
+                      <button className="btn-primary" style={{ background: GRAD }} onClick={salvarPreparo} disabled={salvandoPreparo}>
+                        {salvandoPreparo ? 'Salvando...' : editandoPreparo ? 'Salvar alteração' : '+ Adicionar preparo'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Modal>
+        )}
 
         {/* Cabeçalho */}
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
@@ -642,6 +855,10 @@ export default function Especialidades() {
                 <button onClick={() => setModalEscala(true)}
                   style={{ padding: '9px 14px', background: 'linear-gradient(135deg, #065f46, #047857)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap' }}>
                   📅 Escala
+                </button>
+                <button onClick={() => setModalConfig(true)}
+                  style={{ padding: '9px 14px', background: 'linear-gradient(135deg, #374151, #6b7280)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap' }}>
+                  ⚙️ Configurações
                 </button>
               </div>
             </div>
@@ -1001,7 +1218,7 @@ export default function Especialidades() {
                             <td style={{ padding: '6px 8px' }}>
                               <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexWrap: 'nowrap' }}>
                                 {a.status !== 'autorizado' && btn(() => autorizar(a.id), 'Autorizar', '#dcfce7', '#86efac', '#166534', '✓')}
-                                {a.status === 'autorizado' && btn(() => imprimirComprovante(a, espAtiva.label), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', '🖨')}
+                                {a.status === 'autorizado' && btn(() => imprimirComprovante(a, espAtiva.label, undefined, preparosDb), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', '🖨')}
                                 {a.status !== 'negado' && btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', '✗')}
                                 {a.status !== 'pendente' && btn(() => voltarPendente(a.id), 'Voltar para pendente', '#fef9c3', '#fde047', '#854d0e', '↩')}
                                 {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', '✏')}
