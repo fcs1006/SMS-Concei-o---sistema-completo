@@ -1,78 +1,304 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Tela = 'login' | 'cadastro' | 'esqueci'
 
-const FUNDOS = [
-  { id: 'foto',      label: '🏙️ Foto',      style: { backgroundImage: 'url(/conceicao-bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' } },
-  { id: 'gradient',  label: '🎨 Padrão',    style: { background: 'linear-gradient(135deg, #0f172a 0%, #134e4a 100%)' } },
-  { id: 'azul',      label: '🔵 Azul',      style: { background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)' } },
-  { id: 'roxo',      label: '🟣 Roxo',      style: { background: 'linear-gradient(135deg, #1e1b4b 0%, #4f46e5 100%)' } },
+const GRADIENTES = [
+  { id: 'gradient', label: '🎨 Padrão', style: { background: 'linear-gradient(135deg, #0f172a 0%, #134e4a 100%)' } },
+  { id: 'azul',     label: '🔵 Azul',   style: { background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)' } },
+  { id: 'roxo',     label: '🟣 Roxo',   style: { background: 'linear-gradient(135deg, #1e1b4b 0%, #4f46e5 100%)' } },
 ]
 
 export default function Login() {
   const [tela, setTela] = useState<Tela>('login')
-  const [fundoId, setFundoId] = useState('foto')
-  const [mostrarFundos, setMostrarFundos] = useState(false)
-  const router = useRouter()
+  const [fundoId, setFundoId]   = useState('foto')
+  const [customUrl, setCustomUrl] = useState<string>('')
+  const [bgSize, setBgSize]     = useState('cover')
+  const [bgPos, setBgPos]       = useState('center')
+  // ajuste manual
+  const [ajuste, setAjuste]     = useState(false)   // modal aberto
+  const [ajX, setAjX]           = useState(50)      // 0–100
+  const [ajY, setAjY]           = useState(50)      // 0–100
+  const [ajZoom, setAjZoom]     = useState(100)     // 50–300
+  const [modoAj, setModoAj]     = useState(false)   // usando ajuste manual
+  const [mostrarPainel, setMostrarPainel] = useState(false)
+  const fileRef    = useRef<HTMLInputElement>(null)
+  const prevRef    = useRef<HTMLDivElement>(null)
+  const dragging   = useRef(false)
+  const router     = useRouter()
 
   useEffect(() => {
-    const salvo = localStorage.getItem('login_fundo')
-    if (salvo) setFundoId(salvo)
+    const f   = localStorage.getItem('login_fundo')      || 'foto'
+    const cu  = localStorage.getItem('login_custom_url') || ''
+    const bs  = localStorage.getItem('login_bg_size')    || 'cover'
+    const bp  = localStorage.getItem('login_bg_pos')     || 'center'
+    const ma  = localStorage.getItem('login_modo_aj')    === '1'
+    const ax  = Number(localStorage.getItem('login_aj_x')    || 50)
+    const ay  = Number(localStorage.getItem('login_aj_y')    || 50)
+    const az  = Number(localStorage.getItem('login_aj_zoom') || 100)
+    setFundoId(f); setCustomUrl(cu); setBgSize(bs); setBgPos(bp)
+    setModoAj(ma); setAjX(ax); setAjY(ay); setAjZoom(az)
   }, [])
 
-  function trocarFundo(id: string) {
-    setFundoId(id)
-    localStorage.setItem('login_fundo', id)
-    setMostrarFundos(false)
+  function salvar(key: string, val: string) { localStorage.setItem(key, val) }
+
+  function trocarFundo(id: string) { setFundoId(id); salvar('login_fundo', id) }
+
+  function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const url = ev.target?.result as string
+      setCustomUrl(url); setFundoId('custom')
+      salvar('login_fundo', 'custom'); salvar('login_custom_url', url)
+    }
+    reader.readAsDataURL(file)
   }
 
-  const fundo = FUNDOS.find(f => f.id === fundoId) || FUNDOS[0]
+  function aplicarAjuste() {
+    setModoAj(true)
+    salvar('login_modo_aj', '1')
+    salvar('login_aj_x',    String(ajX))
+    salvar('login_aj_y',    String(ajY))
+    salvar('login_aj_zoom', String(ajZoom))
+    setAjuste(false)
+  }
+
+  function resetarAjuste() {
+    setModoAj(false); setAjX(50); setAjY(50); setAjZoom(100)
+    localStorage.removeItem('login_modo_aj')
+    localStorage.removeItem('login_aj_x')
+    localStorage.removeItem('login_aj_y')
+    localStorage.removeItem('login_aj_zoom')
+    setBgSize('cover'); setBgPos('center')
+    salvar('login_bg_size', 'cover'); salvar('login_bg_pos', 'center')
+    setAjuste(false)
+  }
+
+  // Arrastar no preview para ajustar posição
+  const onPrevMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    dragging.current = true
+    e.preventDefault()
+  }, [])
+  const onPrevMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragging.current || !prevRef.current) return
+    const rect = prevRef.current.getBoundingClientRect()
+    const x = Math.round(Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width)  * 100)))
+    const y = Math.round(Math.max(0, Math.min(100, ((e.clientY - rect.top)  / rect.height) * 100)))
+    setAjX(x); setAjY(y)
+  }, [])
+  const onPrevMouseUp = useCallback(() => { dragging.current = false }, [])
+
+  const ehFoto = fundoId === 'foto' || fundoId === 'custom'
+  const fotoUrl = fundoId === 'custom' ? customUrl : '/conceicao-bg.jpg'
+  const gradiente = GRADIENTES.find(g => g.id === fundoId)
+
+  const fundoStyle: React.CSSProperties = ehFoto
+    ? modoAj
+      ? { backgroundImage: `url(${fotoUrl})`, backgroundSize: `${ajZoom}%`, backgroundPosition: `${ajX}% ${ajY}%`, backgroundRepeat: 'no-repeat' }
+      : { backgroundImage: `url(${fotoUrl})`, backgroundSize: bgSize, backgroundPosition: bgPos, backgroundRepeat: 'no-repeat' }
+    : (gradiente?.style ?? GRADIENTES[0].style)
+
+  const sliderStyle: React.CSSProperties = {
+    width: '100%', accentColor: '#6366f1', cursor: 'pointer', height: '4px'
+  }
 
   return (
     <div style={{
-      minHeight: '100vh',
-      ...fundo.style,
+      minHeight: '100vh', ...fundoStyle,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '20px', position: 'relative'
     }}>
-      {/* Overlay escuro quando foto */}
-      {fundoId === 'foto' && (
+      {ehFoto && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 0 }} />
       )}
 
-      {/* Ícone trocar fundo — canto inferior esquerdo */}
-      <div style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 10 }}>
-        {mostrarFundos && (
+      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUpload} />
+
+      {/* ── Modal ajuste manual ── */}
+      {ajuste && ehFoto && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
           <div style={{
-            position: 'absolute', bottom: '52px', left: 0,
-            background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(8px)',
-            borderRadius: '12px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px',
-            border: '1px solid rgba(255,255,255,0.1)', minWidth: '140px'
+            background: '#0f172a', borderRadius: '20px', padding: '24px', width: '340px',
+            border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+            display: 'flex', flexDirection: 'column', gap: '20px'
           }}>
-            {FUNDOS.map(f => (
-              <button key={f.id} onClick={() => trocarFundo(f.id)} style={{
-                background: fundoId === f.id ? 'rgba(255,255,255,0.15)' : 'none',
-                border: 'none', borderRadius: '8px', padding: '8px 12px',
-                color: 'white', fontSize: '13px', fontWeight: fundoId === f.id ? '700' : '400',
-                cursor: 'pointer', textAlign: 'left', fontFamily: 'DM Sans, sans-serif'
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ color: 'white', fontWeight: '700', fontSize: '15px', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
+                🎛️ Ajuste manual da foto
+              </p>
+              <button onClick={() => setAjuste(false)} style={{
+                background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)',
+                fontSize: '20px', cursor: 'pointer', lineHeight: 1
+              }}>×</button>
+            </div>
+
+            {/* Preview arrastável */}
+            <div>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '700', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Preview — arraste para reposicionar
+              </p>
+              <div
+                ref={prevRef}
+                onMouseDown={onPrevMouseDown}
+                onMouseMove={onPrevMouseMove}
+                onMouseUp={onPrevMouseUp}
+                onMouseLeave={onPrevMouseUp}
+                style={{
+                  width: '100%', height: '160px', borderRadius: '10px',
+                  backgroundImage: `url(${fotoUrl})`,
+                  backgroundSize: `${ajZoom}%`,
+                  backgroundPosition: `${ajX}% ${ajY}%`,
+                  backgroundRepeat: 'no-repeat',
+                  cursor: 'grab', userSelect: 'none',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  position: 'relative'
+                }}
+              >
+                {/* Mira central */}
+                <div style={{
+                  position: 'absolute', left: `${ajX}%`, top: `${ajY}%`,
+                  transform: 'translate(-50%,-50%)',
+                  width: '16px', height: '16px', borderRadius: '50%',
+                  border: '2px solid white', boxShadow: '0 0 0 1px rgba(0,0,0,0.5)',
+                  pointerEvents: 'none'
+                }} />
+              </div>
+            </div>
+
+            {/* Zoom */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '700', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Zoom</p>
+                <span style={{ color: 'white', fontSize: '11px', fontWeight: '700' }}>{ajZoom}%</span>
+              </div>
+              <input type="range" min={50} max={300} step={5} value={ajZoom}
+                onChange={e => setAjZoom(Number(e.target.value))} style={sliderStyle} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px' }}>50%</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px' }}>300%</span>
+              </div>
+            </div>
+
+            {/* Posição X */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '700', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Posição horizontal</p>
+                <span style={{ color: 'white', fontSize: '11px', fontWeight: '700' }}>{ajX}%</span>
+              </div>
+              <input type="range" min={0} max={100} step={1} value={ajX}
+                onChange={e => setAjX(Number(e.target.value))} style={sliderStyle} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px' }}>Esquerda</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px' }}>Direita</span>
+              </div>
+            </div>
+
+            {/* Posição Y */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '700', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Posição vertical</p>
+                <span style={{ color: 'white', fontSize: '11px', fontWeight: '700' }}>{ajY}%</span>
+              </div>
+              <input type="range" min={0} max={100} step={1} value={ajY}
+                onChange={e => setAjY(Number(e.target.value))} style={sliderStyle} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px' }}>Topo</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px' }}>Base</span>
+              </div>
+            </div>
+
+            {/* Botões */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={resetarAjuste} style={{
+                flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '10px', padding: '10px', color: 'rgba(255,255,255,0.7)',
+                fontSize: '13px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '600'
+              }}>↺ Resetar</button>
+              <button onClick={aplicarAjuste} style={{
+                flex: 2, background: '#4f46e5', border: 'none',
+                borderRadius: '10px', padding: '10px', color: 'white',
+                fontSize: '13px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '700'
+              }}>✓ Aplicar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Painel de fundo — canto inferior direito ── */}
+      <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 10 }}>
+        {mostrarPainel && (
+          <div style={{
+            position: 'absolute', bottom: '52px', right: 0,
+            background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)',
+            borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px',
+            border: '1px solid rgba(255,255,255,0.12)', width: '220px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+          }}>
+            {/* Foto */}
+            <div>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '700', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Foto</p>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button onClick={() => trocarFundo('foto')} style={{
+                  flex: 1, background: fundoId === 'foto' ? 'rgba(79,70,229,0.6)' : 'rgba(255,255,255,0.08)',
+                  border: fundoId === 'foto' ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px', padding: '7px 6px', color: 'white', fontSize: '11px',
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '600'
+                }}>🏙️ Conceição</button>
+                <button onClick={() => fileRef.current?.click()} style={{
+                  flex: 1, background: fundoId === 'custom' ? 'rgba(79,70,229,0.6)' : 'rgba(255,255,255,0.08)',
+                  border: fundoId === 'custom' ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px', padding: '7px 6px', color: 'white', fontSize: '11px',
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '600'
+                }}>📤 Upload</button>
+              </div>
+            </div>
+
+            {/* Gradiente */}
+            <div>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '700', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Gradiente</p>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {GRADIENTES.map(g => (
+                  <button key={g.id} onClick={() => trocarFundo(g.id)} style={{
+                    flex: 1, ...g.style,
+                    border: fundoId === g.id ? '2px solid white' : '2px solid transparent',
+                    borderRadius: '8px', padding: '6px 4px', color: 'white', fontSize: '11px',
+                    cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '700'
+                  }}>{g.label.split(' ')[0]}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Ajuste manual (só quando foto) */}
+            {ehFoto && (
+              <button onClick={() => { setMostrarPainel(false); setAjuste(true) }} style={{
+                background: modoAj ? 'rgba(79,70,229,0.4)' : 'rgba(255,255,255,0.06)',
+                border: modoAj ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px', padding: '9px 12px', color: 'white', fontSize: '12px',
+                cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '600',
+                textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px'
               }}>
-                {f.label} {fundoId === f.id ? '✓' : ''}
+                <span>🎛️</span>
+                <span>Ajuste manual{modoAj ? ' ✓' : ''}</span>
               </button>
-            ))}
+            )}
           </div>
         )}
+
         <button
-          onClick={() => setMostrarFundos(v => !v)}
-          title="Trocar fundo"
+          onClick={() => setMostrarPainel(v => !v)}
+          title="Personalizar fundo"
           style={{
             width: '40px', height: '40px', borderRadius: '50%',
             background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(8px)',
             border: '1px solid rgba(255,255,255,0.2)',
             cursor: 'pointer', fontSize: '18px', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            transition: 'all 0.2s'
+            alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
           }}>
           🖼️
         </button>
