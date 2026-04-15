@@ -23,10 +23,23 @@ export default function Login() {
   const [ajZoom, setAjZoom]     = useState(100)     // 50–300
   const [modoAj, setModoAj]     = useState(false)   // usando ajuste manual
   const [mostrarPainel, setMostrarPainel] = useState(false)
-  const fileRef    = useRef<HTMLInputElement>(null)
-  const prevRef    = useRef<HTMLDivElement>(null)
-  const dragging   = useRef(false)
-  const router     = useRouter()
+  const fileRef      = useRef<HTMLInputElement>(null)
+  const prevRef      = useRef<HTMLDivElement>(null)
+  const dragging     = useRef(false)
+  const cliquesLogo  = useRef(0)
+  const timerLogo    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const router       = useRouter()
+
+  function clicarLogo() {
+    cliquesLogo.current += 1
+    if (timerLogo.current) clearTimeout(timerLogo.current)
+    if (cliquesLogo.current >= 5) {
+      cliquesLogo.current = 0
+      setMostrarPainel(v => !v)
+    } else {
+      timerLogo.current = setTimeout(() => { cliquesLogo.current = 0 }, 2000)
+    }
+  }
 
   useEffect(() => {
     const f   = localStorage.getItem('login_fundo')      || 'foto'
@@ -230,11 +243,11 @@ export default function Login() {
         </div>
       )}
 
-      {/* ── Painel de fundo — canto inferior direito ── */}
+      {/* ── Painel de fundo — canto inferior direito (ativado por 5 cliques no logo) ── */}
       <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 10 }}>
         {mostrarPainel && (
           <div style={{
-            position: 'absolute', bottom: '52px', right: 0,
+            position: 'absolute', bottom: '8px', right: 0,
             background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)',
             borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px',
             border: '1px solid rgba(255,255,255,0.12)', width: '220px',
@@ -289,25 +302,13 @@ export default function Login() {
             )}
           </div>
         )}
-
-        <button
-          onClick={() => setMostrarPainel(v => !v)}
-          title="Personalizar fundo"
-          style={{
-            width: '40px', height: '40px', borderRadius: '50%',
-            background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            cursor: 'pointer', fontSize: '18px', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
-          }}>
-          🖼️
-        </button>
       </div>
+
       <div className="login-card" style={{ position: 'relative', zIndex: 1 }}>
-        {/* Logo / Header */}
+        {/* Logo / Header — 5 cliques rápidos abre o painel de personalização */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <img src="/logo.jpg" alt="SMS Conceição"
-            style={{ width: '80px', height: '80px', objectFit: 'contain', margin: '0 auto 16px', display: 'block' }} />
+          <img src="/logo.jpg" alt="SMS Conceição" onClick={clicarLogo}
+            style={{ width: '80px', height: '80px', objectFit: 'contain', margin: '0 auto 16px', display: 'block', cursor: 'default' }} />
           <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
             SMS Conceição
           </h1>

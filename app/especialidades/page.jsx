@@ -50,6 +50,15 @@ const TIPOS_USG_ORDEM = [
 ]
 // Ordem alfabética para o select
 const TIPOS_USG = [...TIPOS_USG_ORDEM].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+
+const PREPARO_USG = {
+  'ABDOMEN TOTAL':        'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR.',
+  'ABDOMEN SUPERIOR':     'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR.',
+  'VIAS URINÁRIAS':       'BEXIGA CHEIA (BEBER 1 LITRO DE ÁGUA 1 HORA ANTES E NÃO URINAR).',
+  'PÉLVICA':              'BEXIGA CHEIA (BEBER 1 LITRO DE ÁGUA 1 HORA ANTES E NÃO URINAR).',
+  'PRÓSTATA ABDOMINAL':   'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR. BEXIGA CHEIA.',
+  'PRÓSTATA TRANSRETAL':  'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR. BEXIGA CHEIA.',
+}
 const TIPOS_CONSULTA = ['Primeira Consulta','Retorno','Outro']
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -67,6 +76,7 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
   const isUsg = ag.tipo_exame && !['Primeira Consulta','Retorno','Outro'].includes(ag.tipo_exame)
   const tipoDoc = isUsg ? 'EXAME' : 'CONSULTA'
   const numComp = String(ag.id).slice(-8).toUpperCase()
+  const preparo = isUsg ? (PREPARO_USG[ag.tipo_exame] || null) : null
 
   // Usa data_atendimento salva no agendamento (data real do médico na escala)
   const dataAtendimento = ag.data_atendimento || ag.data_consulta
@@ -143,6 +153,11 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
       </div>
       ${ag.observacao ? `<div class="campo" style="margin-top:8px"><label>Observação</label><span style="white-space:normal">${ag.observacao}</span></div>` : ''}
     </div>
+
+    ${preparo ? `
+    <div style="background:#fff7ed;border:1px solid #fb923c;border-radius:4px;padding:10px 14px;margin-top:10px;font-size:11px;color:#7c2d12;">
+      <strong>🧪 PREPARO PARA O EXAME:</strong><br/>${preparo}
+    </div>` : ''}
 
     <div class="aviso">
       ⚠️ <strong>Importante:</strong> Apresente este comprovante no dia do atendimento junto com documento de identidade e cartão SUS.

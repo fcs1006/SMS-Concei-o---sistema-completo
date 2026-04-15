@@ -5,6 +5,11 @@ import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { abrirJanelaImpressaoComTitulo } from '@/lib/printHeader'
 
+const SERVIDORES_ESTADO = [
+  { nome: 'RENILDA TELES DE FRAGA',   cargo: 'TÉC. DE ENFERMAGEM' },
+  { nome: 'SHEILA ZAVARESE SECCHIN',  cargo: 'CIRURGIÃ DENTISTA'  },
+]
+
 export default function Frequencia() {
   const router = useRouter()
   const [usuario, setUsuario] = useState(null)
@@ -31,6 +36,10 @@ export default function Frequencia() {
   const [funcoesExistentes, setFuncoesExistentes] = useState([])
   const [modalRelatorio, setModalRelatorio] = useState(false)
   const [grupoRelatorio, setGrupoRelatorio] = useState('com_matricula')
+  // Servidores do Estado
+  const [servEstadoIdx, setServEstadoIdx] = useState(0)
+  const [mesEstado, setMesEstado] = useState(String(new Date().getMonth() + 1).padStart(2, '0'))
+  const [anoEstado, setAnoEstado] = useState(String(new Date().getFullYear()))
 
   const nomesMeses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                       'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -582,6 +591,139 @@ export default function Frequencia() {
     )
   }
 
+  async function imprimirFolhaPonto() {
+    const srv = SERVIDORES_ESTADO[servEstadoIdx]
+    const mesN = Number(mesEstado)
+    const anoN = Number(anoEstado)
+    const nomeMes = nomesMeses[mesN - 1].toUpperCase()
+    const ultimoDia = new Date(anoN, mesN, 0).getDate()
+    const diasSemana = ['DOMINGO','SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SÁBADO']
+
+    // Busca feriados e facultativos para o mês/ano do estado (independente da seção principal)
+    const [respFer, respFac] = await Promise.all([
+      fetch(`/api/feriados?ano=${anoN}`),
+      fetch(`/api/facultativos?mes=${mesN}&ano=${anoN}`)
+    ])
+    const feriadosEstado   = await respFer.json().catch(() => [])
+    const facultativosEstado = await respFac.json().catch(() => [])
+
+    function getTipoDiaEstado(dia, mesD, anoD) {
+      const diaSem = new Date(anoD, mesD - 1, dia).getDay()
+      if (diaSem === 0) return 'DOMINGO'
+      if (diaSem === 6) return 'SÁBADO'
+      const fixos = [[1,1],[21,4],[1,5],[7,9],[12,10],[2,11],[15,11],[20,11],[25,12]]
+      if (fixos.some(([d, m]) => d === dia && m === mesD)) return 'FERIADO'
+      const pascoa = calcularPascoa(anoD)
+      const somarDias = (base, n) => { const r = new Date(base); r.setDate(r.getDate() + n); return r }
+      const moveis = [
+        somarDias(pascoa, -48), somarDias(pascoa, -47),
+        somarDias(pascoa, -2),  somarDias(pascoa, 60),
+      ]
+      if (moveis.some(mv => mv.getFullYear() === anoD && mv.getMonth() + 1 === mesD && mv.getDate() === dia)) return 'FERIADO'
+      if (Array.isArray(feriadosEstado) && feriadosEstado.some(f => f.dia === dia && f.mes === mesD)) return 'FERIADO'
+      const fac = Array.isArray(facultativosEstado) && facultativosEstado.find(f => f.dia === dia && f.mes === mesD && f.ano === anoD)
+      if (fac) return fac.descricao
+      return null
+    }
+
+    const linhas = []
+    for (let d = 1; d <= ultimoDia; d++) {
+      const diaSem = new Date(anoN, mesN - 1, d).getDay()
+      const nomeDia = diasSemana[diaSem]
+      const tipo = getTipoDiaEstado(d, mesN, anoN)
+      const isEspecial = tipo !== null
+      const bgRow = (diaSem === 0 || diaSem === 6) ? 'background:#f0f0f0;' : ''
+      let celulas
+      if (isEspecial) {
+        const txt = `<td style="text-align:center;font-size:9px;font-weight:bold;">${tipo}</td><td></td>`
+        celulas = txt + txt + txt + txt
+      } else {
+        celulas = '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>'
+      }
+      linhas.push(`<tr style="${bgRow}">
+        <td style="text-align:center;font-weight:bold;">${d}</td>
+        <td style="text-align:center;font-weight:bold;">${nomeDia}</td>
+        ${celulas}
+      </tr>`)
+    }
+
+    const logoUrl = `${window.location.origin}/logo.jpg`
+    const html = `<!doctype html><html><head><meta charset="utf-8">
+      <title>Folha de Ponto - ${srv.nome}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 10px; margin: 3mm 8mm 8mm 8mm; color: #000; }
+        .cabecalho { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 4px; }
+        .cabecalho img { height: 60px; }
+        .cabecalho-texto { font-size: 10px; line-height: 1.6; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #000; padding: 2px 3px; font-size: 9px; height: 18px; }
+        th { background: #e0e0e0; text-align: center; font-weight: bold; }
+        td { text-align: center; }
+        .assinaturas { display: flex; justify-content: space-around; margin-top: 40px; }
+        .ass-linha { text-align: center; }
+        .ass-linha .linha { border-top: 1px solid #000; width: 220px; margin: 0 auto; padding-top: 4px; font-size: 9px; font-weight: bold; }
+        @page { size: A4 portrait; margin: 4mm 8mm 8mm 8mm; }
+      </style>
+    </head><body>
+      <div class="cabecalho">
+        <img src="${logoUrl}" onerror="this.style.display='none'" />
+        <div class="cabecalho-texto">
+          Avenida Sebastião de Brito, Centro, 181<br>
+          Conceição do Tocantins – Tocantins &nbsp; CEP: 77.305-000<br>
+          Tel.: +55 63 3381-1309<br>
+          conceicaodotocantins170560@gmail.com
+        </div>
+      </div>
+
+      <div style="text-align:center;font-weight:bold;font-size:9px;margin:2px 0;">FUNDO MUNICIPAL DE SAÚDE</div>
+      <div style="text-align:center;font-weight:bold;font-size:9px;margin:2px 0;">PREFEITURA MUNICIPAL DE CONCEIÇÃO DO TOCANTINS</div>
+      <div style="text-align:center;font-weight:bold;font-size:9px;margin:2px 0;">SECRETARIA MUNICIPAL DE SAÚDE</div>
+
+      <div style="text-align:center;background:#d0d0d0;padding:5px;font-weight:bold;font-size:11px;margin:6px 0;border:1px solid #000;">
+        FOLHA DE PONTO
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;margin-bottom:4px;font-size:9px;">
+        <tr>
+          <td style="border:1px solid #000;padding:3px 6px;font-weight:bold;width:16%;white-space:nowrap;">SERVIDOR:</td>
+          <td style="border:1px solid #000;padding:3px 6px;font-weight:bold;width:52%;">${srv.nome}</td>
+          <td rowspan="3" style="border:1px solid #000;padding:3px 6px;font-weight:bold;width:32%;text-align:center;vertical-align:middle;">FREQUÊNCIA: ${nomeMes} / ${anoN}</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #000;padding:3px 6px;font-weight:bold;white-space:nowrap;">LOTAÇÃO:</td>
+          <td style="border:1px solid #000;padding:3px 6px;font-weight:bold;">FUNDO MUN. DE SAÚDE DE CONCEIÇÃO DO TO</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #000;padding:3px 6px;font-weight:bold;white-space:nowrap;">CARGO:</td>
+          <td style="border:1px solid #000;padding:3px 6px;font-weight:bold;">${srv.cargo}</td>
+        </tr>
+      </table>
+
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:5%;">DIA</th>
+            <th rowspan="2" style="width:11%;">DIAS DA<br>SEMANA</th>
+            <th colspan="4" style="width:42%;">1º TURNO</th>
+            <th colspan="4" style="width:42%;">2º TURNO</th>
+          </tr>
+          <tr>
+            <th>HORA</th><th>ASSINATURA</th><th>HORA</th><th>ASSINATURA</th>
+            <th>HORA</th><th>ASSINATURA</th><th>HORA</th><th>ASSINATURA</th>
+          </tr>
+        </thead>
+        <tbody>${linhas.join('')}</tbody>
+      </table>
+
+      <div class="assinaturas">
+        <div class="ass-linha"><div class="linha">Carimbo e assinatura do Servidor</div></div>
+        <div class="ass-linha"><div class="linha">Carimbo e assinatura da chefia</div></div>
+      </div>
+    </body></html>`
+
+    abrirImpressao(html, `Folha de Ponto — ${srv.nome} — ${nomeMes}/${anoN}`)
+  }
+
   const inp = 'input-modern'
   const lbl = 'label-modern'
 
@@ -750,6 +892,48 @@ export default function Frequencia() {
           </div>
         </div>
 
+
+        {/* ── Servidores do Estado ── */}
+        <div className="card" style={{ padding: '20px', marginBottom: '20px', border: '1px solid #d1fae5' }}>
+          <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700',
+            color: '#065f46', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            📄 Folha de Ponto — Servidores do Estado
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '12px', alignItems: 'end' }}>
+            <div>
+              <label className={lbl}>Servidor</label>
+              <select className={inp} value={servEstadoIdx} onChange={e => setServEstadoIdx(Number(e.target.value))}>
+                {SERVIDORES_ESTADO.map((s, i) => (
+                  <option key={i} value={i}>{s.nome} — {s.cargo}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={lbl}>Mês</label>
+              <select className={inp} value={mesEstado} onChange={e => setMesEstado(e.target.value)}>
+                {nomesMeses.map((n, i) => (
+                  <option key={i} value={String(i + 1).padStart(2, '0')}>
+                    {String(i + 1).padStart(2, '0')} — {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={lbl}>Ano</label>
+              <input className={inp} type="number" value={anoEstado}
+                onChange={e => setAnoEstado(e.target.value)} min="2020" max="2099" />
+            </div>
+            <button
+              className="btn-primary"
+              style={{ background: 'linear-gradient(135deg, #059669, #34d399)', whiteSpace: 'nowrap' }}
+              onClick={imprimirFolhaPonto}>
+              🖨️ Imprimir
+            </button>
+          </div>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: '10px 0 0' }}>
+            Gera a folha de ponto mensal completa (mês inteiro) no formato do Estado, com dias da semana e feriados marcados automaticamente.
+          </p>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
 
