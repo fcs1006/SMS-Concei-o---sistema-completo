@@ -306,13 +306,13 @@ export default function Login() {
 
       <div className="login-card" style={{ position: 'relative', zIndex: 1 }}>
         {/* Logo / Header — 5 cliques rápidos abre o painel de personalização */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <img src="/logo.jpg" alt="SMS Conceição" onClick={clicarLogo}
-            style={{ width: '80px', height: '80px', objectFit: 'contain', margin: '0 auto 16px', display: 'block', cursor: 'default' }} />
-          <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
+            style={{ width: '64px', height: '64px', objectFit: 'contain', margin: '0 auto 12px', display: 'block', cursor: 'default' }} />
+          <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 2px' }}>
             SMS Conceição
           </h1>
-          <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Secretaria Municipal de Saúde</p>
+          <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Secretaria Municipal de Saúde</p>
         </div>
 
         {tela === 'login'   && <FormLogin    irPara={setTela} router={router} />}

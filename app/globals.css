@@ -246,10 +246,10 @@ input, select, textarea {
 
 .login-card {
   background: white;
-  border-radius: 20px;
-  padding: 40px;
+  border-radius: 16px;
+  padding: 28px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.12);
-  width: min(380px, 90vw);
+  width: min(340px, 90vw);
 }
 
 .search-dropdown {

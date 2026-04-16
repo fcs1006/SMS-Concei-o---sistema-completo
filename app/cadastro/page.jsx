@@ -84,10 +84,7 @@ function camposPendentes(paciente) {
 
 export default function Cadastro() {
   const router = useRouter()
-  const [usuario] = useState(() => {
-    if (typeof window === 'undefined') return null
-    return JSON.parse(localStorage.getItem('sms_user') || 'null')
-  })
+  const [usuario, setUsuario] = useState(null)
   const [form, setForm] = useState(FORM_INICIAL)
   const [erros, setErros] = useState({})
   const [status, setStatus] = useState({ msg: '', tipo: '' })
@@ -96,6 +93,7 @@ export default function Cadastro() {
   const [busca, setBusca] = useState('')
   const [carregandoLista, setCarregandoLista] = useState(false)
   const [editandoId, setEditandoId] = useState(null)
+  const [excluindo, setExcluindo] = useState(null)
 
   function setField(id, val) {
     setForm(f => ({ ...f, [id]: val }))
@@ -171,6 +169,23 @@ export default function Cadastro() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  async function excluirPaciente(paciente) {
+    const confirmado = window.confirm(`Excluir o paciente "${paciente.nome}"?\n\nEsta ação não pode ser desfeita.`)
+    if (!confirmado) return
+
+    setExcluindo(paciente.id)
+    const { error } = await supabase.from('pacientes').delete().eq('id', paciente.id)
+    setExcluindo(null)
+
+    if (error) {
+      setStatus({ msg: '❌ Erro ao excluir: ' + error.message, tipo: 'erro' })
+    } else {
+      setStatus({ msg: `✅ Paciente "${paciente.nome}" excluído com sucesso.`, tipo: 'ok' })
+      if (editandoId === paciente.id) limparFormulario()
+      carregarPacientes(busca)
+    }
+  }
+
   async function salvar(e) {
     e.preventDefault()
     if (!validar()) return
@@ -226,10 +241,10 @@ export default function Cadastro() {
   }
 
   useEffect(() => {
-    if (!usuario) {
-      router.push('/')
-    }
-  }, [router, usuario])
+    const u = localStorage.getItem('sms_user')
+    if (!u) { router.push('/'); return }
+    setUsuario(JSON.parse(u))
+  }, [router])
 
   useEffect(() => {
     if (!usuario) return
@@ -465,22 +480,42 @@ export default function Cadastro() {
                             Nascimento: {formatarDataBr(paciente.dt_nasc)} • Sexo: {paciente.sexo || '-'}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => editarPaciente(paciente)}
-                          style={{
-                            border: 'none',
-                            borderRadius: '8px',
-                            background: '#dbeafe',
-                            color: '#1d4ed8',
-                            fontWeight: '700',
-                            fontSize: '12px',
-                            padding: '8px 12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Editar
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            onClick={() => editarPaciente(paciente)}
+                            style={{
+                              border: 'none',
+                              borderRadius: '8px',
+                              background: '#dbeafe',
+                              color: '#1d4ed8',
+                              fontWeight: '700',
+                              fontSize: '12px',
+                              padding: '8px 12px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => excluirPaciente(paciente)}
+                            disabled={excluindo === paciente.id}
+                            style={{
+                              border: 'none',
+                              borderRadius: '8px',
+                              background: '#fee2e2',
+                              color: '#dc2626',
+                              fontWeight: '700',
+                              fontSize: '12px',
+                              padding: '8px 12px',
+                              cursor: excluindo === paciente.id ? 'not-allowed' : 'pointer',
+                              opacity: excluindo === paciente.id ? 0.6 : 1
+                            }}
+                          >
+                            {excluindo === paciente.id ? '...' : 'Excluir'}
+                          </button>
+                        </div>
                       </div>
 
                       <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
