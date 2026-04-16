@@ -13,14 +13,15 @@ const EVOLUTION_URL = process.env.EVOLUTION_API_URL!
 const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY!
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE!
 
-// ── Verifica horário de funcionamento ───────────────────────────────────────
+// ── Verifica horário de funcionamento (desativado para testes) ───────────────
 function dentroDoHorario(): boolean {
-  const agora = new Date().toLocaleString('en-US', { timeZone: 'America/Araguaina' })
-  const hora = new Date(agora)
-  const h = hora.getHours()
-  const diaSemana = hora.getDay() // 0=dom, 6=sáb
-  if (diaSemana === 0 || diaSemana === 6) return false
-  return (h >= 7 && h < 11) || (h >= 13 && h < 17)
+  return true // TODO: reativar após testes
+  // const agora = new Date().toLocaleString('en-US', { timeZone: 'America/Araguaina' })
+  // const hora = new Date(agora)
+  // const h = hora.getHours()
+  // const diaSemana = hora.getDay() // 0=dom, 6=sáb
+  // if (diaSemana === 0 || diaSemana === 6) return false
+  // return (h >= 7 && h < 11) || (h >= 13 && h < 17)
 }
 
 // ── Ferramentas do Francisco ─────────────────────────────────────────────────
@@ -208,13 +209,88 @@ async function executarFerramenta(nome: string, input: any, telefone: string): P
   }
 }
 
-// ── Envia mensagem via Evolution API ────────────────────────────────────────
+// ── Envia mensagem de texto via Evolution API ────────────────────────────────
 async function enviarMensagem(numero: string, texto: string) {
   await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_KEY },
     body: JSON.stringify({ number: numero, text: texto })
   })
+}
+
+// ── Menus em texto (compatível com qualquer conexão WhatsApp) ────────────────
+const MENU_PRINCIPAL = `📋 *Como posso ajudar?*
+
+1️⃣ UBS Urbana (Postinho)
+2️⃣ UBS Rural (Hospital)
+3️⃣ Laboratório
+4️⃣ Secretaria de Saúde
+5️⃣ Academia de Saúde
+6️⃣ Vigilância Sanitária
+7️⃣ 🔍 Ver meus agendamentos
+8️⃣ 🚗 TFD — Minhas viagens
+
+_Digite o número da opção ou descreva sua dúvida_`
+
+const MENUS_SECUNDARIOS: Record<string, string> = {
+  '1': `🏨 *UBS Urbana (Postinho)*\n📞 *(63) 99130-2450*\n\n1️⃣ Nutricionista\n2️⃣ Psicólogo\n3️⃣ Dentista\n4️⃣ Farmácia\n5️⃣ Vacina\n\n0️⃣ ↩ Voltar ao menu`,
+  '2': `🏥 *UBS Rural (Hospital)*\n📞 *(63) 99130-6916*\n\n1️⃣ Eletrocardiograma (ECG)\n2️⃣ Dentista\n3️⃣ Urgência / Emergência\n4️⃣ Agendamento de viagens (TFD)\n\n0️⃣ ↩ Voltar ao menu`,
+  '3': `🔬 *Laboratório*\n📞 *(63) 99132-7974*\n\n1️⃣ Realizar exame de sangue\n2️⃣ Resultado de exame\n3️⃣ Assistente social\n\n0️⃣ ↩ Voltar ao menu`,
+  '4': `🏛️ *Secretaria de Saúde*\n📞 *(63) 99130-6916*\n\n1️⃣ Consulta com especialista\n2️⃣ Consulta com psiquiatra\n3️⃣ Tomografia / Ressonância\n4️⃣ Posição do meu pedido\n5️⃣ Consulta / Exame particular\n\n0️⃣ ↩ Voltar ao menu`,
+  '5': `🏃 *Academia de Saúde*\n\n1️⃣ Consulta com fisioterapeuta\n2️⃣ Acompanhamento de fisioterapia\n\n0️⃣ ↩ Voltar ao menu`,
+  '6': `🛡️ *Vigilância Sanitária*\n📞 *(63) 99131-4490*\n\n1️⃣ Emissão de alvará sanitário\n2️⃣ Registrar denúncia\n\n0️⃣ ↩ Voltar ao menu`,
+}
+
+// Respostas diretas para opções de submenu
+const RESPOSTAS_DIRETAS: Record<string, string> = {
+  // UBS Urbana
+  '1-1': `🥗 *Nutricionista — UBS Urbana (Postinho)*\n\nO agendamento é feito diretamente na UBS Urbana.\n📞 Ligue: *(63) 99130-2450*\n\n_Leve seu cartão SUS e encaminhamento._`,
+  '1-2': `🧠 *Psicólogo — UBS Urbana (Postinho)*\n\nO agendamento é feito diretamente na UBS Urbana.\n📞 Ligue: *(63) 99130-2450*\n\n_Leve seu cartão SUS e encaminhamento._`,
+  '1-3': `🦷 *Dentista — UBS Urbana (Postinho)*\n\nO agendamento é feito com o seu ACS urbano ou diretamente na UBS.\n📞 Ligue: *(63) 99130-2450*`,
+  '1-4': `💊 *Farmácia — UBS Urbana (Postinho)*\n\nA retirada de medicamentos é feita na própria UBS Urbana.\n📞 *(63) 99130-2450*\n\n_Leve a receita médica atualizada._`,
+  '1-5': `💉 *Vacina — UBS Urbana (Postinho)*\n\nVacinação e atualização da carteira de vacinação na UBS Urbana.\n📞 *(63) 99130-2450*\n\n_Leve sua carteira de vacinação._`,
+  // UBS Rural
+  '2-1': `❤️ *Eletrocardiograma (ECG) — UBS Rural (Hospital)*\n\nAgendamento feito diretamente na UBS Rural com encaminhamento médico.\n📞 *(63) 99130-6916*`,
+  '2-2': `🦷 *Dentista — UBS Rural (Hospital)*\n\nAgendamento com o seu ACS rural ou diretamente na UBS Rural.\n📞 *(63) 99130-6916*`,
+  '2-3': `🚨 *Urgência / Emergência*\n\nDirija-se imediatamente à *UBS Rural (Hospital)* ou ligue:\n📞 *(63) 99130-6916*`,
+  '2-4': `🚗 *Agendamento de viagens — TFD*\n\nPara agendar transporte para tratamento fora do município, procure a *UBS Rural* com a documentação médica.\n📞 *(63) 99130-6916*`,
+  // Laboratório
+  '3-1': `🩸 *Realizar exame de sangue — Laboratório*\n\nLeve o pedido médico ao laboratório municipal.\n📞 *(63) 99132-7974*\n\n_Horário: segunda a sexta, 7h às 11h._`,
+  '3-2': `📄 *Resultado de exame — Laboratório*\n\nO resultado pode ser retirado no laboratório municipal.\n📞 *(63) 99132-7974*`,
+  '3-3': `🤝 *Assistente Social — Laboratório*\n\nO atendimento com assistente social é realizado no laboratório municipal.\n📞 *(63) 99132-7974*`,
+  // Secretaria
+  '4-1': `🏥 *Consulta com especialista — Secretaria de Saúde*\n\nPara agendar consulta com ortopedista, ginecologista, oftalmologista, urologista ou USG, procure a Secretaria de Saúde com:\n• Encaminhamento do médico do PSF\n• Cartão SUS\n• Documento de identidade\n\n📞 *(63) 99130-6916*`,
+  '4-2': `🧠 *Consulta com Psiquiatra — Secretaria de Saúde*\n\nAgendamento feito na Secretaria de Saúde com encaminhamento médico.\n📞 *(63) 99130-6916*`,
+  '4-3': `🩻 *Tomografia / Ressonância — Secretaria de Saúde*\n\nAgendamento feito na Secretaria de Saúde com pedido médico.\n📞 *(63) 99130-6916*`,
+  '4-4': `🔍 *Posição do pedido*\n\nPara consultar o status do seu agendamento, me informe seu *nome completo* ou *CPF*.`,
+  '4-5': `💳 *Consulta / Exame particular*\n\nPara agendamentos particulares, entre em contato diretamente com a Secretaria de Saúde.\n📞 *(63) 99130-6916*`,
+  // Academia
+  '5-1': `🦵 *Fisioterapeuta — Academia de Saúde*\n\nConsultas com fisioterapeuta são realizadas na Academia de Saúde do município. Procure a unidade para agendamento.`,
+  '5-2': `📋 *Acompanhamento de Fisioterapia — Academia de Saúde*\n\nO acompanhamento fisioterapêutico é feito na Academia de Saúde. Procure a unidade com seu encaminhamento.`,
+  // Vigilância
+  '6-1': `📜 *Alvará Sanitário — Vigilância Sanitária*\n\nPara emissão de alvará sanitário, entre em contato com a VISA municipal.\n📞 *(63) 99131-4490*`,
+  '6-2': `📢 *Denúncia — Vigilância Sanitária*\n\nPara registrar uma denúncia sanitária, entre em contato com a VISA municipal.\n📞 *(63) 99131-4490*\n\n_O sigilo do denunciante é garantido._`,
+}
+
+async function enviarMenu(numero: string) {
+  await enviarMensagem(numero, MENU_PRINCIPAL)
+}
+
+// ── Busca e atualiza estado da conversa ──────────────────────────────────────
+async function getEstado(telefone: string): Promise<string> {
+  const { data } = await supabase
+    .from('whatsapp_estados')
+    .select('estado')
+    .eq('telefone', telefone)
+    .maybeSingle()
+  return data?.estado || 'menu'
+}
+
+async function setEstado(telefone: string, estado: string) {
+  await supabase.from('whatsapp_estados').upsert(
+    { telefone, estado, atualizado_em: new Date().toISOString() },
+    { onConflict: 'telefone' }
+  )
 }
 
 // ── Carrega histórico da conversa ────────────────────────────────────────────
@@ -254,6 +330,8 @@ export async function POST(request: NextRequest) {
     const texto: string =
       msgObj?.conversation ||
       msgObj?.extendedTextMessage?.text ||
+      msgObj?.listResponseMessage?.title ||
+      msgObj?.buttonsResponseMessage?.selectedDisplayText ||
       msgObj?.imageMessage?.caption || ''
 
     if (!texto.trim()) return NextResponse.json({ ok: true })
@@ -269,17 +347,86 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    // Primeira mensagem — aviso obrigatório
     const primeiraMsg = historico.length === 0
+    const estado = await getEstado(telefone)
+    const input = texto.trim()
+    const inputNum = input.replace(/[^0-9]/g, '')
 
+    // ── Primeira mensagem: apresentação + menu ───────────────────────────────
+    if (primeiraMsg) {
+      const apresentacao = `Olá! 👋 Sou o *Francisco*, assistente virtual da *Secretaria Municipal de Saúde de Conceição do Tocantins*.\n\n📋 Este canal é exclusivo para assuntos da SMS. Em caso de urgência ou emergência, entre em contato *imediatamente*: 📞 *(63) 99130-6916*`
+      await salvarMensagem(telefone, 'assistant', apresentacao)
+      await enviarMensagem(telefone, apresentacao)
+      await setEstado(telefone, 'menu')
+      await salvarMensagem(telefone, 'assistant', MENU_PRINCIPAL)
+      await enviarMensagem(telefone, MENU_PRINCIPAL)
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Palavra-chave para voltar ao menu ────────────────────────────────────
+    if (['0', 'menu', 'voltar', 'início', 'inicio'].includes(input.toLowerCase())) {
+      await setEstado(telefone, 'menu')
+      await salvarMensagem(telefone, 'assistant', MENU_PRINCIPAL)
+      await enviarMensagem(telefone, MENU_PRINCIPAL)
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Navegação no menu principal (opções 1-8) ─────────────────────────────
+    if (estado === 'menu' && inputNum && Number(inputNum) >= 1 && Number(inputNum) <= 6) {
+      const submenu = MENUS_SECUNDARIOS[inputNum]
+      await setEstado(telefone, `sub_${inputNum}`)
+      await salvarMensagem(telefone, 'assistant', submenu)
+      await enviarMensagem(telefone, submenu)
+      return NextResponse.json({ ok: true })
+    }
+
+    // Opção 7: ver agendamentos
+    if (estado === 'menu' && inputNum === '7') {
+      const resp = `🔍 *Ver meus agendamentos*\n\nInforme seu *nome completo* ou *CPF* para eu buscar seus agendamentos.`
+      await setEstado(telefone, 'buscar_agendamento')
+      await salvarMensagem(telefone, 'assistant', resp)
+      await enviarMensagem(telefone, resp)
+      return NextResponse.json({ ok: true })
+    }
+
+    // Opção 8: TFD/viagens
+    if (estado === 'menu' && inputNum === '8') {
+      const resp = `🚗 *TFD — Minhas viagens*\n\nInforme seu *nome completo* ou *CPF* para eu buscar suas viagens agendadas.`
+      await setEstado(telefone, 'buscar_tfd')
+      await salvarMensagem(telefone, 'assistant', resp)
+      await enviarMensagem(telefone, resp)
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Navegação no submenu ─────────────────────────────────────────────────
+    if (estado.startsWith('sub_') && inputNum) {
+      const pai = estado.replace('sub_', '')
+      const chave = `${pai}-${inputNum}`
+
+      // Opção 4-4 (posição do pedido) → entra no fluxo de busca por IA
+      if (chave === '4-4') {
+        const resp = `🔍 Informe seu *nome completo* ou *CPF* para eu consultar o status do seu pedido.`
+        await setEstado(telefone, 'buscar_agendamento')
+        await salvarMensagem(telefone, 'assistant', resp)
+        await enviarMensagem(telefone, resp)
+        return NextResponse.json({ ok: true })
+      }
+
+      const respDireta = RESPOSTAS_DIRETAS[chave]
+      if (respDireta) {
+        await salvarMensagem(telefone, 'assistant', respDireta)
+        await enviarMensagem(telefone, respDireta)
+        await setEstado(telefone, 'menu')
+        await salvarMensagem(telefone, 'assistant', MENU_PRINCIPAL)
+        await enviarMensagem(telefone, MENU_PRINCIPAL)
+        return NextResponse.json({ ok: true })
+      }
+    }
+
+    // ── Fluxos que precisam de IA (busca no banco) ───────────────────────────
     const mensagens: Groq.Chat.Completions.ChatCompletionMessageParam[] = [
       ...historico,
-      {
-        role: 'user',
-        content: primeiraMsg
-          ? `[PRIMEIRA MENSAGEM DO USUÁRIO — inclua o aviso do canal e do número de emergência no início da sua resposta]\n\n${texto}`
-          : texto
-      }
+      { role: 'user', content: texto }
     ]
 
     const systemPrompt = `Você é Francisco, o assistente virtual da Secretaria Municipal de Saúde de Conceição do Tocantins - TO.
@@ -290,56 +437,61 @@ IDENTIDADE E TOM:
 - Responda sempre em português brasileiro, linguagem simples e acessível
 - Mensagens curtas e diretas (formato WhatsApp)
 - Nunca se apresente como médico ou profissional de saúde
+- NUNCA se reapresente — a apresentação já foi enviada automaticamente
+- Vá direto ao ponto: responda imediatamente o que o usuário perguntou ou pediu
 
-AVISO INICIAL (primeira mensagem de cada conversa):
-Sempre inicie informando: "📋 Este canal é exclusivo para assuntos da Secretaria Municipal de Saúde. Em caso de urgência ou emergência, entre em contato IMEDIATAMENTE pelo: 📞 *(63) 99130-6916*"
+AVISO DE EMERGÊNCIA (sempre que relevante):
+Urgências e emergências: redirecione para 📞 *(63) 99130-6916*, independente do horário.
 
 HORÁRIO DE FUNCIONAMENTO (segunda a sexta, 7h–11h e 13h–17h):
 - Fora desse horário: informe que a secretaria está fechada e oriente a retornar no próximo horário de atendimento
 - Urgências e emergências: sempre redirecione para o *📞 (63) 99130-6916*, independente do horário
 
-ASSUNTOS PERMITIDOS (somente):
-- Agendamentos, consultas, exames e retornos da secretaria
-- TFD — Tratamento Fora do Domicílio
-- Informações sobre serviços da SMS
-- Orientações gerais de saúde baseadas em diretrizes do Ministério da Saúde:
-  • Hábitos saudáveis, alimentação, atividade física
-  • Cuidados com hipertensão, diabetes, saúde bucal, vacinação
-  • Prevenção e autocuidado
+MAPA DE SERVIÇOS — onde cada serviço é atendido:
 
-TRIAGEM DE ATENDIMENTO — REGRA PRINCIPAL:
-Quando o usuário perguntar sobre consulta médica, atendimento ou "quero marcar uma consulta", siga este fluxo:
+🏨 *UBS Urbana (Postinho)* — 📞 (63) 99130-2450
+- Nutricionista
+- Psicólogo
+- Dentista (ACS urbano)
+- Farmácia (retirada de medicamentos)
+- Vacina / carteira de vacinação
 
-PASSO 1 — Pergunte: "Qual é o seu Agente Comunitário de Saúde (ACS)?"
+🏥 *UBS Rural (Hospital)* — 📞 (63) 99130-6916
+- Eletrocardiograma (ECG)
+- Dentista (ACS rural)
+- Urgência e Emergência
+- Agendamento de viagens (TFD)
 
-PASSO 2 — Com base no ACS, oriente:
+🔬 *Laboratório* — 📞 (63) 99132-7974
+- Realização de exames de sangue
+- Resultados de exames de sangue
+- Assistente social
 
-🏥 UBS RURAL (urgência/emergência também):
-- ACS 02 - Luzimaria de Souza Ribeiro
-- ACS 05 - Georgina Alves Bandeira
-- ACS 06 - Edilton Raimundo de Oliveira
-- ACS 07 - Alaides Ribeiro Pompeu
-- ACS 08 - Ramiro Teixeira Dias
-- ACS 09 - Greison Caldeira de Sousa
-- ACS 10 - Laurindo José de Moura
-- ACS 11 - Kelisson Tolentino de Deus
-- ACS 12 - Jurivan Pereira dos Santos
-→ Oriente: "Sua consulta deve ser marcada diretamente na *UBS Rural*. Procure a unidade com seu cartão SUS."
+🏛️ *Secretaria Municipal de Saúde* — 📞 (63) 99130-6916
+- Consultas com especialistas (ortopedia, ginecologia, oftalmologia, urologia, USG)
+- Consulta com psiquiatra
+- Exames de imagem (tomografia, ressonância)
+- Consultar posição/status de pedido de agendamento
+- Agendar consulta ou exame particular
 
-🏨 UBS URBANA — POSTINHO (📞 (63) 99130-2450):
-- ACS 01 - Iva Alves de Araújo
-- ACS 03 - Maira da Costa Santos
-- ACS 04 - Lindaura das Graças Alves Bandeira
-- ACS 13 - Dilma Carlos de Oliveira
-- ACS 14 - Delfino Costa Tolentino
-→ Oriente: "Sua consulta deve ser marcada diretamente no *Postinho (UBS Urbana)*. Entre em contato: (63) 99130-2450"
+🏃 *Academia de Saúde*
+- Consulta com fisioterapeuta
+- Acompanhamento de fisioterapia
 
-PASSO 3 — Diferencie claramente:
-- *Consultas de rotina/UBS* → marcar na própria UBS (não na secretaria)
-- *Encaminhamentos para especialistas e exames* (ortopedia, ginecologia, USG, etc.) → marcar na *Secretaria Municipal de Saúde*
-- *Urgência/Emergência* → UBS Rural ou ligue: *📞 (63) 99130-6916*
+🛡️ *Vigilância Sanitária* — 📞 (63) 99131-4490
+- Emissão de alvará sanitário
+- Denúncias à VISA municipal
 
-Se o usuário não souber o ACS, oriente: "Você pode verificar com seu ACS na sua microárea ou comparecer à UBS mais próxima."
+TRIAGEM — REGRA PARA CONSULTAS DE ROTINA (clínico geral / médico de família):
+Quando o usuário quiser marcar consulta médica de rotina, pergunte o ACS para direcionar à UBS correta:
+
+🏥 UBS RURAL → ACS: 02-Luzimaria, 05-Georgina, 06-Edilton, 07-Alaides, 08-Ramiro, 09-Greison, 10-Laurindo, 11-Kelisson, 12-Jurivan
+→ "Sua consulta deve ser marcada diretamente no *UBS Rural (Hospital)*. Você pode ligar para: 📞 *(63) 99130-6916*"
+
+🏨 UBS URBANA → ACS: 01-Iva, 03-Maira, 04-Lindaura, 13-Dilma, 14-Delfino
+→ "Sua consulta deve ser marcada diretamente no *UBS Urbana (Postinho)*. Você pode ligar para: 📞 *(63) 99130-2450*"
+
+Se não souber o ACS: "Você pode verificar com seu ACS na sua microárea ou comparecer à UBS mais próxima."
 
 USO DAS FERRAMENTAS — REGRAS OBRIGATÓRIAS:
 - Quando o usuário fornecer um nome ou número (CPF, CNS), chame IMEDIATAMENTE a ferramenta sem pedir mais informações
@@ -402,7 +554,7 @@ QUANDO ESCALAR PARA HUMANO (use a ferramenta escalar_para_humano):
       tentativas++
 
       const response = await groq.chat.completions.create({
-        model: 'moonshotai/kimi-k2-instruct',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 1024,
         messages: [{ role: 'system', content: systemPrompt }, ...mensagens],
         tools,
@@ -437,6 +589,9 @@ QUANDO ESCALAR PARA HUMANO (use a ferramenta escalar_para_humano):
 
     await salvarMensagem(telefone, 'assistant', resposta)
     await enviarMensagem(telefone, resposta)
+    await setEstado(telefone, 'menu')
+    await salvarMensagem(telefone, 'assistant', MENU_PRINCIPAL)
+    await enviarMensagem(telefone, MENU_PRINCIPAL)
 
     return NextResponse.json({ ok: true })
   } catch (e: any) {
