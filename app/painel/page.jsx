@@ -75,7 +75,7 @@ export default function PainelGeral() {
       supabase.from('pacientes').select('*', { count: 'exact', head: true }),
       supabase.from('servidores').select('*', { count: 'exact', head: true }).eq('ativo', true),
       supabase.from('viagens').select('destino').gte('data_viagem', inicioMes),
-      supabase.from('viagens').select('data_viagem, hora, paciente_nome, destino, created_at').order('created_at', { ascending: false }).limit(5)
+      supabase.from('viagens').select('data_viagem, hora, paciente_nome, destino, created_at').order('created_at', { ascending: false, nullsFirst: false }).order('data_viagem', { ascending: false }).limit(5)
     ])
 
     // Contagem por destino
