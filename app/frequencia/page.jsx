@@ -37,7 +37,8 @@ export default function Frequencia() {
   const [modalRelatorio, setModalRelatorio] = useState(false)
   const [grupoRelatorio, setGrupoRelatorio] = useState('com_matricula')
   // Servidores do Estado
-  const [servEstadoIdx, setServEstadoIdx] = useState(0)
+  const [servEstadoIdx, setServEstadoIdx] = useState('')
+  const [escalaAberta, setEscalaAberta] = useState(false)
   const [mesEstado, setMesEstado] = useState(String(new Date().getMonth() + 1).padStart(2, '0'))
   const [anoEstado, setAnoEstado] = useState(String(new Date().getFullYear()))
 
@@ -592,6 +593,7 @@ export default function Frequencia() {
   }
 
   async function imprimirFolhaPonto() {
+    if (servEstadoIdx === '') { alert('Selecione um servidor!'); return }
     const srv = SERVIDORES_ESTADO[servEstadoIdx]
     const mesN = Number(mesEstado)
     const anoN = Number(anoEstado)
@@ -847,49 +849,61 @@ export default function Frequencia() {
 
         {/* Profissionais em ESCALA */}
         <div className="card" style={{ padding: '20px', marginBottom: '20px', border: '1px solid #bae6fd' }}>
-          <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700',
-            color: '#0369a1', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            📋 Profissionais em ESCALA — Folha em Branco
-          </h3>
-          <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
-            Selecione o servidor acima e use os botões para incluir ou remover da lista de ESCALA.
-            A lista fica salva permanentemente no sistema e é usada como critério de impressão:
-            <strong> ESCALA → folha em branco</strong> | <strong>demais → folha normal (Seg–Sex + feriados)</strong>.
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: escalaAberta ? '12px' : 0 }}
+            onClick={() => setEscalaAberta(v => !v)}>
+            <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700',
+              color: '#0369a1', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              📋 Profissionais em ESCALA — Folha em Branco
+              <span style={{ marginLeft: '10px', fontSize: '12px', color: '#64748b', fontWeight: '400', textTransform: 'none' }}>
+                ({emEscalaLista.length} profissional{emEscalaLista.length !== 1 ? 'is' : ''})
+              </span>
+            </h3>
+            <span style={{ fontSize: '18px', color: '#0369a1', userSelect: 'none' }}>{escalaAberta ? '▲' : '▼'}</span>
+          </div>
 
-          {servidorAtual && (
-            <div style={{ background: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: '8px',
-              padding: '8px 14px', marginBottom: '12px', fontSize: '13px', color: '#0369a1', fontWeight: '600' }}>
-              Servidor selecionado: {servidorAtual.nome} ({servidorAtual.matricula})
-              {emEscala && <span style={{ marginLeft: '12px', color: '#0ea5e9' }}>✓ Em ESCALA</span>}
-            </div>
+          {escalaAberta && (
+            <>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
+                Selecione o servidor acima e use os botões para incluir ou remover da lista de ESCALA.
+                A lista fica salva permanentemente no sistema e é usada como critério de impressão:
+                <strong> ESCALA → folha em branco</strong> | <strong>demais → folha normal (Seg–Sex + feriados)</strong>.
+              </p>
+
+              {servidorAtual && (
+                <div style={{ background: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: '8px',
+                  padding: '8px 14px', marginBottom: '12px', fontSize: '13px', color: '#0369a1', fontWeight: '600' }}>
+                  Servidor selecionado: {servidorAtual.nome} ({servidorAtual.matricula})
+                  {emEscala && <span style={{ marginLeft: '12px', color: '#0ea5e9' }}>✓ Em ESCALA</span>}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
+                <button onClick={adicionarEscala} className="btn-primary"
+                  style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)' }}>
+                  + Adicionar à ESCALA
+                </button>
+                <button onClick={removerEscala} className="btn-danger">
+                  − Remover da ESCALA
+                </button>
+              </div>
+
+              <div style={{ fontSize: '13px', color: '#0369a1', marginBottom: '6px', fontWeight: '600' }}>
+                {emEscalaLista.length} profissional(is) em ESCALA → receberão folha em branco:
+              </div>
+              <div style={{ border: '1px solid #bae6fd', borderRadius: '8px', maxHeight: '160px',
+                overflowY: 'auto', background: 'white', padding: '8px 12px' }}>
+                {emEscalaLista.length === 0 ? (
+                  <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>Nenhum servidor na ESCALA</p>
+                ) : (
+                  emEscalaLista.map((s, i) => (
+                    <p key={s.id} style={{ margin: '2px 0', fontSize: '13px', color: '#0369a1' }}>
+                      {i + 1}. {s.nome} ({s.matricula || s.id})
+                    </p>
+                  ))
+                )}
+              </div>
+            </>
           )}
-
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
-            <button onClick={adicionarEscala} className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)' }}>
-              + Adicionar à ESCALA
-            </button>
-            <button onClick={removerEscala} className="btn-danger">
-              − Remover da ESCALA
-            </button>
-          </div>
-
-          <div style={{ fontSize: '13px', color: '#0369a1', marginBottom: '6px', fontWeight: '600' }}>
-            {emEscalaLista.length} profissional(is) em ESCALA → receberão folha em branco:
-          </div>
-          <div style={{ border: '1px solid #bae6fd', borderRadius: '8px', maxHeight: '160px',
-            overflowY: 'auto', background: 'white', padding: '8px 12px' }}>
-            {emEscalaLista.length === 0 ? (
-              <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>Nenhum servidor na ESCALA</p>
-            ) : (
-              emEscalaLista.map((s, i) => (
-                <p key={s.id} style={{ margin: '2px 0', fontSize: '13px', color: '#0369a1' }}>
-                  {i + 1}. {s.nome} ({s.matricula || s.id})
-                </p>
-              ))
-            )}
-          </div>
         </div>
 
 
@@ -902,7 +916,8 @@ export default function Frequencia() {
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '12px', alignItems: 'end' }}>
             <div>
               <label className={lbl}>Servidor</label>
-              <select className={inp} value={servEstadoIdx} onChange={e => setServEstadoIdx(Number(e.target.value))}>
+              <select className={inp} value={servEstadoIdx} onChange={e => setServEstadoIdx(e.target.value === '' ? '' : Number(e.target.value))}>
+                <option value="">— Selecione o servidor —</option>
                 {SERVIDORES_ESTADO.map((s, i) => (
                   <option key={i} value={i}>{s.nome} — {s.cargo}</option>
                 ))}

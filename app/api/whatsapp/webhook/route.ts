@@ -423,7 +423,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Fluxos que precisam de IA (busca no banco) ───────────────────────────
+    // ── Busca direta de agendamentos (sem IA) ────────────────────────────────
+    if (estado === 'buscar_agendamento') {
+      const resultado = await executarFerramenta('buscar_agendamentos', { busca: input }, telefone)
+      const resposta = resultado === 'Nenhum agendamento encontrado para este paciente.'
+        ? `❌ Nenhum agendamento encontrado para *${input}*.\n\nVerifique se o nome ou CPF está correto e tente novamente, ou ligue para a SMS:\n📞 *(63) 99130-6916*`
+        : `📋 *Seus agendamentos:*\n\n${resultado}`
+      await salvarMensagem(telefone, 'assistant', resposta)
+      await enviarMensagem(telefone, resposta)
+      await setEstado(telefone, 'menu')
+      await salvarMensagem(telefone, 'assistant', MENU_PRINCIPAL)
+      await enviarMensagem(telefone, MENU_PRINCIPAL)
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Busca direta de viagens TFD (sem IA) ─────────────────────────────────
+    if (estado === 'buscar_tfd') {
+      const resultado = await executarFerramenta('buscar_tfd', { busca: input }, telefone)
+      const resposta = resultado === 'Nenhuma viagem TFD encontrada para este paciente.'
+        ? `❌ Nenhuma viagem encontrada para *${input}*.\n\nVerifique o nome ou CPF, ou entre em contato:\n📞 *(63) 99130-6916*`
+        : `🚗 *Suas viagens TFD:*\n\n${resultado}`
+      await salvarMensagem(telefone, 'assistant', resposta)
+      await enviarMensagem(telefone, resposta)
+      await setEstado(telefone, 'menu')
+      await salvarMensagem(telefone, 'assistant', MENU_PRINCIPAL)
+      await enviarMensagem(telefone, MENU_PRINCIPAL)
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Fluxos abertos tratados pela IA ──────────────────────────────────────
     const mensagens: Groq.Chat.Completions.ChatCompletionMessageParam[] = [
       ...historico,
       { role: 'user', content: texto }
@@ -554,8 +582,9 @@ QUANDO ESCALAR PARA HUMANO (use a ferramenta escalar_para_humano):
       tentativas++
 
       const response = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 1024,
+        model: 'llama3-groq-8b-8192-tool-use-preview',
+        max_tokens: 512,
+        temperature: 0.3,
         messages: [{ role: 'system', content: systemPrompt }, ...mensagens],
         tools,
         tool_choice: 'auto'
