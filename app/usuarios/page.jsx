@@ -6,7 +6,8 @@ import Layout from '@/components/Layout'
 
 function mascaraCPF(v) {
   const d = String(v || '').replace(/\D/g, '')
-  return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+  if (d.length < 3) return d
+  return d.slice(0, 3) + '.***.***-**'
 }
 
 export default function Usuarios() {

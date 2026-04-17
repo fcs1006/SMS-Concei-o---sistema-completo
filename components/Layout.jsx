@@ -67,11 +67,6 @@ export default function Layout({ children, usuario }) {
       bg1: '#451a03', bg2: '#92400e', acento: '#f59e0b'
     },
     {
-      label: 'Usuários', icon: '👥', path: '/usuarios', adminOnly: true,
-      cor: '#f9a8d4', corBg: 'rgba(249,168,212,0.15)',
-      bg1: '#4a044e', bg2: '#701a75', acento: '#e879f9'
-    },
-    {
       label: 'Francisco IA', icon: '🤖', path: '/francisco', adminOnly: true,
       cor: '#6ee7b7', corBg: 'rgba(110,231,183,0.15)',
       bg1: '#064e3b', bg2: '#065f46', acento: '#34d399'
@@ -194,12 +189,27 @@ export default function Layout({ children, usuario }) {
                 }}>
                   {usuario?.nome?.charAt(0) || 'U'}
                 </div>
-                <div style={{ overflow: 'hidden' }}>
+                <div style={{ overflow: 'hidden', flex: 1 }}>
                   <p style={{ color: 'white', fontSize: '11px', fontWeight: '600', margin: 0, fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {usuario?.nome || 'Usuário'}
                   </p>
                   <p style={{ color: paginaAtiva.acento, fontSize: '10px', margin: 0, opacity: 0.7 }}>Online</p>
                 </div>
+                {usuario?.perfil === 'admin' && (
+                  <button
+                    title="Gerenciar usuários"
+                    onClick={() => router.push('/usuarios')}
+                    style={{
+                      background: pathname === '/usuarios' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.07)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: '7px', width: '26px', height: '26px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '14px', cursor: 'pointer', flexShrink: 0
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+                    onMouseLeave={e => e.currentTarget.style.background = pathname === '/usuarios' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.07)'}
+                  >⚙️</button>
+                )}
               </div>
               <button
                 onClick={() => { localStorage.clear(); router.push('/') }}
