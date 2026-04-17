@@ -189,7 +189,7 @@ export default function Layout({ children, usuario }) {
                 }}>
                   {usuario?.nome?.charAt(0) || 'U'}
                 </div>
-                <div style={{ overflow: 'hidden', flex: 1 }}>
+                <div style={{ overflowX: 'hidden', overflowY: 'hidden', flexGrow: 1 }}>
                   <p style={{ color: 'white', fontSize: '11px', fontWeight: '600', margin: 0, fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {usuario?.nome || 'Usuário'}
                   </p>

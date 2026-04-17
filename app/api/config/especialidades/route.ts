@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const slugNorm = slug.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
   const { data, error } = await supabase
     .from('especialidades_config')
-    .insert({ slug: slugNorm, label: label.trim(), icon: icon || '🏥', cota: Number(cota) || 30 })
+    .insert({ slug: slugNorm, label: label.trim(), icon: icon || '', cota: Number(cota) || 30 })
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

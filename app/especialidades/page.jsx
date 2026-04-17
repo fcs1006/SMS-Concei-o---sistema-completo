@@ -5,29 +5,29 @@ import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 
 const ESPECIALIDADES = [
-  { id: 'ortopedia',    label: 'Ortopedia',    icon: '🦴', cota: 30 },
-  { id: 'ginecologia',  label: 'Ginecologia',  icon: '🩺', cota: 30 },
+  { id: 'ortopedia', label: 'Ortopedia', icon: '🦴', cota: 30 },
+  { id: 'ginecologia', label: 'Ginecologia', icon: '🩺', cota: 30 },
   { id: 'oftalmologia', label: 'Oftalmologia', icon: '👁️', cota: 30 },
-  { id: 'urologia',     label: 'Urologia',     icon: '🔬', cota: 30 },
-  { id: 'usg',          label: 'USG',          icon: '📡', cota: 60 },
-  { id: 'psiquiatria',  label: 'Psiquiatria',  icon: '🧠', cota: 30 },
+  { id: 'urologia', label: 'Urologia', icon: '🔬', cota: 30 },
+  { id: 'usg', label: 'USG', icon: '🖥️', cota: 60 },
+  { id: 'psiquiatria', label: 'Psiquiatria', icon: '🧠', cota: 30 },
 ]
 
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
-const COR       = '#b45309'
-const COR_DARK  = '#92400e'
-const GRAD      = 'linear-gradient(135deg, #92400e, #b45309)'
+const COR = '#b45309'
+const COR_DARK = '#92400e'
+const GRAD = 'linear-gradient(135deg, #92400e, #b45309)'
 
 const STATUS_STYLE = {
-  pendente:   { bg: '#fef9c3', cor: '#854d0e', borda: '#fde047' },
+  pendente: { bg: '#fef9c3', cor: '#854d0e', borda: '#fde047' },
   autorizado: { bg: '#dcfce7', cor: '#166534', borda: '#86efac' },
-  negado:     { bg: '#fee2e2', cor: '#991b1b', borda: '#fca5a5' },
-  excluido:   { bg: '#f1f5f9', cor: '#475569', borda: '#cbd5e1' },
+  negado: { bg: '#fee2e2', cor: '#991b1b', borda: '#fca5a5' },
+  excluido: { bg: '#f1f5f9', cor: '#475569', borda: '#cbd5e1' },
 }
 const STATUS_LABEL = { pendente: 'Pendente', autorizado: 'Autorizado', negado: 'Negado', excluido: 'Excluído' }
 
-const CONSELHOS = ['CRM','CRO','CREFITO','CRM-RJ','CRM-GO','CRM-DF','Outro']
+const CONSELHOS = ['CRM', 'CRO', 'CREFITO', 'CRM-RJ', 'CRM-GO', 'CRM-DF', 'Outro']
 
 // Ordem original de atendimento (usada na impressão e na lista)
 const TIPOS_USG_ORDEM = [
@@ -52,14 +52,14 @@ const TIPOS_USG_ORDEM = [
 const TIPOS_USG = [...TIPOS_USG_ORDEM].sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
 const PREPARO_USG = {
-  'ABDOMEN TOTAL':        'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR.',
-  'ABDOMEN SUPERIOR':     'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR.',
-  'VIAS URINÁRIAS':       'BEXIGA CHEIA (BEBER 1 LITRO DE ÁGUA 1 HORA ANTES E NÃO URINAR).',
-  'PÉLVICA':              'BEXIGA CHEIA (BEBER 1 LITRO DE ÁGUA 1 HORA ANTES E NÃO URINAR).',
-  'PRÓSTATA ABDOMINAL':   'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR. BEXIGA CHEIA.',
-  'PRÓSTATA TRANSRETAL':  'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR. BEXIGA CHEIA.',
+  'ABDOMEN TOTAL': 'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR.',
+  'ABDOMEN SUPERIOR': 'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR.',
+  'VIAS URINÁRIAS': 'BEXIGA CHEIA (BEBER 1 LITRO DE ÁGUA 1 HORA ANTES E NÃO URINAR).',
+  'PÉLVICA': 'BEXIGA CHEIA (BEBER 1 LITRO DE ÁGUA 1 HORA ANTES E NÃO URINAR).',
+  'PRÓSTATA ABDOMINAL': 'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR. BEXIGA CHEIA.',
+  'PRÓSTATA TRANSRETAL': 'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR. BEXIGA CHEIA.',
 }
-const TIPOS_CONSULTA = ['Primeira Consulta','Retorno','Outro']
+const TIPOS_CONSULTA = ['Primeira Consulta', 'Retorno', 'Outro']
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmtData(v) {
@@ -73,7 +73,7 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
   const hoje = new Date()
   const dataEmissao = hoje.toLocaleDateString('pt-BR')
   const horaEmissao = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  const isUsg = ag.tipo_exame && !['Primeira Consulta','Retorno','Outro'].includes(ag.tipo_exame)
+  const isUsg = ag.tipo_exame && !['Primeira Consulta', 'Retorno', 'Outro'].includes(ag.tipo_exame)
   const tipoDoc = isUsg ? 'EXAME' : 'CONSULTA'
   const numComp = String(ag.id).slice(-8).toUpperCase()
   const preparo = isUsg ? (preparos[ag.tipo_exame] || null) : null
@@ -332,7 +332,7 @@ export default function Especialidades() {
   const [modalConfig, setModalConfig] = useState(false)
   const [abaConfig, setAbaConfig] = useState('especialidades')
   // form nova especialidade
-  const [formEsp, setFormEsp] = useState({ label: '', icon: '🏥', cota: '30' })
+  const [formEsp, setFormEsp] = useState({ label: '', icon: '', cota: '30' })
   const [salvandoEsp, setSalvandoEsp] = useState(false)
   // form novo preparo
   const [formPreparo, setFormPreparo] = useState({ especialidade_slug: 'usg', tipo_exame: '', instrucoes: '' })
@@ -364,7 +364,7 @@ export default function Especialidades() {
         dataPre.filter(p => p.ativo).forEach(p => { mapa[p.tipo_exame] = p.instrucoes })
         setPreparosDb(mapa)
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // Carregar dados ao mudar especialidade/mes/ano
@@ -401,7 +401,7 @@ export default function Especialidades() {
       const res = await fetch('/api/especialidades/escala?' + p)
       const json = await res.json()
       if (json.ok) setEscala(json.data || [])
-    } catch {}
+    } catch { }
   }
 
   async function buscarProfissionais() {
@@ -410,7 +410,7 @@ export default function Especialidades() {
       const res = await fetch('/api/especialidades/profissionais?' + p)
       const json = await res.json()
       if (json.ok) setProfissionais(json.data || [])
-    } catch {}
+    } catch { }
   }
 
   async function buscarRelatorio() {
@@ -423,7 +423,7 @@ export default function Especialidades() {
 
       // Resumo por especialidade
       const mapa = {}
-      ESPECIALIDADES.forEach(e => { mapa[e.id] = { label: e.label, icon: e.icon, cota: e.cota, pendente: 0, autorizado: 0, negado: 0, excluido: 0 } })
+      especialidades.forEach(e => { mapa[e.id] = { label: e.label, icon: e.icon, cota: e.cota, pendente: 0, autorizado: 0, negado: 0, excluido: 0 } })
       todos.forEach(r => { if (mapa[r.especialidade]) mapa[r.especialidade][r.status] = (mapa[r.especialidade][r.status] || 0) + 1 })
       setRelatorio(Object.values(mapa))
       setRelDetalhes(todos)
@@ -453,12 +453,12 @@ export default function Especialidades() {
     if (escala.length > 0 && !form.profissional_nome) { mostrarMsg('Selecione o profissional', false); return }
     // Restrições por sexo (USG)
     if (isUsg && form.sexo) {
-      const sexoM = ['M','MASCULINO','Masculino','m'].includes(form.sexo)
-      const sexoF = ['F','FEMININO','Feminino','f'].includes(form.sexo)
+      const sexoM = ['M', 'MASCULINO', 'Masculino', 'm'].includes(form.sexo)
+      const sexoF = ['F', 'FEMININO', 'Feminino', 'f'].includes(form.sexo)
       if (form.tipo_exame === 'TRANSVAGINAL' && !sexoF) {
         mostrarMsg('❌ Exame de Transvaginal é exclusivo para pacientes do sexo feminino', false); return
       }
-      if (['PRÓSTATA TRANSRETAL','PRÓSTATA ABDOMINAL'].includes(form.tipo_exame) && !sexoM) {
+      if (['PRÓSTATA TRANSRETAL', 'PRÓSTATA ABDOMINAL'].includes(form.tipo_exame) && !sexoM) {
         mostrarMsg('❌ Exame de Próstata é exclusivo para pacientes do sexo masculino', false); return
       }
     }
@@ -546,7 +546,7 @@ export default function Especialidades() {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      setFormEsp({ label: '', icon: '🏥', cota: '30' })
+      setFormEsp({ label: '', icon: '', cota: '30' })
       mostrarMsg('✅ Especialidade cadastrada')
       await carregarConfig()
     } catch (e) { mostrarMsg('❌ ' + e.message, false) }
@@ -700,7 +700,7 @@ export default function Especialidades() {
   }
 
   // ── Cálculos de cota ──────────────────────────────────────────────────────
-  const espAtiva = especialidades.find(e => e.id === esp) || ESPECIALIDADES.find(e => e.id === esp) || ESPECIALIDADES[0]
+  const espAtiva = especialidades.find(e => e.id === esp) || especialidades[0] || ESPECIALIDADES[0]
   const autorizados = agendamentos.filter(a => a.status === 'autorizado').length
   const usados = autorizados
   const pct = Math.min(100, Math.round((usados / espAtiva.cota) * 100))
@@ -715,7 +715,7 @@ export default function Especialidades() {
           <Modal titulo="⚙️ Configurações de Especialidades" onClose={() => setModalConfig(false)} largura="640px">
             {/* Abas */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-              {[['especialidades','🏥 Especialidades'],['preparos','🧪 Preparos']].map(([id, lbl]) => (
+              {[['especialidades', '🏥 Especialidades'], ['preparos', '🧪 Preparos']].map(([id, lbl]) => (
                 <button key={id} onClick={() => setAbaConfig(id)} style={{
                   background: abaConfig === id ? '#b45309' : 'none',
                   color: abaConfig === id ? 'white' : '#64748b',
@@ -751,7 +751,7 @@ export default function Especialidades() {
                   <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nova especialidade</p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px auto', gap: '8px', alignItems: 'end' }}>
                     <div><label className="label-modern">Nome</label><input className="input-modern" placeholder="Ex.: Cardiologia" value={formEsp.label} onChange={e => setFormEsp(f => ({ ...f, label: e.target.value }))} /></div>
-                    <div><label className="label-modern">Ícone</label><input className="input-modern" value={formEsp.icon} onChange={e => setFormEsp(f => ({ ...f, icon: e.target.value }))} style={{ textAlign: 'center' }} /></div>
+                    <div><label className="label-modern">Ícone</label><input className="input-modern" value={formEsp.icon || ''} onChange={e => setFormEsp(f => ({ ...f, icon: e.target.value }))} style={{ textAlign: 'center' }} /></div>
                     <div><label className="label-modern">Cota/mês</label><input className="input-modern" type="number" min="1" value={formEsp.cota} onChange={e => setFormEsp(f => ({ ...f, cota: e.target.value }))} /></div>
                     <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={salvarEspecialidade} disabled={salvandoEsp}>
                       {salvandoEsp ? '...' : '+ Adicionar'}
@@ -884,7 +884,7 @@ export default function Especialidades() {
           <>
             {/* Sub-abas especialidade */}
             <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '0', flexWrap: 'wrap' }}>
-              {ESPECIALIDADES.map(e => (
+              {especialidades.map(e => (
                 <button key={e.id} onClick={() => setEsp(e.id)}
                   style={{ background: 'none', border: 'none', padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: esp === e.id ? COR : '#64748b', borderBottom: esp === e.id ? `3px solid ${COR}` : '3px solid transparent', marginBottom: '-1px', fontFamily: 'Sora, sans-serif' }}>
                   {e.icon} {e.label}
@@ -1026,11 +1026,11 @@ export default function Especialidades() {
                         style={{ width: '100%' }}>
                         <option value="">— Selecione —</option>
                         {(esp === 'usg' ? TIPOS_USG.filter(t => {
-                          const sexoM = ['M','MASCULINO','Masculino','m'].includes(form.sexo)
-                          const sexoF = ['F','FEMININO','Feminino','f'].includes(form.sexo)
+                          const sexoM = ['M', 'MASCULINO', 'Masculino', 'm'].includes(form.sexo)
+                          const sexoF = ['F', 'FEMININO', 'Feminino', 'f'].includes(form.sexo)
                           if (!form.sexo) return true // sem sexo cadastrado → mostra tudo
                           if (t === 'TRANSVAGINAL') return sexoF
-                          if (['PRÓSTATA TRANSRETAL','PRÓSTATA ABDOMINAL'].includes(t)) return sexoM
+                          if (['PRÓSTATA TRANSRETAL', 'PRÓSTATA ABDOMINAL'].includes(t)) return sexoM
                           return true
                         }) : TIPOS_CONSULTA).map(t => (
                           <option key={t} value={t}>{t}</option>
@@ -1149,127 +1149,127 @@ export default function Especialidades() {
                 </p>
               ) : (
                 <>
-                <div className="screen-only">
-                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: 'Sora, sans-serif', fontSize: '12px' }}>
-                    <colgroup>
-                      <col style={{ width: '28px' }} />
-                      <col style={{ width: '20%' }} />
-                      <col style={{ width: '9%' }} />
-                      <col style={{ width: '9%' }} />
-                      <col style={{ width: '13%' }} />
-                      <col style={{ width: '9%' }} />
-                      <col style={{ width: '7%' }} />
-                      <col style={{ width: '8%' }} />
-                      <col style={{ width: '9%' }} />
-                      <col style={{ width: '130px' }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                        {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Profissional', 'Data', 'Status', 'Obs', 'Ações'].map(h => (
-                          <th key={h} style={{ padding: '7px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const sorted = [...agendamentos].sort((a, b) => {
-                          const d = (a.data_consulta || '').localeCompare(b.data_consulta || '')
-                          if (d !== 0) return d
-                          return (a.created_at || '').localeCompare(b.created_at || '')
-                        })
-                        let printNum = 0
-                        const btn = (onClick, title, bg, borda, cor, label) => (
-                          <button onClick={onClick} title={title}
-                            style={{ padding: '3px 0', width: '26px', fontSize: '12px', fontWeight: '700', background: bg, border: `1px solid ${borda}`, borderRadius: '5px', color: cor, cursor: 'pointer', textAlign: 'center', lineHeight: 1 }}>
-                            {label}
-                          </button>
-                        )
-                        return sorted.map((a, i) => {
-                          if (a.status === 'autorizado') printNum++
-                          const numExibir = a.status === 'autorizado' ? printNum : i + 1
-                          const st = STATUS_STYLE[a.status] || STATUS_STYLE.pendente
-                          const doisNomes = a.profissional_nome ? a.profissional_nome.split(' ').slice(0, 2).join(' ') : '—'
-                          return (
-                          <tr key={a.id}
-                            className={a.status !== 'autorizado' ? 'no-print' : ''}
-                            style={{ borderBottom: '1px solid #f1f5f9' }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                            <td style={{ padding: '8px', color: '#94a3b8', fontSize: '11px' }}>{numExibir}</td>
-                            <td style={{ padding: '8px', fontWeight: '700', color: '#0f172a', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.paciente_nome}</td>
-                            <td style={{ padding: '8px', color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.paciente_cns || '—'}</td>
-                            <td style={{ padding: '8px', color: '#475569', fontSize: '11px' }}>{a.telefone || '—'}</td>
-                            <td style={{ padding: '8px', fontSize: '11px', color: '#0f172a', fontWeight: a.tipo_exame ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.tipo_exame || '—'}</td>
-                            <td style={{ padding: '8px', fontSize: '11px', color: '#475569', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.profissional_nome || ''}>{doisNomes}</td>
-                            <td style={{ padding: '8px', color: '#475569', fontSize: '11px', whiteSpace: 'nowrap' }}>{fmtData(a.data_consulta)}</td>
-                            <td style={{ padding: '8px' }}>
-                              <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '20px', background: st.bg, color: st.cor, border: `1px solid ${st.borda}`, whiteSpace: 'nowrap' }}>
-                                {STATUS_LABEL[a.status]}
-                              </span>
-                            </td>
-                            <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {a.status === 'negado' && a.motivo_cancelamento
-                                ? <span style={{ fontSize: '11px', color: '#991b1b', fontStyle: 'italic' }} title={a.motivo_cancelamento}>
-                                    {a.motivo_cancelamento.length > 18 ? a.motivo_cancelamento.slice(0, 18) + '…' : a.motivo_cancelamento}
+                  <div className="screen-only">
+                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: 'Sora, sans-serif', fontSize: '12px' }}>
+                      <colgroup>
+                        <col style={{ width: '28px' }} />
+                        <col style={{ width: '20%' }} />
+                        <col style={{ width: '9%' }} />
+                        <col style={{ width: '9%' }} />
+                        <col style={{ width: '13%' }} />
+                        <col style={{ width: '9%' }} />
+                        <col style={{ width: '7%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '9%' }} />
+                        <col style={{ width: '130px' }} />
+                      </colgroup>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                          {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Profissional', 'Data', 'Status', 'Obs', 'Ações'].map(h => (
+                            <th key={h} style={{ padding: '7px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const sorted = [...agendamentos].sort((a, b) => {
+                            const d = (a.data_consulta || '').localeCompare(b.data_consulta || '')
+                            if (d !== 0) return d
+                            return (a.created_at || '').localeCompare(b.created_at || '')
+                          })
+                          let printNum = 0
+                          const btn = (onClick, title, bg, borda, cor, label) => (
+                            <button onClick={onClick} title={title}
+                              style={{ padding: '3px 0', width: '26px', fontSize: '12px', fontWeight: '700', background: bg, border: `1px solid ${borda}`, borderRadius: '5px', color: cor, cursor: 'pointer', textAlign: 'center', lineHeight: 1 }}>
+                              {label}
+                            </button>
+                          )
+                          return sorted.map((a, i) => {
+                            if (a.status === 'autorizado') printNum++
+                            const numExibir = a.status === 'autorizado' ? printNum : i + 1
+                            const st = STATUS_STYLE[a.status] || STATUS_STYLE.pendente
+                            const doisNomes = a.profissional_nome ? a.profissional_nome.split(' ').slice(0, 2).join(' ') : '—'
+                            return (
+                              <tr key={a.id}
+                                className={a.status !== 'autorizado' ? 'no-print' : ''}
+                                style={{ borderBottom: '1px solid #f1f5f9' }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                <td style={{ padding: '8px', color: '#94a3b8', fontSize: '11px' }}>{numExibir}</td>
+                                <td style={{ padding: '8px', fontWeight: '700', color: '#0f172a', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.paciente_nome}</td>
+                                <td style={{ padding: '8px', color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.paciente_cns || '—'}</td>
+                                <td style={{ padding: '8px', color: '#475569', fontSize: '11px' }}>{a.telefone || '—'}</td>
+                                <td style={{ padding: '8px', fontSize: '11px', color: '#0f172a', fontWeight: a.tipo_exame ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.tipo_exame || '—'}</td>
+                                <td style={{ padding: '8px', fontSize: '11px', color: '#475569', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.profissional_nome || ''}>{doisNomes}</td>
+                                <td style={{ padding: '8px', color: '#475569', fontSize: '11px', whiteSpace: 'nowrap' }}>{fmtData(a.data_consulta)}</td>
+                                <td style={{ padding: '8px' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '20px', background: st.bg, color: st.cor, border: `1px solid ${st.borda}`, whiteSpace: 'nowrap' }}>
+                                    {STATUS_LABEL[a.status]}
                                   </span>
-                                : <span style={{ fontSize: '11px', color: '#94a3b8' }}>{a.observacao || '—'}</span>
-                              }
-                            </td>
-                            <td style={{ padding: '6px 8px' }}>
-                              <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexWrap: 'nowrap' }}>
-                                {a.status !== 'autorizado' && btn(() => autorizar(a.id), 'Autorizar', '#dcfce7', '#86efac', '#166534', '✓')}
-                                {a.status === 'autorizado' && btn(() => imprimirComprovante(a, espAtiva.label, undefined, preparosDb), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', '🖨')}
-                                {a.status !== 'negado' && btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', '✗')}
-                                {a.status !== 'pendente' && btn(() => voltarPendente(a.id), 'Voltar para pendente', '#fef9c3', '#fde047', '#854d0e', '↩')}
-                                {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', '✏')}
-                                {btn(() => { setModalExcluir({ show: true, id: a.id }); setMotivoExclusao('') }, 'Excluir', '#f1f5f9', '#cbd5e1', '#64748b', '🗑')}
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                        })
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
+                                </td>
+                                <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {a.status === 'negado' && a.motivo_cancelamento
+                                    ? <span style={{ fontSize: '11px', color: '#991b1b', fontStyle: 'italic' }} title={a.motivo_cancelamento}>
+                                      {a.motivo_cancelamento.length > 18 ? a.motivo_cancelamento.slice(0, 18) + '…' : a.motivo_cancelamento}
+                                    </span>
+                                    : <span style={{ fontSize: '11px', color: '#94a3b8' }}>{a.observacao || '—'}</span>
+                                  }
+                                </td>
+                                <td style={{ padding: '6px 8px' }}>
+                                  <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexWrap: 'nowrap' }}>
+                                    {a.status !== 'autorizado' && btn(() => autorizar(a.id), 'Autorizar', '#dcfce7', '#86efac', '#166534', '✓')}
+                                    {a.status === 'autorizado' && btn(() => imprimirComprovante(a, espAtiva.label, undefined, preparosDb), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', '🖨')}
+                                    {a.status !== 'negado' && btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', '✗')}
+                                    {a.status !== 'pendente' && btn(() => voltarPendente(a.id), 'Voltar para pendente', '#fef9c3', '#fde047', '#854d0e', '↩')}
+                                    {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', '✏')}
+                                    {btn(() => { setModalExcluir({ show: true, id: a.id }); setMotivoExclusao('') }, 'Excluir', '#f1f5f9', '#cbd5e1', '#64748b', '🗑')}
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
 
-                {/* Tabela exclusiva para impressão — ordem clínica (USG: por tipo; demais: por data) */}
-                {agendamentos.filter(a => a.status === 'autorizado').length > 0 && (() => {
-                  const printSorted = esp === 'usg'
-                    ? [...agendamentos].filter(a => a.status === 'autorizado').sort((a, b) => {
+                  {/* Tabela exclusiva para impressão — ordem clínica (USG: por tipo; demais: por data) */}
+                  {agendamentos.filter(a => a.status === 'autorizado').length > 0 && (() => {
+                    const printSorted = esp === 'usg'
+                      ? [...agendamentos].filter(a => a.status === 'autorizado').sort((a, b) => {
                         const ia = TIPOS_USG_ORDEM.indexOf(a.tipo_exame)
                         const ib = TIPOS_USG_ORDEM.indexOf(b.tipo_exame)
                         return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
                       })
-                    : [...agendamentos].filter(a => a.status === 'autorizado').sort((a, b) =>
+                      : [...agendamentos].filter(a => a.status === 'autorizado').sort((a, b) =>
                         (a.data_consulta || '').localeCompare(b.data_consulta || '') || (a.created_at || '').localeCompare(b.created_at || '')
                       )
-                  return (
-                    <div className="print-only">
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Arial, sans-serif', fontSize: '11px' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '2px solid #000' }}>
-                            {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Data'].map(h => (
-                              <th key={h} style={{ padding: '5px 6px', textAlign: 'left', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase' }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {printSorted.map((a, i) => (
-                            <tr key={a.id} style={{ borderBottom: '1px solid #ccc' }}>
-                              <td style={{ padding: '5px 6px' }}>{i + 1}</td>
-                              <td style={{ padding: '5px 6px', fontWeight: '700' }}>{a.paciente_nome}</td>
-                              <td style={{ padding: '5px 6px' }}>{a.paciente_cns || '—'}</td>
-                              <td style={{ padding: '5px 6px' }}>{a.telefone || '—'}</td>
-                              <td style={{ padding: '5px 6px' }}>{a.tipo_exame || '—'}</td>
-                              <td style={{ padding: '5px 6px', whiteSpace: 'nowrap' }}>{fmtData(a.data_consulta)}</td>
+                    return (
+                      <div className="print-only">
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Arial, sans-serif', fontSize: '11px' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '2px solid #000' }}>
+                              {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Data'].map(h => (
+                                <th key={h} style={{ padding: '5px 6px', textAlign: 'left', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase' }}>{h}</th>
+                              ))}
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )
-                })()}
+                          </thead>
+                          <tbody>
+                            {printSorted.map((a, i) => (
+                              <tr key={a.id} style={{ borderBottom: '1px solid #ccc' }}>
+                                <td style={{ padding: '5px 6px' }}>{i + 1}</td>
+                                <td style={{ padding: '5px 6px', fontWeight: '700' }}>{a.paciente_nome}</td>
+                                <td style={{ padding: '5px 6px' }}>{a.paciente_cns || '—'}</td>
+                                <td style={{ padding: '5px 6px' }}>{a.telefone || '—'}</td>
+                                <td style={{ padding: '5px 6px' }}>{a.tipo_exame || '—'}</td>
+                                <td style={{ padding: '5px 6px', whiteSpace: 'nowrap' }}>{fmtData(a.data_consulta)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  })()}
                 </>
               )}
             </div>
@@ -1285,143 +1285,144 @@ export default function Especialidades() {
             return true
           })
           return (
-          <div>
-            {/* Filtros */}
-            <div className="card no-print" style={{ padding: '16px 20px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                <div>
-                  <label className="label-modern">Mês</label>
-                  <select className="input-modern" value={relMes} onChange={e => setRelMes(e.target.value)} style={{ width: '140px' }}>
-                    {MESES.map((n, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{String(i + 1).padStart(2, '0')} — {n}</option>)}
-                  </select>
+            <div>
+              {/* Filtros */}
+              <div className="card no-print" style={{ padding: '16px 20px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div>
+                    <label className="label-modern">Mês</label>
+                    <select className="input-modern" value={relMes} onChange={e => setRelMes(e.target.value)} style={{ width: '140px' }}>
+                      {MESES.map((n, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{String(i + 1).padStart(2, '0')} — {n}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-modern">Ano</label>
+                    <input className="input-modern" type="number" value={relAno} onChange={e => setRelAno(e.target.value)} min="2020" max="2099" style={{ width: '90px' }} />
+                  </div>
+                  <div>
+                    <label className="label-modern">Especialidade</label>
+                    <select className="input-modern" value={relFiltroEsp} onChange={e => setRelFiltroEsp(e.target.value)} style={{ width: '160px' }}>
+                      <option value="">Todas</option>
+                      {especialidades.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-modern">Status</label>
+                    <select className="input-modern" value={relFiltroStatus} onChange={e => setRelFiltroStatus(e.target.value)} style={{ width: '140px' }}>
+                      <option value="">Todos</option>
+                      {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-modern">Profissional</label>
+                    <input className="input-modern" type="text" placeholder="Filtrar..." value={relFiltroProf} onChange={e => setRelFiltroProf(e.target.value)} style={{ width: '160px' }} />
+                  </div>
+                  <button className="btn-primary" style={{ background: GRAD }} onClick={buscarRelatorio}>🔄 Atualizar</button>
+                  <button className="btn-secondary" onClick={() => window.print()}>🖨️ Imprimir</button>
                 </div>
-                <div>
-                  <label className="label-modern">Ano</label>
-                  <input className="input-modern" type="number" value={relAno} onChange={e => setRelAno(e.target.value)} min="2020" max="2099" style={{ width: '90px' }} />
-                </div>
-                <div>
-                  <label className="label-modern">Especialidade</label>
-                  <select className="input-modern" value={relFiltroEsp} onChange={e => setRelFiltroEsp(e.target.value)} style={{ width: '160px' }}>
-                    <option value="">Todas</option>
-                    {ESPECIALIDADES.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="label-modern">Status</label>
-                  <select className="input-modern" value={relFiltroStatus} onChange={e => setRelFiltroStatus(e.target.value)} style={{ width: '140px' }}>
-                    <option value="">Todos</option>
-                    {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="label-modern">Profissional</label>
-                  <input className="input-modern" type="text" placeholder="Filtrar..." value={relFiltroProf} onChange={e => setRelFiltroProf(e.target.value)} style={{ width: '160px' }} />
-                </div>
-                <button className="btn-primary" style={{ background: GRAD }} onClick={buscarRelatorio}>🔄 Atualizar</button>
-                <button className="btn-secondary" onClick={() => window.print()}>🖨️ Imprimir</button>
-              </div>
-            </div>
-
-            <div className="card print-area" style={{ padding: '20px', marginBottom: '16px' }}>
-              {/* Cabeçalho impressão */}
-              <div className="print-title" style={{ display: 'none', marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
-                <p style={{ fontFamily: 'Arial', fontSize: '13px', fontWeight: '700', margin: '0 0 2px', textTransform: 'uppercase' }}>SECRETARIA MUNICIPAL DE SAÚDE — CONCEIÇÃO DO TOCANTINS/TO</p>
-                <p style={{ fontFamily: 'Arial', fontSize: '15px', fontWeight: '800', margin: '6px 0 2px' }}>RELATÓRIO DE ESPECIALIDADES</p>
-                <p style={{ fontFamily: 'Arial', fontSize: '12px', margin: 0, color: '#333' }}>
-                  Competência: {MESES[Number(relMes) - 1]}/{relAno}
-                  {relFiltroEsp ? ` · ${ESPECIALIDADES.find(e => e.id === relFiltroEsp)?.label}` : ''}
-                  {relFiltroStatus ? ` · ${STATUS_LABEL[relFiltroStatus]}` : ''}
-                </p>
               </div>
 
-              <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '0 0 14px' }}>
-                Resumo — {MESES[Number(relMes) - 1]}/{relAno}
-              </h3>
-              {relLoading ? (
-                <p style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>Carregando...</p>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginBottom: '28px' }}>
-                  <thead>
-                    <tr style={{ background: GRAD, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                      {['Especialidade', 'Cota', 'Pendente', 'Autorizado', 'Negado', 'Excluído', 'Usados', '% Cota'].map(h => (
-                        <th key={h} style={{ padding: '9px 12px', color: 'white', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', letterSpacing: '0.05em' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {relatorio.filter(r => !relFiltroEsp || ESPECIALIDADES.find(e => e.id === relFiltroEsp)?.label === r.label).map((r, i) => {
-                      const total = r.autorizado
-                      const pct2 = Math.round((total / r.cota) * 100)
-                      return (
-                        <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 0 ? '#fff' : '#f8fafc', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                          <td style={{ padding: '9px 12px', fontWeight: '700', color: '#0f172a' }}>{r.icon} {r.label}</td>
-                          <td style={{ padding: '9px 12px', color: '#475569', fontWeight: '600' }}>{r.cota}</td>
-                          {['pendente','autorizado','negado','excluido'].map(s => (
-                            <td key={s} style={{ padding: '9px 12px' }}>
-                              <span style={{ background: STATUS_STYLE[s].bg, color: STATUS_STYLE[s].cor, padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: '700' }}>{r[s] || 0}</span>
-                            </td>
-                          ))}
-                          <td style={{ padding: '9px 12px', fontWeight: '700', color: total >= r.cota ? '#dc2626' : '#0f172a' }}>{total}</td>
-                          <td style={{ padding: '9px 12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{ background: '#e2e8f0', borderRadius: '999px', height: '6px', width: '70px', overflow: 'hidden' }}>
-                                <div style={{ width: Math.min(100, pct2) + '%', height: '100%', borderRadius: '999px', background: pct2 >= 100 ? '#dc2626' : pct2 >= 80 ? '#f59e0b' : '#16a34a' }} />
-                              </div>
-                              <span style={{ fontSize: '12px', fontWeight: '700', color: pct2 >= 100 ? '#dc2626' : '#475569' }}>{pct2}%</span>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              )}
+              <div className="card print-area" style={{ padding: '20px', marginBottom: '16px' }}>
+                {/* Cabeçalho impressão */}
+                <div className="print-title" style={{ display: 'none', marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
+                  <p style={{ fontFamily: 'Arial', fontSize: '13px', fontWeight: '700', margin: '0 0 2px', textTransform: 'uppercase' }}>SECRETARIA MUNICIPAL DE SAÚDE — CONCEIÇÃO DO TOCANTINS/TO</p>
+                  <p style={{ fontFamily: 'Arial', fontSize: '15px', fontWeight: '800', margin: '6px 0 2px' }}>RELATÓRIO DE ESPECIALIDADES</p>
+                  <p style={{ fontFamily: 'Arial', fontSize: '12px', margin: 0, color: '#333' }}>
+                    Competência: {MESES[Number(relMes) - 1]}/{relAno}
+                    {relFiltroEsp ? ` · ${especialidades.find(e => e.id === relFiltroEsp)?.label}` : ''}
+                    {relFiltroStatus ? ` · ${STATUS_LABEL[relFiltroStatus]}` : ''}
+                  </p>
+                </div>
 
-              {/* Tabela detalhada */}
-              {detalhesFiltrados.length > 0 && (
-                <>
-                  <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '0 0 12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-                    Detalhamento — {detalhesFiltrados.length} registro{detalhesFiltrados.length !== 1 ? 's' : ''}
-                  </h3>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '0 0 14px' }}>
+                  Resumo — {MESES[Number(relMes) - 1]}/{relAno}
+                </h3>
+                {relLoading ? (
+                  <p style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>Carregando...</p>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginBottom: '28px' }}>
                     <thead>
-                      <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                        {['#', 'Especialidade', 'Paciente', 'Telefone', 'Tipo', 'Profissional', 'Data', 'Status', 'Motivo'].map(h => (
-                          <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                      <tr style={{ background: GRAD, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                        {['Especialidade', 'Cota', 'Pendente', 'Autorizado', 'Negado', 'Excluído', 'Usados', '% Cota'].map(h => (
+                          <th key={h} style={{ padding: '9px 12px', color: 'white', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', letterSpacing: '0.05em' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {detalhesFiltrados.map((r, i) => {
-                        const st = STATUS_STYLE[r.status] || STATUS_STYLE.pendente
-                        const esp2 = ESPECIALIDADES.find(e => e.id === r.especialidade)
-                        const motivo = r.status === 'negado' ? r.motivo_cancelamento : r.status === 'excluido' ? r.motivo_exclusao : null
+                      {relatorio.filter(r => !relFiltroEsp || especialidades.find(e => e.id === relFiltroEsp)?.label === r.label).map((r, i) => {
+                        const total = r.autorizado
+                        const pct2 = Math.round((total / r.cota) * 100)
                         return (
-                          <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9', background: r.status === 'excluido' ? '#f8fafc' : 'white' }}>
-                            <td style={{ padding: '8px 10px', color: '#94a3b8', fontSize: '11px' }}>{i + 1}</td>
-                            <td style={{ padding: '8px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}>{esp2?.icon} {esp2?.label}</td>
-                            <td style={{ padding: '8px 10px', fontWeight: '600', color: '#0f172a', whiteSpace: 'nowrap' }}>{r.paciente_nome}</td>
-                            <td style={{ padding: '8px 10px', color: '#64748b', fontSize: '11px' }}>{r.telefone || '—'}</td>
-                            <td style={{ padding: '8px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}>{r.tipo_exame || '—'}</td>
-                            <td style={{ padding: '8px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}>{r.profissional_nome || '—'}</td>
-                            <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', color: '#475569', fontSize: '11px' }}>{fmtData(r.data_consulta)}</td>
-                            <td style={{ padding: '8px 10px' }}>
-                              <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '12px', background: st.bg, color: st.cor, border: `1px solid ${st.borda}`, whiteSpace: 'nowrap' }}>
-                                {STATUS_LABEL[r.status]}
-                              </span>
-                            </td>
-                            <td style={{ padding: '8px 10px', fontSize: '11px', color: r.status === 'excluido' ? '#475569' : '#991b1b', fontStyle: motivo ? 'italic' : 'normal', maxWidth: '200px' }}>
-                              {motivo || '—'}
+                          <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 0 ? '#fff' : '#f8fafc', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                            <td style={{ padding: '9px 12px', fontWeight: '700', color: '#0f172a' }}>{r.icon} {r.label}</td>
+                            <td style={{ padding: '9px 12px', color: '#475569', fontWeight: '600' }}>{r.cota}</td>
+                            {['pendente', 'autorizado', 'negado', 'excluido'].map(s => (
+                              <td key={s} style={{ padding: '9px 12px' }}>
+                                <span style={{ background: STATUS_STYLE[s].bg, color: STATUS_STYLE[s].cor, padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: '700' }}>{r[s] || 0}</span>
+                              </td>
+                            ))}
+                            <td style={{ padding: '9px 12px', fontWeight: '700', color: total >= r.cota ? '#dc2626' : '#0f172a' }}>{total}</td>
+                            <td style={{ padding: '9px 12px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ background: '#e2e8f0', borderRadius: '999px', height: '6px', width: '70px', overflow: 'hidden' }}>
+                                  <div style={{ width: Math.min(100, pct2) + '%', height: '100%', borderRadius: '999px', background: pct2 >= 100 ? '#dc2626' : pct2 >= 80 ? '#f59e0b' : '#16a34a' }} />
+                                </div>
+                                <span style={{ fontSize: '12px', fontWeight: '700', color: pct2 >= 100 ? '#dc2626' : '#475569' }}>{pct2}%</span>
+                              </div>
                             </td>
                           </tr>
                         )
                       })}
                     </tbody>
                   </table>
-                </>
-              )}
-            </div>
-            <style dangerouslySetInnerHTML={{__html: `
+                )}
+
+                {/* Tabela detalhada */}
+                {detalhesFiltrados.length > 0 && (
+                  <>
+                    <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '0 0 12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                      Detalhamento — {detalhesFiltrados.length} registro{detalhesFiltrados.length !== 1 ? 's' : ''}
+                    </h3>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                          {['#', 'Especialidade', 'Paciente', 'Telefone', 'Tipo', 'Profissional', 'Data', 'Status', 'Motivo'].map(h => (
+                            <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detalhesFiltrados.map((r, i) => {
+                          const st = STATUS_STYLE[r.status] || STATUS_STYLE.pendente
+                          const esp2 = especialidades.find(e => e.id === r.especialidade)
+                          const motivo = r.status === 'negado' ? r.motivo_cancelamento : r.status === 'excluido' ? r.motivo_exclusao : null
+                          return (
+                            <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9', background: r.status === 'excluido' ? '#f8fafc' : 'white' }}>
+                              <td style={{ padding: '8px 10px', color: '#94a3b8', fontSize: '11px' }}>{i + 1}</td>
+                              <td style={{ padding: '8px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}>{esp2?.icon} {esp2?.label}</td>
+                              <td style={{ padding: '8px 10px', fontWeight: '600', color: '#0f172a', whiteSpace: 'nowrap' }}>{r.paciente_nome}</td>
+                              <td style={{ padding: '8px 10px', color: '#64748b', fontSize: '11px' }}>{r.telefone || '—'}</td>
+                              <td style={{ padding: '8px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}>{r.tipo_exame || '—'}</td>
+                              <td style={{ padding: '8px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}>{r.profissional_nome || '—'}</td>
+                              <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', color: '#475569', fontSize: '11px' }}>{fmtData(r.data_consulta)}</td>
+                              <td style={{ padding: '8px 10px' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '12px', background: st.bg, color: st.cor, border: `1px solid ${st.borda}`, whiteSpace: 'nowrap' }}>
+                                  {STATUS_LABEL[r.status]}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 10px', fontSize: '11px', color: r.status === 'excluido' ? '#475569' : '#991b1b', fontStyle: motivo ? 'italic' : 'normal', maxWidth: '200px' }}>
+                                {motivo || '—'}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </>
+                )}
+              </div>
+              <style dangerouslySetInnerHTML={{
+                __html: `
               @media print {
                 body * { visibility: hidden; }
                 .print-area, .print-area * { visibility: visible; }
@@ -1430,7 +1431,7 @@ export default function Especialidades() {
                 .no-print { display: none !important; }
               }
             `}} />
-          </div>
+            </div>
           )
         })()}
       </div>
@@ -1610,7 +1611,8 @@ export default function Especialidades() {
         </Modal>
       )}
 
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .print-only { display: none; }
         @media print {
           body * { visibility: hidden; }
