@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
+import { Bus, ClipboardList, UserCheck, Users } from 'lucide-react'
 
 const COR       = '#34d399'
 const COR_BG    = 'rgba(52,211,153,0.12)'
@@ -24,8 +25,8 @@ function Card({ titulo, valor, sub, icon, cor, corBg }) {
         <span style={{
           background: corBg || COR_BG, borderRadius: '10px',
           width: '38px', height: '38px', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: '18px'
-        }}>{icon}</span>
+          justifyContent: 'center'
+        }}>{icon && typeof icon === 'string' ? <span style={{ fontSize: '18px' }}>{icon}</span> : icon}</span>
       </div>
       <span style={{ fontSize: '32px', fontWeight: '700', color: '#1e293b', fontFamily: 'Sora, sans-serif', lineHeight: '1' }}>
         {valor ?? <span style={{ fontSize: '20px', color: '#94a3b8' }}>—</span>}
@@ -122,28 +123,28 @@ export default function PainelGeral() {
                 titulo="Viagens hoje"
                 valor={stats.viagensHoje}
                 sub="agendamentos para hoje"
-                icon="🚐"
+                icon={<Bus size={20} color="#3b82f6" />}
                 corBg="rgba(59,130,246,0.12)"
               />
               <Card
                 titulo={`Viagens previstas em ${mesAtual}`}
                 valor={stats.viagensMes}
                 sub="no mês corrente"
-                icon="📋"
+                icon={<ClipboardList size={20} color="#8b5cf6" />}
                 corBg="rgba(139,92,246,0.12)"
               />
               <Card
                 titulo="Pacientes cadastrados"
                 valor={stats.totalPacientes}
                 sub="no banco de dados"
-                icon="🧑‍⚕️"
+                icon={<UserCheck size={20} color="#10b981" />}
                 corBg="rgba(16,185,129,0.12)"
               />
               <Card
                 titulo="Servidores ativos"
                 valor={stats.servidoresAtivos}
                 sub="em atividade"
-                icon="👥"
+                icon={<Users size={20} color="#f59e0b" />}
                 corBg="rgba(245,158,11,0.12)"
               />
             </div>
@@ -207,8 +208,8 @@ export default function PainelGeral() {
                         <div style={{
                           width: '32px', height: '32px', borderRadius: '8px',
                           background: 'rgba(59,130,246,0.1)', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0
-                        }}>🚐</div>
+                          alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                        }}><Bus size={16} color="#3b82f6" /></div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b', margin: 0, fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {v.paciente_nome || 'Paciente'}

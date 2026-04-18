@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { abrirJanelaImpressao } from '@/lib/printHeader'
+import { Printer, MapPin } from 'lucide-react'
 
 export default function Resumo() {
   const router = useRouter()
@@ -237,7 +238,7 @@ export default function Resumo() {
           fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '14px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
-          <span>📍 {titulo}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {titulo}</span>
           <span style={{ fontSize: '12px', opacity: 0.9 }}>{contarPessoas(lista)} pessoas</span>
         </div>
 
@@ -318,8 +319,9 @@ export default function Resumo() {
               style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #450a0a, #7f1d1d)', border: 'none',
                 borderRadius: '10px', color: 'white', fontSize: '13px', cursor: 'pointer',
                 fontFamily: 'Sora, sans-serif', fontWeight: '600',
-                boxShadow: '0 4px 12px rgba(69,10,10,0.3)' }}>
-              🖨️ Imprimir
+                boxShadow: '0 4px 12px rgba(69,10,10,0.3)',
+                display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Printer size={14} /> Imprimir
             </button>
           )}
         </div>
@@ -355,7 +357,7 @@ export default function Resumo() {
               <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '14px' }}>
                 Total Geral — {formatarMes(mes)}
               </span>
-              <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '18px', color: '#818cf8' }}>
+              <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '18px', color: '#f0c030' }}>
                 {contarPessoas(todos)} pessoas
               </span>
             </div>
@@ -364,7 +366,7 @@ export default function Resumo() {
             <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
               <div style={{ background: 'linear-gradient(135deg, #5f1b1b, #ef4444)', color: 'white',
                 padding: '10px 16px', fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '14px' }}>
-                📊 Resumo TFD — {formatarMes(mes)}
+                Resumo TFD — {formatarMes(mes)}
               </div>
               <table className="table-modern" style={{ fontSize: '13px' }}>
                 <thead>
@@ -407,7 +409,7 @@ export default function Resumo() {
 
         {!gerado && !carregando && (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📅</div>
+            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Printer size={40} strokeWidth={1} color="#cbd5e1" /></div>
             <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '16px', margin: '0 0 4px' }}>
               Selecione o mês e clique em GERAR
             </p>

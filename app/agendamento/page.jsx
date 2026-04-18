@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { cabecalhoImpressao } from '@/lib/printHeader'
+import { Printer, UserPlus, User, Users, MapPin } from 'lucide-react'
 
 /* ─── IMPRESSÃO ─────────────────────────────────────────────────── */
 function gerarHtmlAgendamento(d) {
@@ -269,7 +270,7 @@ export default function Agendamento() {
     if (!form.temAcomp) faltando.push('Acompanhante')
     if (!form.agendadoPor) faltando.push('Agendado por')
     if (faltando.length > 0) {
-      setStatus({ msg: `⚠️ Preencha os campos obrigatórios: ${faltando.join(', ')}`, tipo: 'erro' })
+      setStatus({ msg: `Preencha os campos obrigatórios: ${faltando.join(', ')}`, tipo: 'erro' })
       return
     }
     setSalvando(true)
@@ -287,10 +288,10 @@ export default function Agendamento() {
       competencia: form.data ? form.data.substring(5, 7) + '/' + form.data.substring(0, 4) : ''
     }])
     if (error) {
-      setStatus({ msg: '❌ Erro: ' + error.message, tipo: 'erro' })
+      setStatus({ msg: 'Erro: ' + error.message, tipo: 'erro' })
     } else {
       setUltimoAgendamento({ ...form })
-      setStatus({ msg: '✅ Viagem agendada com sucesso!', tipo: 'ok' })
+      setStatus({ msg: 'Viagem agendada com sucesso!', tipo: 'ok' })
       setForm(FORM_VAZIO)
       setBusca('')
     }
@@ -346,14 +347,14 @@ export default function Agendamento() {
   const hoje = new Date()
   const dataHoje = `CONCEIÇÃO DO TOCANTINS-TO, ${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`
 
-  const SectionHeader = ({ title, icon }) => (
+  const SectionHeader = ({ title, Icon }) => (
     <div style={{
       background: 'linear-gradient(135deg, #172554, #1e3a8a)',
       color: 'white', padding: '10px 16px', borderRadius: '10px',
       fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '13px',
       display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px'
     }}>
-      {icon} {title}
+      {Icon && <Icon size={14} />} {title}
     </div>
   )
 
@@ -375,18 +376,20 @@ export default function Agendamento() {
                 padding: '9px 16px', background: 'linear-gradient(135deg, #172554, #1e3a8a)',
                 border: 'none', borderRadius: '10px', fontSize: '13px', color: 'white',
                 cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: '600',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)', whiteSpace: 'nowrap'
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)', whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: '6px'
               }}>
-              🖨️ Reimprimir
+              <Printer size={14} /> Reimprimir
             </button>
             <button onClick={() => router.push('/cadastro')}
               style={{
                 padding: '9px 16px', background: 'linear-gradient(135deg, #172554, #1e3a8a)',
                 border: 'none', borderRadius: '10px', fontSize: '13px', color: 'white',
                 cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: '600',
-                boxShadow: '0 4px 12px rgba(23,37,84,0.3)', whiteSpace: 'nowrap'
+                boxShadow: '0 4px 12px rgba(23,37,84,0.3)', whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: '6px'
               }}>
-              👤 Novo Paciente
+              <UserPlus size={14} /> Novo Paciente
             </button>
           </div>
         </div>
@@ -413,7 +416,7 @@ export default function Agendamento() {
               </div>
             </div>
 
-            <SectionHeader title="Dados do Paciente" icon="👤" />
+            <SectionHeader title="Dados do Paciente" Icon={User} />
 
             {/* Busca */}
             <div style={{ position: 'relative' }}>
@@ -478,7 +481,7 @@ export default function Agendamento() {
             {/* Acompanhantes */}
             {form.temAcomp === 'SIM' && (
               <>
-                <SectionHeader title="Acompanhante 1" icon="👥" />
+                <SectionHeader title="Acompanhante 1" Icon={Users} />
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
                   <div style={{ position: 'relative' }}>
                     <label className={lbl}>Nome</label>
@@ -513,7 +516,7 @@ export default function Agendamento() {
                     <input className={inp} value={form.endA1} onChange={e => setField('endA1', e.target.value.toUpperCase())} /></div>
                 </div>
 
-                <SectionHeader title="Acompanhante 2" icon="👥" />
+                <SectionHeader title="Acompanhante 2" Icon={Users} />
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
                   <div style={{ position: 'relative' }}>
                     <label className={lbl}>Nome</label>
@@ -550,7 +553,7 @@ export default function Agendamento() {
               </>
             )}
 
-            <SectionHeader title="Destino e Motivo" icon="📍" />
+            <SectionHeader title="Destino e Motivo" Icon={MapPin} />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
               <div><label className={lbl}>Destino *</label>
@@ -597,9 +600,10 @@ export default function Agendamento() {
                     padding: '12px 28px', background: 'linear-gradient(135deg, #b45309, #f59e0b)',
                     border: 'none', borderRadius: '10px', color: 'white', fontSize: '14px',
                     fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif',
-                    boxShadow: '0 4px 12px rgba(180,83,9,0.3)'
+                    boxShadow: '0 4px 12px rgba(180,83,9,0.3)',
+                    display: 'flex', alignItems: 'center', gap: '6px'
                   }}>
-                  🖨️ IMPRIMIR
+                  <Printer size={14} /> IMPRIMIR
                 </button>
               )}
             </div>
@@ -613,7 +617,7 @@ export default function Agendamento() {
         <div className="modal-overlay">
           <div className="modal-card" style={{ maxWidth: '560px' }}>
             <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
-              🖨️ Reimprimir Agendamento
+              <Printer size={16} style={{ display: 'inline', marginRight: '6px' }} /> Reimprimir Agendamento
             </h2>
             <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Busque pelo nome do paciente ou data da viagem — os resultados aparecem automaticamente.</p>
 
@@ -651,9 +655,10 @@ export default function Agendamento() {
                       style={{
                         padding: '6px 14px', background: 'linear-gradient(135deg, #172554, #1e3a8a)',
                         border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px',
-                        fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap'
+                        fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap',
+                        display: 'flex', alignItems: 'center', gap: '5px'
                       }}>
-                      🖨️ Imprimir
+                      <Printer size={12} /> Imprimir
                     </button>
                   </div>
                 ))}

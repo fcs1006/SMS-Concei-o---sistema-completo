@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { abrirJanelaImpressao } from '@/lib/printHeader'
+import { Printer, Pencil, Trash2 } from 'lucide-react'
 
 export default function Relatorio() {
   const router = useRouter()
@@ -163,9 +164,9 @@ async function abrirEditar(v) {
     }).eq('id', viagemEditando.id)
 
     if (error) {
-      setStatusMsg({ msg: '❌ Erro: ' + error.message, tipo: 'erro' })
+      setStatusMsg({ msg: 'Erro: ' + error.message, tipo: 'erro' })
     } else {
-      setStatusMsg({ msg: '✅ Atualizado!', tipo: 'ok' })
+      setStatusMsg({ msg: 'Atualizado!', tipo: 'ok' })
       setModalEditar(false)
       setLinhaSelecionada(null)
       carregarViagens()
@@ -271,9 +272,10 @@ async function abrirEditar(v) {
             border: 'none', borderRadius: '10px',
             fontSize: '13px', color: 'white', cursor: 'pointer',
             fontFamily: 'Sora, sans-serif', fontWeight: '600',
-            boxShadow: '0 4px 12px rgba(30,107,46,0.3)'
+            boxShadow: '0 4px 12px rgba(30,107,46,0.3)',
+            display: 'flex', alignItems: 'center', gap: '6px'
           }}>
-            🖨️ Imprimir
+            <Printer size={14} /> Imprimir
           </button>
         </div>
 
@@ -325,8 +327,9 @@ async function abrirEditar(v) {
                 background: linhaSelecionada ? '#16a34a' : '#9ca3af',
                 color: 'white', fontWeight: '600', fontSize: '12px',
                 cursor: linhaSelecionada ? 'pointer' : 'not-allowed',
-                whiteSpace: 'nowrap', fontFamily: 'Sora, sans-serif'
-              }}>✏️ Editar</button>
+                whiteSpace: 'nowrap', fontFamily: 'Sora, sans-serif',
+              display: 'flex', alignItems: 'center', gap: '5px'
+              }}><Pencil size={12} /> Editar</button>
             <button type="button"
               onClick={() => {
                 if (!linhaSelecionada) { alert('Selecione uma linha!'); return }
@@ -338,15 +341,16 @@ async function abrirEditar(v) {
                 background: linhaSelecionada ? '#ef4444' : '#9ca3af',
                 color: 'white', fontWeight: '600', fontSize: '12px',
                 cursor: linhaSelecionada ? 'pointer' : 'not-allowed',
-                whiteSpace: 'nowrap', fontFamily: 'Sora, sans-serif'
-              }}>🗑️ Excluir</button>
+                whiteSpace: 'nowrap', fontFamily: 'Sora, sans-serif',
+              display: 'flex', alignItems: 'center', gap: '5px'
+              }}><Trash2 size={12} /> Excluir</button>
           </div>
         </div>
 
         {/* Selecionado */}
         {linhaSelecionada && (
           <div className="selected-banner" style={{ marginBottom: '12px' }}>
-            <span>✅ Selecionado: <strong>{linhaSelecionada.paciente_nome}</strong> — {formatarData(linhaSelecionada.data_viagem)}</span>
+            <span>Selecionado: <strong>{linhaSelecionada.paciente_nome}</strong> — {formatarData(linhaSelecionada.data_viagem)}</span>
             <button type="button" onClick={() => setLinhaSelecionada(null)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '13px' }}>
               ✕ Limpar
@@ -358,7 +362,7 @@ async function abrirEditar(v) {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
           {[
             { label: `${filtradas.length} viagens`, bg: '#dbeafe', color: '#1d4ed8' },
-            { label: `${totalPacientes} pacientes`, bg: '#e0e7ff', color: '#3730a3' },
+            { label: `${totalPacientes} pacientes`, bg: '#dcfce7', color: '#155220' },
             { label: `${totalAcompanhantes} acompanhantes`, bg: '#fef9c3', color: '#854d0e' },
             { label: `${totalPacientes + totalAcompanhantes} total`, bg: '#ede9fe', color: '#5b21b6' },
           ].map(b => (
@@ -415,7 +419,7 @@ async function abrirEditar(v) {
         <div className="modal-overlay">
           <div className="modal-card" style={{ maxWidth: '420px' }}>
             <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px' }}>
-              🖨️ Imprimir Relatório
+              <Printer size={16} style={{ display: 'inline', marginRight: '6px' }} /> Imprimir Relatório
             </h2>
             <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 20px' }}>
               Selecione a data e a cidade destino.
@@ -439,8 +443,8 @@ async function abrirEditar(v) {
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setModalImprimir(false)} className="btn-secondary">Fechar</button>
-              <button type="button" onClick={imprimirRelatorio} className="btn-primary" style={{ background: 'linear-gradient(135deg, #1a1035, #2e1065)', padding: '10px 24px' }}>
-                🖨️ IMPRIMIR
+              <button type="button" onClick={imprimirRelatorio} className="btn-primary" style={{ background: 'linear-gradient(135deg, #1a1035, #2e1065)', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Printer size={14} /> IMPRIMIR
               </button>
             </div>
           </div>
@@ -452,7 +456,7 @@ async function abrirEditar(v) {
         <div className="modal-overlay">
           <div className="modal-card">
             <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
-              ✏️ Editar Viagem
+              <Pencil size={16} style={{ display: 'inline', marginRight: '6px' }} /> Editar Viagem
             </h2>
             <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 20px' }}>{viagemEditando.paciente_nome}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -586,7 +590,7 @@ async function abrirEditar(v) {
         <div className="modal-overlay">
           <div className="modal-card" style={{ maxWidth: '400px' }}>
             <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '18px', fontWeight: '700', color: '#dc2626', margin: '0 0 12px' }}>
-              🗑️ Excluir Viagem
+              <Trash2 size={16} style={{ display: 'inline', marginRight: '6px' }} /> Excluir Viagem
             </h2>
             <p style={{ color: '#475569', fontSize: '13px', margin: '0 0 6px' }}>Tem certeza que deseja excluir?</p>
             <p style={{ fontWeight: '700', color: '#0f172a', fontSize: '14px', margin: '0 0 4px' }}>{viagemExcluindo.paciente_nome}</p>

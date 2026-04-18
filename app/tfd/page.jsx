@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { abrirJanelaImpressao } from '@/lib/printHeader'
+import { Printer, MapPin } from 'lucide-react'
 
 export default function TFD() {
   const router = useRouter()
@@ -225,7 +226,7 @@ export default function TFD() {
           fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '14px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
-          <span>📍 {titulo}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {titulo}</span>
           <span style={{ fontSize: '12px', opacity: 0.9 }}>{contarPessoas(lista)} pessoas</span>
         </div>
 
@@ -324,9 +325,10 @@ export default function TFD() {
                   border: 'none', borderRadius: '10px', color: 'white',
                   fontSize: '13px', cursor: 'pointer',
                   fontFamily: 'Sora, sans-serif', fontWeight: '600',
-                  boxShadow: '0 4px 12px rgba(69,10,10,0.3)'
+                  boxShadow: '0 4px 12px rgba(69,10,10,0.3)',
+                  display: 'flex', alignItems: 'center', gap: '6px'
                 }}>
-                🖨️ Imprimir
+                <Printer size={14} /> Imprimir
               </button>
             )}
           </div>
@@ -369,7 +371,7 @@ export default function TFD() {
               <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '14px' }}>
                 Total Geral
               </span>
-              <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '18px', color: '#818cf8' }}>
+              <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '18px', color: '#f0c030' }}>
                 {contarPessoas([...porto, ...palmas])} pessoas
               </span>
             </div>
