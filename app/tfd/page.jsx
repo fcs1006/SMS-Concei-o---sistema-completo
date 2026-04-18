@@ -369,7 +369,7 @@ export default function TFD() {
               <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '14px' }}>
                 Total Geral
               </span>
-              <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '18px', color: '#f0c030' }}>
+              <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '18px', color: '#818cf8' }}>
                 {contarPessoas([...porto, ...palmas])} pessoas
               </span>
             </div>

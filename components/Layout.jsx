@@ -21,55 +21,48 @@ export default function Layout({ children, usuario }) {
 
   const menus = [
     {
-      label: 'Painel Geral', icon: '🏠', path: '/painel',
-      bg1: '#0f172a', bg2: '#1e293b', cor: '#94a3b8', corBg: 'rgba(148,163,184,0.15)', acento: '#cbd5e1'
+      label: 'Painel Geral',   icon: '🏠',  path: '/painel',
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
     {
-      label: 'Pacientes', icon: '👨🏾', path: '/cadastro',
-      cor: '#93c5fd', corBg: 'rgba(147,197,253,0.15)',
-      bg1: '#0f172a', bg2: '#1d4ed8', acento: '#60a5fa'
+      label: 'Pacientes',      icon: '👨🏾', path: '/cadastro',
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
     {
-      label: 'Agendamento', icon: '📋', path: '/agendamento',
-      bg1: '#172554', bg2: '#1e3a8a', cor: '#93c5fd', corBg: 'rgba(147,197,253,0.15)', acento: '#93c5fd'
+      label: 'Agendamento',    icon: '📋',  path: '/agendamento',
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
     {
-      label: 'Relatório', icon: '📊', path: '/relatorio',
-      bg1: '#1a1035', bg2: '#2e1065', cor: '#d8b4fe', corBg: 'rgba(216,180,254,0.15)', acento: '#c084fc'
+      label: 'Relatório',      icon: '📊',  path: '/relatorio',
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
     {
-      label: 'TFD', icon: '🚌', path: '/tfd',
-      bg1: '#450a0a', bg2: '#7f1d1d', cor: '#fca5a5', corBg: 'rgba(252,165,165,0.15)', acento: '#fca5a5'
+      label: 'TFD',            icon: '🚌',  path: '/tfd',
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
     {
-      label: 'Frequência', icon: '📆', path: '/frequencia',
-      cor: '#0891b2', corBg: 'rgba(8,145,178,0.2)',
-      bg1: '#0c2340', bg2: '#0e3460', acento: '#38bdf8'
+      label: 'Frequência',     icon: '📆',  path: '/frequencia',
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
     {
-      label: 'BPA', icon: '🗂️', path: '/bpa',
-      cor: '#6ee7b7', corBg: 'rgba(110,231,183,0.15)',
-      bg1: '#064e3b', bg2: '#065f46', acento: '#34d399'
+      label: 'BPA',            icon: '🗂️',  path: '/bpa',
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
     {
-      label: 'Almoxarifado', icon: '📦', path: '/almoxarifado',
-      cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)',
-      bg1: '#1e1b4b', bg2: '#312e81', acento: '#818cf8'
+      label: 'Almoxarifado',   icon: '📦',  path: '/almoxarifado',
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
     {
-      label: 'SIGTAP', icon: '🔬', path: '/sigtap',
-      cor: '#6ee7b7', corBg: 'rgba(110,231,183,0.15)',
-      bg1: '#022c22', bg2: '#064e3b', acento: '#34d399'
+      label: 'SIGTAP',         icon: '🔬',  path: '/sigtap',
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
     {
-      label: 'Especialidades', icon: '🏥', path: '/especialidades',
-      cor: '#fcd34d', corBg: 'rgba(252,211,77,0.15)',
-      bg1: '#451a03', bg2: '#92400e', acento: '#f59e0b'
+      label: 'Especialidades', icon: '🏥',  path: '/especialidades',
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
     {
-      label: 'Francisco IA', icon: '🤖', path: '/francisco', adminOnly: true,
-      cor: '#6ee7b7', corBg: 'rgba(110,231,183,0.15)',
-      bg1: '#064e3b', bg2: '#065f46', acento: '#34d399'
+      label: 'Francisco IA',   icon: '🤖',  path: '/francisco', adminOnly: true,
+      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
     },
   ]
 

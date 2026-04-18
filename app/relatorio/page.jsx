@@ -358,7 +358,7 @@ async function abrirEditar(v) {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
           {[
             { label: `${filtradas.length} viagens`, bg: '#dbeafe', color: '#1d4ed8' },
-            { label: `${totalPacientes} pacientes`, bg: '#dcfce7', color: '#155220' },
+            { label: `${totalPacientes} pacientes`, bg: '#e0e7ff', color: '#3730a3' },
             { label: `${totalAcompanhantes} acompanhantes`, bg: '#fef9c3', color: '#854d0e' },
             { label: `${totalPacientes + totalAcompanhantes} total`, bg: '#ede9fe', color: '#5b21b6' },
           ].map(b => (

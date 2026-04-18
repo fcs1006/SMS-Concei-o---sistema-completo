@@ -23,6 +23,7 @@ export default function Login() {
   const [ajZoom, setAjZoom]     = useState(100)     // 50–300
   const [modoAj, setModoAj]     = useState(false)   // usando ajuste manual
   const [mostrarPainel, setMostrarPainel] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const fileRef      = useRef<HTMLInputElement>(null)
   const prevRef      = useRef<HTMLDivElement>(null)
   const dragging     = useRef(false)
@@ -52,6 +53,7 @@ export default function Login() {
     const az  = Number(localStorage.getItem('login_aj_zoom') || 100)
     setFundoId(f); setCustomUrl(cu); setBgSize(bs); setBgPos(bp)
     setModoAj(ma); setAjX(ax); setAjY(ay); setAjZoom(az)
+    setMounted(true)
   }, [])
 
   function salvar(key: string, val: string) { localStorage.setItem(key, val) }
@@ -108,10 +110,10 @@ export default function Login() {
   const fotoUrl = fundoId === 'custom' ? customUrl : '/conceicao-bg.jpg'
   const gradiente = GRADIENTES.find(g => g.id === fundoId)
 
-  const fundoStyle: React.CSSProperties = ehFoto
+  const fundoStyle: React.CSSProperties = !mounted ? {} : ehFoto
     ? modoAj
-      ? { backgroundImage: `url(${fotoUrl})`, backgroundSize: `${ajZoom}%`, backgroundPosition: `${ajX}% ${ajY}%`, backgroundRepeat: 'no-repeat' }
-      : { backgroundImage: `url(${fotoUrl})`, backgroundSize: bgSize, backgroundPosition: bgPos, backgroundRepeat: 'no-repeat' }
+      ? { backgroundImage: `url(${fotoUrl})`, backgroundSize: `${ajZoom}%`, backgroundPosition: `${ajX}% ${ajY}%`, backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }
+      : { backgroundImage: `url(${fotoUrl})`, backgroundSize: bgSize, backgroundPosition: bgPos, backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }
     : (gradiente?.style ?? GRADIENTES[0].style)
 
   const sliderStyle: React.CSSProperties = {
@@ -124,7 +126,7 @@ export default function Login() {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '20px', position: 'relative'
     }}>
-      {ehFoto && (
+      {mounted && ehFoto && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 0 }} />
       )}
 
@@ -143,7 +145,7 @@ export default function Login() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <p style={{ color: 'white', fontWeight: '700', fontSize: '15px', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
-                🎛️ Ajuste manual da foto
+                Ajuste de imagem
               </p>
               <button onClick={() => setAjuste(false)} style={{
                 background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)',
@@ -262,13 +264,13 @@ export default function Login() {
                   border: fundoId === 'foto' ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '8px', padding: '7px 6px', color: 'white', fontSize: '11px',
                   cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '600'
-                }}>🏙️ Conceição</button>
+                }}>Conceição</button>
                 <button onClick={() => fileRef.current?.click()} style={{
                   flex: 1, background: fundoId === 'custom' ? 'rgba(79,70,229,0.6)' : 'rgba(255,255,255,0.08)',
                   border: fundoId === 'custom' ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '8px', padding: '7px 6px', color: 'white', fontSize: '11px',
                   cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '600'
-                }}>📤 Upload</button>
+                }}>Upload</button>
               </div>
             </div>
 
@@ -296,8 +298,7 @@ export default function Login() {
                 cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '600',
                 textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px'
               }}>
-                <span>🎛️</span>
-                <span>Ajuste manual{modoAj ? ' ✓' : ''}</span>
+                  <span>Ajuste manual{modoAj ? ' ✓' : ''}</span>
               </button>
             )}
           </div>
@@ -371,11 +372,11 @@ function FormLogin({ irPara, router }: { irPara: (t: Tela) => void; router: any 
       {erro && <div className="status-err" style={{ textAlign: 'center' }}>{erro}</div>}
       <button type="submit" disabled={carregando} className="btn-primary"
         style={{ width: '100%', padding: '13px', fontSize: '14px', marginTop: '4px' }}>
-        {carregando ? 'Entrando...' : 'ENTRAR'}
+        {carregando ? 'Entrando...' : 'Entrar'}
       </button>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
         <button type="button" onClick={() => irPara('cadastro')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0d9488', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', padding: 0 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4f46e5', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', padding: 0, fontWeight: '600' }}>
           Criar conta
         </button>
         <button type="button" onClick={() => irPara('esqueci')}
@@ -422,13 +423,17 @@ function FormCadastro({ irPara }: { irPara: (t: Tela) => void }) {
 
   if (sucesso) return (
     <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ fontSize: '40px' }}>✅</div>
+      <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#eff6ff', border: '2px solid #c7d2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </div>
       <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', color: '#0f172a', margin: 0 }}>Cadastro realizado!</p>
       <p style={{ color: '#64748b', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', margin: 0 }}>
         Sua conta foi criada e está aguardando aprovação do administrador. Após a liberação, você poderá fazer login.
       </p>
       <button className="btn-primary" onClick={() => irPara('login')} style={{ padding: '12px', fontSize: '14px' }}>
-        IR PARA O LOGIN
+        Ir para o login
       </button>
     </div>
   )
@@ -462,7 +467,7 @@ function FormCadastro({ irPara }: { irPara: (t: Tela) => void }) {
       </div>
       {erro && <div className="status-err" style={{ textAlign: 'center' }}>{erro}</div>}
       <button type="submit" disabled={salvando} className="btn-primary" style={{ padding: '12px', fontSize: '14px' }}>
-        {salvando ? 'Cadastrando...' : 'CADASTRAR'}
+        {salvando ? 'Cadastrando...' : 'Criar conta'}
       </button>
       <button type="button" onClick={() => irPara('login')}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', textAlign: 'center' }}>
@@ -507,13 +512,17 @@ function FormEsqueci({ irPara }: { irPara: (t: Tela) => void }) {
 
   if (sucesso) return (
     <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ fontSize: '40px' }}>🔒</div>
+      <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#eff6ff', border: '2px solid #c7d2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </div>
       <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', color: '#0f172a', margin: 0 }}>Senha redefinida!</p>
       <p style={{ color: '#64748b', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', margin: 0 }}>
         Sua senha foi atualizada. Faça login com a nova senha.
       </p>
       <button className="btn-primary" onClick={() => irPara('login')} style={{ padding: '12px', fontSize: '14px' }}>
-        IR PARA O LOGIN
+        Ir para o login
       </button>
     </div>
   )
@@ -544,7 +553,7 @@ function FormEsqueci({ irPara }: { irPara: (t: Tela) => void }) {
       </div>
       {erro && <div className="status-err" style={{ textAlign: 'center' }}>{erro}</div>}
       <button type="submit" disabled={salvando} className="btn-primary" style={{ padding: '12px', fontSize: '14px' }}>
-        {salvando ? 'Redefinindo...' : 'REDEFINIR SENHA'}
+        {salvando ? 'Redefinindo...' : 'Redefinir senha'}
       </button>
       <button type="button" onClick={() => irPara('login')}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', textAlign: 'center' }}>
