@@ -23,6 +23,7 @@ export default function Login() {
   const [ajZoom, setAjZoom]     = useState(100)
   const [modoAj, setModoAj]     = useState(false)
   const [mostrarPainel, setMostrarPainel] = useState(false)
+  const [fundoPronto, setFundoPronto] = useState(false)
   const fileRef      = useRef<HTMLInputElement>(null)
   const prevRef      = useRef<HTMLDivElement>(null)
   const dragging     = useRef(false)
@@ -56,6 +57,7 @@ export default function Login() {
         if (cfg.login_fundo_url)    setCustomUrl(cfg.login_fundo_url)
       })
       .catch(() => {})
+      .finally(() => setFundoPronto(true))
   }, [])
 
   function salvarNoBanco(campos: Record<string, string>) {
@@ -292,8 +294,8 @@ export default function Login() {
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
+        animate={{ opacity: fundoPronto ? 1 : 0, y: fundoPronto ? 0 : 20 }}
+        transition={{ duration: 0.4 }}
         className="login-card"
         style={{ position: 'relative', zIndex: 1 }}
       >
