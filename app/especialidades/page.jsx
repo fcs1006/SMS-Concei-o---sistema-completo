@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
-import { Printer, Calendar, Settings, Pencil, Save, RefreshCw, BarChart2, CalendarDays } from 'lucide-react'
+import { Printer, Calendar, Settings, Pencil, Save, RefreshCw, BarChart2, CalendarDays, Trash2, Stethoscope, FlaskConical, UserCog, Check, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const ESPECIALIDADES = [
   { id: 'ortopedia', label: 'Ortopedia', icon: '🦴', cota: 30 },
@@ -16,9 +17,9 @@ const ESPECIALIDADES = [
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
-const COR = '#b45309'
-const COR_DARK = '#92400e'
-const GRAD = 'linear-gradient(135deg, #92400e, #b45309)'
+const COR = '#d97706'
+const COR_DARK = '#b45309'
+const GRAD = 'linear-gradient(135deg, #d97706, #fbbf24)'
 
 const STATUS_STYLE = {
   pendente: { bg: '#fef9c3', cor: '#854d0e', borda: '#fde047' },
@@ -60,7 +61,7 @@ const PREPARO_USG = {
   'PRÓSTATA ABDOMINAL': 'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR. BEXIGA CHEIA.',
   'PRÓSTATA TRANSRETAL': 'JEJUM DE 8 HORAS. 40 GOTAS DIMETICONA ANTES DE DORMIR NO DIA ANTERIOR. BEXIGA CHEIA.',
 }
-const TIPOS_CONSULTA = ['Primeira Consulta', 'Retorno', 'Outro']
+const TIPOS_CONSULTA = ['1º vez', 'Retorno', 'Outro']
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmtData(v) {
@@ -74,7 +75,7 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
   const hoje = new Date()
   const dataEmissao = hoje.toLocaleDateString('pt-BR')
   const horaEmissao = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  const isUsg = ag.tipo_exame && !['Primeira Consulta', 'Retorno', 'Outro'].includes(ag.tipo_exame)
+  const isUsg = ag.tipo_exame && !['1º vez', 'Retorno', 'Outro'].includes(ag.tipo_exame)
   const tipoDoc = isUsg ? 'EXAME' : 'CONSULTA'
   const numComp = String(ag.id).slice(-8).toUpperCase()
   const preparo = isUsg ? (preparos[ag.tipo_exame] || null) : null
@@ -182,16 +183,26 @@ function Modal({ titulo, onClose, children, largura = '520px' }) {
     return () => window.removeEventListener('keydown', esc)
   }, [onClose])
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ background: 'white', borderRadius: '16px', width: '100%', maxWidth: largura, boxShadow: '0 25px 60px rgba(0,0,0,0.3)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 12 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+        style={{ background: 'white', borderRadius: '16px', width: '100%', maxWidth: largura, boxShadow: '0 25px 60px rgba(0,0,0,0.3)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>{titulo}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b', lineHeight: 1, padding: '0 4px' }}>✕</button>
         </div>
         <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>{children}</div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -714,13 +725,14 @@ export default function Especialidades() {
       <div style={{ padding: '28px 32px', maxWidth: '1400px', margin: '0 auto' }}>
 
         {/* Modal Configurações */}
+        <AnimatePresence>
         {modalConfig && (
           <Modal titulo="Configurações de Especialidades" onClose={() => setModalConfig(false)} largura="640px">
             {/* Abas */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-              {[['especialidades', '🏥 Especialidades'], ['preparos', '🧪 Preparos']].map(([id, lbl]) => (
+              {[['especialidades', <><Stethoscope size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Especialidades</>], ['preparos', <><FlaskConical size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Preparos</>]].map(([id, lbl]) => (
                 <button key={id} onClick={() => setAbaConfig(id)} style={{
-                  background: abaConfig === id ? '#b45309' : 'none',
+                  background: abaConfig === id ? '#d97706' : 'none',
                   color: abaConfig === id ? 'white' : '#64748b',
                   border: abaConfig === id ? 'none' : '1px solid #e2e8f0',
                   borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600',
@@ -778,12 +790,12 @@ export default function Especialidades() {
                       <div key={p.id} style={{ padding: '8px 12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fde68a' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                           <div style={{ flex: 1 }}>
-                            <span style={{ fontWeight: '700', fontSize: '12px', color: '#92400e', display: 'block' }}>{p.tipo_exame} <span style={{ fontWeight: '400', color: '#b45309' }}>({p.especialidade_slug.toUpperCase()})</span></span>
-                            <span style={{ fontSize: '11px', color: '#78350f', display: 'block', marginTop: '2px' }}>{p.instrucoes}</span>
+                            <span style={{ fontWeight: '700', fontSize: '12px', color: '#b45309', display: 'block' }}>{p.tipo_exame} <span style={{ fontWeight: '400', color: '#d97706' }}>({p.especialidade_slug.toUpperCase()})</span></span>
+                            <span style={{ fontSize: '11px', color: '#92400e', display: 'block', marginTop: '2px' }}>{p.instrucoes}</span>
                           </div>
                           <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                             <button onClick={() => { setEditandoPreparo(p.id); setFormPreparo({ especialidade_slug: p.especialidade_slug, tipo_exame: p.tipo_exame, instrucoes: p.instrucoes }) }} style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#1d4ed8', display: 'flex', alignItems: 'center' }}><Pencil size={11} /></button>
-                            <button onClick={() => excluirPreparo(p.id)} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#991b1b' }}>🗑</button>
+                            <button onClick={() => excluirPreparo(p.id)} title="Excluir" style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#991b1b', display:'inline-flex', alignItems:'center' }}><Trash2 size={11} /></button>
                           </div>
                         </div>
                       </div>
@@ -829,6 +841,7 @@ export default function Especialidades() {
             )}
           </Modal>
         )}
+        </AnimatePresence>
 
         {/* Cabeçalho */}
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
@@ -852,11 +865,11 @@ export default function Especialidades() {
               </div>
               <div style={{ display: 'flex', gap: '6px', alignSelf: 'flex-end', paddingBottom: '1px' }}>
                 <button onClick={() => setModalProf(true)}
-                  style={{ padding: '9px 14px', background: 'linear-gradient(135deg, #1e40af, #2563eb)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap' }}>
-                  👨‍⚕️ Profissionais
+                  style={{ padding: '9px 14px', background: GRAD, border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <UserCog size={13} /> Profissionais
                 </button>
                 <button onClick={() => setModalEscala(true)}
-                  style={{ padding: '9px 14px', background: 'linear-gradient(135deg, #065f46, #047857)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  style={{ padding: '9px 14px', background: GRAD, border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Calendar size={13} /> Escala
                 </button>
                 <button onClick={() => setModalConfig(true)}
@@ -872,8 +885,13 @@ export default function Especialidades() {
         <div style={{ display: 'flex', gap: '4px', borderBottom: '2px solid #e2e8f0', marginBottom: '20px' }}>
           {[{ id: 'agendamento', label: 'Agendamento', Icon: CalendarDays }, { id: 'relatorio', label: 'Relatório', Icon: BarChart2 }].map(t => (
             <button key={t.id} onClick={() => setAbaMain(t.id)}
-              style={{ background: 'none', border: 'none', padding: '10px 18px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', color: abaMain === t.id ? COR : '#64748b', borderBottom: abaMain === t.id ? `3px solid ${COR}` : '3px solid transparent', marginBottom: '-2px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              style={{ background: 'none', border: 'none', padding: '10px 18px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', color: abaMain === t.id ? COR : '#64748b', borderBottom: 'none', marginBottom: '-2px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px', position: 'relative', paddingBottom: '13px' }}>
               <t.Icon size={15} /> {t.label}
+              {abaMain === t.id && (
+                <motion.div layoutId="tab-indicator-esp"
+                  style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '3px', background: COR, borderRadius: '2px 2px 0 0' }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }} />
+              )}
             </button>
           ))}
         </div>
@@ -948,7 +966,7 @@ export default function Especialidades() {
                             background: ativo ? 'rgba(180,83,9,0.08)' : 'rgba(0,0,0,0.03)',
                             textAlign: 'left', transition: 'all 0.15s',
                           }}>
-                          <span style={{ fontSize: '13px' }}>👨‍⚕️</span>
+                          <UserCog size={13} style={{ flexShrink: 0, color: COR }} />
                           <span style={{ fontSize: '12px', fontWeight: ativo ? '700' : '600', color: ativo ? COR : '#0f172a' }}>
                             {e.profissional_nome}
                           </span>
@@ -1155,19 +1173,19 @@ export default function Especialidades() {
                 </p>
               ) : (
                 <>
-                  <div className="screen-only">
-                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: 'Sora, sans-serif', fontSize: '12px' }}>
+                  <div className="screen-only" style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: '900px', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: 'Sora, sans-serif', fontSize: '12px' }}>
                       <colgroup>
                         <col style={{ width: '28px' }} />
-                        <col style={{ width: '20%' }} />
+                        <col style={{ width: '18%' }} />
                         <col style={{ width: '9%' }} />
                         <col style={{ width: '9%' }} />
-                        <col style={{ width: '13%' }} />
                         <col style={{ width: '9%' }} />
-                        <col style={{ width: '7%' }} />
+                        <col style={{ width: '14%' }} />
+                        <col style={{ width: '8%' }} />
                         <col style={{ width: '8%' }} />
                         <col style={{ width: '9%' }} />
-                        <col style={{ width: '130px' }} />
+                        <col style={{ width: '120px' }} />
                       </colgroup>
                       <thead>
                         <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
@@ -1223,12 +1241,12 @@ export default function Especialidades() {
                                 </td>
                                 <td style={{ padding: '6px 8px' }}>
                                   <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexWrap: 'nowrap' }}>
-                                    {a.status !== 'autorizado' && btn(() => autorizar(a.id), 'Autorizar', '#dcfce7', '#86efac', '#166534', '✓')}
-                                    {a.status === 'autorizado' && btn(() => imprimirComprovante(a, espAtiva.label, undefined, preparosDb), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', '🖨')}
-                                    {a.status !== 'negado' && btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', '✗')}
+                                    {a.status !== 'autorizado' && btn(() => autorizar(a.id), 'Autorizar', '#dcfce7', '#86efac', '#166534', <Check size={11} />)}
+                                    {a.status === 'autorizado' && btn(() => imprimirComprovante(a, espAtiva.label, undefined, preparosDb), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', <Printer size={11} />)}
+                                    {a.status !== 'negado' && btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', <X size={11} />)}
                                     {a.status !== 'pendente' && btn(() => voltarPendente(a.id), 'Voltar para pendente', '#fef9c3', '#fde047', '#854d0e', '↩')}
-                                    {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', '✏')}
-                                    {btn(() => { setModalExcluir({ show: true, id: a.id }); setMotivoExclusao('') }, 'Excluir', '#f1f5f9', '#cbd5e1', '#64748b', '🗑')}
+                                    {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', <Pencil size={11} />)}
+                                    {btn(() => { setModalExcluir({ show: true, id: a.id }); setMotivoExclusao('') }, 'Excluir', '#f1f5f9', '#cbd5e1', '#64748b', <Trash2 size={11} />)}
                                   </div>
                                 </td>
                               </tr>
@@ -1389,7 +1407,8 @@ export default function Especialidades() {
                     <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '0 0 12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
                       Detalhamento — {detalhesFiltrados.length} registro{detalhesFiltrados.length !== 1 ? 's' : ''}
                     </h3>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                           {['#', 'Especialidade', 'Paciente', 'Telefone', 'Tipo', 'Profissional', 'Data', 'Status', 'Motivo'].map(h => (
@@ -1424,6 +1443,7 @@ export default function Especialidades() {
                         })}
                       </tbody>
                     </table>
+                    </div>
                   </>
                 )}
               </div>
@@ -1443,6 +1463,7 @@ export default function Especialidades() {
       </div>
 
       {/* ── MODAL: CANCELAMENTO ── */}
+      <AnimatePresence>
       {modalCancel.show && (
         <Modal titulo="Cancelar / Negar Agendamento" onClose={() => { setModalCancel({ show: false, id: null }); setMotivoCancel('') }}>
           <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 14px' }}>
@@ -1464,7 +1485,9 @@ export default function Especialidades() {
           </div>
         </Modal>
       )}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {/* ── MODAL: EDIÇÃO ── */}
       {modalEditar.show && (() => {
         const espId = agendamentos.find(a => a.id === modalEditar.id)?.especialidade
@@ -1543,7 +1566,9 @@ export default function Especialidades() {
           </Modal>
         )
       })()}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {/* ── MODAL: EXCLUSÃO ── */}
       {modalExcluir.show && (
         <Modal titulo="Excluir Agendamento" onClose={() => { setModalExcluir({ show: false, id: null }); setMotivoExclusao('') }}>
@@ -1560,13 +1585,15 @@ export default function Especialidades() {
               style={{ background: 'linear-gradient(135deg, #374151, #4b5563)' }}
               onClick={confirmarExclusao}
               disabled={!motivoExclusao.trim()}>
-              🗑 Confirmar Exclusão
+              <Trash2 size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '5px' }} />Confirmar Exclusão
             </button>
             <button className="btn-secondary" onClick={() => { setModalExcluir({ show: false, id: null }); setMotivoExclusao('') }}>Cancelar</button>
           </div>
         </Modal>
       )}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {/* ── MODAL: PROFISSIONAIS ── */}
       {modalProf && (
         <Modal titulo={`👨‍⚕️ Profissionais — ${espAtiva.label}`} onClose={() => setModalProf(false)} largura="580px">
@@ -1592,7 +1619,7 @@ export default function Especialidades() {
               </div>
             </div>
             <button className="btn-primary" style={{ background: GRAD, marginTop: '12px' }} onClick={salvarProfissional} disabled={salvandoProf}>
-              {salvandoProf ? '⏳...' : '+ Adicionar'}
+              {salvandoProf ? 'Salvando...' : '+ Adicionar'}
             </button>
           </div>
 
@@ -1616,6 +1643,11 @@ export default function Especialidades() {
           }
         </Modal>
       )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+      {/* ── MODAL: ESCALA ── */}
+      </AnimatePresence>
 
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -1631,6 +1663,7 @@ export default function Especialidades() {
         }
       `}} />
 
+      <AnimatePresence>
       {/* ── MODAL: ESCALA ── */}
       {modalEscala && (
         <Modal titulo={`Escala — ${espAtiva.label} / ${MESES[Number(mes) - 1]}/${ano}`} onClose={() => setModalEscala(false)}>
@@ -1658,7 +1691,7 @@ export default function Especialidades() {
               </div>
               <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #065f46, #047857)' }}
                 onClick={adicionarEscala} disabled={salvandoEscala || !profEscalaSel || !dataEscala}>
-                {salvandoEscala ? '⏳...' : '+ Adicionar à Escala'}
+                {salvandoEscala ? 'Salvando...' : '+ Adicionar à Escala'}
               </button>
             </div>
           )}
@@ -1685,6 +1718,7 @@ export default function Especialidades() {
           }
         </Modal>
       )}
+      </AnimatePresence>
     </Layout>
   )
 }

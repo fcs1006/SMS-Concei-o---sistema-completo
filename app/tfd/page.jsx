@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { abrirJanelaImpressao } from '@/lib/printHeader'
-import { Printer, MapPin } from 'lucide-react'
+import { Printer, MapPin, Search, TrendingUp, Bus } from 'lucide-react'
 
 export default function TFD() {
   const router = useRouter()
@@ -221,7 +221,7 @@ export default function TFD() {
     return (
       <div style={{ marginBottom: '28px' }}>
         <div style={{
-          background: cor || 'linear-gradient(135deg, #450a0a, #7f1d1d)',
+          background: cor || 'linear-gradient(135deg, #dc2626, #f87171)',
           color: 'white', padding: '10px 16px', borderRadius: '10px 10px 0 0',
           fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '14px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
@@ -242,20 +242,17 @@ export default function TFD() {
           <div style={{ border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
             <table className="table-modern" style={{ fontSize: '12px', tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
-                <col style={{ width: '40px' }} />
-                <col style={{ width: '18%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '18%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '17%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '7%' }} />
                 <col style={{ width: '12%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '6%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '9%' }} />
                 <col style={{ width: '8%' }} />
               </colgroup>
               <thead>
                 <tr>
-                  <th>Nº</th>
                   <th>Paciente</th>
                   <th>CPF/CNS</th>
                   <th>Acompanhante</th>
@@ -264,7 +261,6 @@ export default function TFD() {
                   <th>Hora</th>
                   <th>Local</th>
                   <th>Obs</th>
-                  <th>Controle</th>
                 </tr>
               </thead>
               <tbody>
@@ -272,16 +268,14 @@ export default function TFD() {
                   const acomps = [v.acomp1_nome, v.acomp2_nome].filter(Boolean).join(' / ') || '-'
                   return (
                     <tr key={v.id} style={{ cursor: 'default' }}>
-                      <td style={{ textAlign: 'center', color: '#94a3b8', fontWeight: '600' }}>{i + 1}</td>
                       <td style={{ fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v.paciente_nome}>{v.paciente_nome || '-'}</td>
-                      <td style={{ color: '#64748b', fontSize: '11px' }}>{formatarCpf(v.paciente_cpf)}</td>
-                      <td style={{ color: '#475569' }}>{acomps}</td>
-                      <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{formatarTelefone(v.telefone)}</td>
-                      <td>{v.motivo || '-'}</td>
+                      <td style={{ fontSize: '11px', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatarCpf(v.paciente_cpf)}</td>
+                      <td style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={acomps}>{acomps}</td>
+                      <td style={{ color: '#475569', whiteSpace: 'nowrap' }}>{formatarTelefone(v.telefone)}</td>
+                      <td style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.motivo || '-'}</td>
                       <td style={{ textAlign: 'center', fontWeight: '600', color: '#991b1b' }}>{v.hora || '-'}</td>
-                      <td>{v.local_destino || '-'}</td>
-                      <td style={{ color: '#64748b' }}>{v.tipo_viagem || '-'}</td>
-                      <td></td>
+                      <td style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.local_destino || '-'}</td>
+                      <td style={{ color: '#475569', whiteSpace: 'nowrap' }}>{v.tipo_viagem || '-'}</td>
                     </tr>
                   )
                 })}
@@ -310,22 +304,23 @@ export default function TFD() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button type="button" onClick={() => router.push('/resumo')}
               style={{
-                padding: '9px 18px', background: 'linear-gradient(135deg, #450a0a, #7f1d1d)',
+                padding: '9px 18px', background: 'linear-gradient(135deg, #dc2626, #f87171)',
                 border: 'none', borderRadius: '10px', color: 'white',
                 fontSize: '13px', cursor: 'pointer',
                 fontFamily: 'Sora, sans-serif', fontWeight: '600',
-                boxShadow: '0 4px 12px rgba(69,10,10,0.3)'
+                boxShadow: '0 4px 12px rgba(220,38,38,0.3)',
+                display: 'flex', alignItems: 'center', gap: '6px'
               }}>
-              📈 Resumo Mensal
+              <TrendingUp size={14} /> Resumo Mensal
             </button>
             {gerado && (
               <button type="button" onClick={imprimirTFD}
                 style={{
-                  padding: '9px 18px', background: 'linear-gradient(135deg, #450a0a, #7f1d1d)',
+                  padding: '9px 18px', background: 'linear-gradient(135deg, #dc2626, #f87171)',
                   border: 'none', borderRadius: '10px', color: 'white',
                   fontSize: '13px', cursor: 'pointer',
                   fontFamily: 'Sora, sans-serif', fontWeight: '600',
-                  boxShadow: '0 4px 12px rgba(69,10,10,0.3)',
+                  boxShadow: '0 4px 12px rgba(220,38,38,0.3)',
                   display: 'flex', alignItems: 'center', gap: '6px'
                 }}>
                 <Printer size={14} /> Imprimir
@@ -344,8 +339,8 @@ export default function TFD() {
                 style={{ width: '180px' }} />
             </div>
             <button type="button" onClick={gerar} disabled={carregando}
-              className="btn-primary" style={{ background: 'linear-gradient(135deg, #450a0a, #7f1d1d)', padding: '10px 28px' }}>
-              {carregando ? 'Buscando...' : '🔍 GERAR'}
+              className="btn-primary" style={{ background: 'linear-gradient(135deg, #dc2626, #f87171)', padding: '10px 28px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {carregando ? 'Buscando...' : <><Search size={14} /> GERAR</>}
             </button>
           </div>
         </div>
@@ -356,15 +351,15 @@ export default function TFD() {
             <TabelaTFD
               titulo="PORTO NACIONAL"
               lista={porto}
-              cor="linear-gradient(135deg, #450a0a, #7f1d1d)" />
+              cor="linear-gradient(135deg, #dc2626, #f87171)" />
 
             <TabelaTFD
               titulo="PALMAS"
               lista={palmas}
-              cor="linear-gradient(135deg, #450a0a, #7f1d1d)" />
+              cor="linear-gradient(135deg, #dc2626, #f87171)" />
 
             <div style={{
-              background: 'linear-gradient(135deg, #450a0a, #7f1d1d)',
+              background: 'linear-gradient(135deg, #dc2626, #f87171)',
               color: 'white', padding: '12px 20px', borderRadius: '10px',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center'
             }}>
@@ -380,7 +375,7 @@ export default function TFD() {
 
         {!gerado && !carregando && (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🚌</div>
+            <Bus size={48} strokeWidth={1.2} style={{ marginBottom: '12px', color: '#cbd5e1' }} />
             <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '16px', margin: '0 0 4px' }}>
               Selecione uma data e clique em GERAR
             </p>

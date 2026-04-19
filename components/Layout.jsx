@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Users, CalendarDays, BarChart2, Bus,
   CalendarCheck, FileText, Package, FlaskConical, Stethoscope,
@@ -44,7 +45,6 @@ export default function Layout({ children, usuario }) {
   const aliasMap = { '/resumo': '/tfd', '/bpa/config': '/bpa' }
   const pathEfetivo = aliasMap[pathname] || pathname
   const paginaAtiva = menus.find(m => pathEfetivo === m.path) || menus[0]
-  const W = recolhido ? '64px' : '216px'
 
   const sidebarBg = '#0f172a'
   const sidebarBorder = 'rgba(255,255,255,0.06)'
@@ -52,15 +52,16 @@ export default function Layout({ children, usuario }) {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
 
-      <aside style={{
-        width: W, minWidth: W,
-        background: sidebarBg,
-        display: 'flex', flexDirection: 'column',
-        boxShadow: '2px 0 12px rgba(0,0,0,0.18)',
-        position: 'sticky', top: 0, height: '100vh',
-        transition: 'width 0.22s ease, min-width 0.22s ease',
-        overflow: 'hidden'
-      }}>
+      <motion.aside
+        animate={{ width: recolhido ? 64 : 216, minWidth: recolhido ? 64 : 216 }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        style={{
+          background: sidebarBg,
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '2px 0 12px rgba(0,0,0,0.18)',
+          position: 'sticky', top: 0, height: '100vh',
+          overflow: 'hidden'
+        }}>
 
         {/* Logo */}
         <div style={{
@@ -71,22 +72,14 @@ export default function Layout({ children, usuario }) {
           gap: '8px'
         }}>
           {!recolhido && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-              <img src="/logo.jpg" alt="SMS"
-                style={{ width: '32px', height: '32px', objectFit: 'contain', flexShrink: 0, borderRadius: '6px' }} />
-              <div style={{ overflow: 'hidden' }}>
-                <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '12px', color: 'white', margin: '0 0 1px', whiteSpace: 'nowrap' }}>
-                  SMS Conceição
-                </p>
-                <p style={{ color: '#64748b', fontSize: '10px', margin: 0, whiteSpace: 'nowrap' }}>
-                  Secretaria de Saúde
-                </p>
-              </div>
+            <div style={{ overflow: 'hidden' }}>
+              <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '12px', color: 'white', margin: '0 0 1px', whiteSpace: 'nowrap' }}>
+                SMS Conceição
+              </p>
+              <p style={{ color: '#64748b', fontSize: '10px', margin: 0, whiteSpace: 'nowrap' }}>
+                Secretaria de Saúde
+              </p>
             </div>
-          )}
-          {recolhido && (
-            <img src="/logo.jpg" alt="SMS"
-              style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '6px' }} />
           )}
           <button
             onClick={toggleSidebar}
@@ -243,7 +236,7 @@ export default function Layout({ children, usuario }) {
             </>
           )}
         </div>
-      </aside>
+      </motion.aside>
 
       <main style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <div style={{ flex: 1 }}>
