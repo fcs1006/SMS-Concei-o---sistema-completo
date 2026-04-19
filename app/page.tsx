@@ -42,21 +42,39 @@ export default function Login() {
   }
 
   useEffect(() => {
-    const f   = localStorage.getItem('login_fundo')      || 'foto'
-    const cu  = localStorage.getItem('login_custom_url') || ''
-    const bs  = localStorage.getItem('login_bg_size')    || 'cover'
-    const bp  = localStorage.getItem('login_bg_pos')     || 'center'
-    const ma  = localStorage.getItem('login_modo_aj')    === '1'
-    const ax  = Number(localStorage.getItem('login_aj_x')    || 50)
-    const ay  = Number(localStorage.getItem('login_aj_y')    || 50)
-    const az  = Number(localStorage.getItem('login_aj_zoom') || 100)
-    setFundoId(f); setCustomUrl(cu); setBgSize(bs); setBgPos(bp)
-    setModoAj(ma); setAjX(ax); setAjY(ay); setAjZoom(az)
+    fetch('/api/config/fundo')
+      .then(r => r.json())
+      .then(({ cfg }) => {
+        if (!cfg) return
+        if (cfg.login_fundo_id)     setFundoId(cfg.login_fundo_id)
+        if (cfg.login_fundo_bgSize) setBgSize(cfg.login_fundo_bgSize)
+        if (cfg.login_fundo_bgPos)  setBgPos(cfg.login_fundo_bgPos)
+        if (cfg.login_fundo_ajX)    { setAjX(Number(cfg.login_fundo_ajX)); setModoAj(true) }
+        if (cfg.login_fundo_ajY)    setAjY(Number(cfg.login_fundo_ajY))
+        if (cfg.login_fundo_zoom && cfg.login_fundo_zoom !== '100') setAjZoom(Number(cfg.login_fundo_zoom))
+        if (cfg.login_fundo_url)    setCustomUrl(cfg.login_fundo_url)
+      })
+      .catch(() => {})
   }, [])
 
-  function salvar(key: string, val: string) { localStorage.setItem(key, val) }
+  function getAdminCpf(): string | null {
+    try { return JSON.parse(localStorage.getItem('sms_user') || '{}')?.usuario || null } catch { return null }
+  }
 
-  function trocarFundo(id: string) { setFundoId(id); salvar('login_fundo', id) }
+  function salvarNoBanco(campos: Record<string, string>) {
+    const adminCpf = getAdminCpf()
+    if (!adminCpf) return
+    fetch('/api/config/fundo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminCpf, ...campos })
+    }).catch(() => {})
+  }
+
+  function trocarFundo(id: string) {
+    setFundoId(id)
+    salvarNoBanco({ login_fundo_id: id })
+  }
 
   function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -65,28 +83,21 @@ export default function Login() {
     reader.onload = ev => {
       const url = ev.target?.result as string
       setCustomUrl(url); setFundoId('custom')
-      salvar('login_fundo', 'custom'); salvar('login_custom_url', url)
+      salvarNoBanco({ login_fundo_id: 'custom', login_fundo_url: url })
     }
     reader.readAsDataURL(file)
   }
 
   function aplicarAjuste() {
     setModoAj(true)
-    salvar('login_modo_aj', '1')
-    salvar('login_aj_x',    String(ajX))
-    salvar('login_aj_y',    String(ajY))
-    salvar('login_aj_zoom', String(ajZoom))
+    salvarNoBanco({ login_fundo_ajX: String(ajX), login_fundo_ajY: String(ajY), login_fundo_zoom: String(ajZoom) })
     setAjuste(false)
   }
 
   function resetarAjuste() {
     setModoAj(false); setAjX(50); setAjY(50); setAjZoom(100)
-    localStorage.removeItem('login_modo_aj')
-    localStorage.removeItem('login_aj_x')
-    localStorage.removeItem('login_aj_y')
-    localStorage.removeItem('login_aj_zoom')
     setBgSize('cover'); setBgPos('center')
-    salvar('login_bg_size', 'cover'); salvar('login_bg_pos', 'center')
+    salvarNoBanco({ login_fundo_bgSize: 'cover', login_fundo_bgPos: 'center', login_fundo_ajX: '50', login_fundo_ajY: '50', login_fundo_zoom: '100' })
     setAjuste(false)
   }
 
