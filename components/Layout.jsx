@@ -1,11 +1,20 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { motion } from 'framer-motion'
+import {
+  LayoutDashboard, Users, CalendarDays, BarChart2, Bus,
+  CalendarCheck, FileText, Package, FlaskConical, Stethoscope,
+  Bot, Settings, LogOut, ChevronLeft, ChevronRight
+} from 'lucide-react'
 
 export default function Layout({ children, usuario }) {
   const router = useRouter()
   const pathname = usePathname()
   const [recolhido, setRecolhido] = useState(false)
+  const [anoAtual, setAnoAtual] = useState('')
+
+  useEffect(() => { setAnoAtual(String(new Date().getFullYear())) }, [])
 
   useEffect(() => {
     const salvo = localStorage.getItem('sidebar_recolhido')
@@ -20,117 +29,85 @@ export default function Layout({ children, usuario }) {
   }
 
   const menus = [
-    {
-      label: 'Painel Geral',   icon: '🏠',  path: '/painel',
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
-    {
-      label: 'Pacientes',      icon: '👨🏾', path: '/cadastro',
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
-    {
-      label: 'Agendamento',    icon: '📋',  path: '/agendamento',
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
-    {
-      label: 'Relatório',      icon: '📊',  path: '/relatorio',
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
-    {
-      label: 'TFD',            icon: '🚌',  path: '/tfd',
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
-    {
-      label: 'Frequência',     icon: '📆',  path: '/frequencia',
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
-    {
-      label: 'BPA',            icon: '🗂️',  path: '/bpa',
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
-    {
-      label: 'Almoxarifado',   icon: '📦',  path: '/almoxarifado',
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
-    {
-      label: 'SIGTAP',         icon: '🔬',  path: '/sigtap',
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
-    {
-      label: 'Especialidades', icon: '🏥',  path: '/especialidades',
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
-    {
-      label: 'Francisco IA',   icon: '🤖',  path: '/francisco', adminOnly: true,
-      bg1: '#1e1b4b', bg2: '#312e81', cor: '#a5b4fc', corBg: 'rgba(165,180,252,0.15)', acento: '#818cf8'
-    },
+    { label: 'Painel Geral',   Icon: LayoutDashboard, path: '/painel',       acento: '#94a3b8' },
+    { label: 'Pacientes',      Icon: Users,            path: '/cadastro',     acento: '#60a5fa' },
+    { label: 'Agendamento',    Icon: CalendarDays,     path: '/agendamento',  acento: '#93c5fd' },
+    { label: 'Relatório',      Icon: BarChart2,        path: '/relatorio',    acento: '#c084fc' },
+    { label: 'TFD',            Icon: Bus,              path: '/tfd',          acento: '#f87171' },
+    { label: 'Frequência',     Icon: CalendarCheck,    path: '/frequencia',   acento: '#38bdf8' },
+    { label: 'BPA',            Icon: FileText,         path: '/bpa',          acento: '#34d399' },
+    { label: 'Almoxarifado',   Icon: Package,          path: '/almoxarifado', acento: '#818cf8' },
+    { label: 'SIGTAP',         Icon: FlaskConical,     path: '/sigtap',       acento: '#34d399' },
+    { label: 'Especialidades', Icon: Stethoscope,      path: '/especialidades', acento: '#fbbf24' },
+    { label: 'Francisco IA',   Icon: Bot,              path: '/francisco',    acento: '#34d399', adminOnly: true },
   ]
 
   const aliasMap = { '/resumo': '/tfd', '/bpa/config': '/bpa' }
   const pathEfetivo = aliasMap[pathname] || pathname
-  const paginaAtiva = menus.find(m => pathEfetivo === m.path) || menus[1]
-  const W = recolhido ? '60px' : '220px'
+  const paginaAtiva = menus.find(m => pathEfetivo === m.path) || menus[0]
+
+  const sidebarBg = '#0f172a'
+  const sidebarBorder = 'rgba(255,255,255,0.06)'
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
 
-      <aside style={{
-        width: W, minWidth: W,
-        background: `linear-gradient(180deg, ${paginaAtiva.bg1} 0%, ${paginaAtiva.bg2} 100%)`,
-        display: 'flex', flexDirection: 'column',
-        boxShadow: '4px 0 20px rgba(0,0,0,0.2)',
-        position: 'sticky', top: 0, height: '100vh',
-        transition: 'width 0.25s ease, min-width 0.25s ease, background 0.4s ease',
-        overflow: 'hidden'
-      }}>
+      <motion.aside
+        animate={{ width: recolhido ? 64 : 216, minWidth: recolhido ? 64 : 216 }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        style={{
+          background: sidebarBg,
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '2px 0 12px rgba(0,0,0,0.18)',
+          position: 'sticky', top: 0, height: '100vh',
+          overflow: 'hidden'
+        }}>
 
-        {/* Logo + botão toggle */}
+        {/* Logo */}
         <div style={{
-          padding: recolhido ? '16px 0' : '20px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          padding: recolhido ? '18px 0' : '18px 16px',
+          borderBottom: `1px solid ${sidebarBorder}`,
           display: 'flex', alignItems: 'center',
           justifyContent: recolhido ? 'center' : 'space-between',
-          gap: '8px', transition: 'padding 0.25s ease'
+          gap: '8px'
         }}>
           {!recolhido && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-              <img src="/logo.jpg" alt="SMS"
-                style={{ width: '36px', height: '36px', objectFit: 'contain', flexShrink: 0, borderRadius: '8px' }} />
-              <div style={{ overflow: 'hidden' }}>
-                <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '12px', color: 'white', margin: '0 0 1px', whiteSpace: 'nowrap' }}>
-                  SMS Conceição
-                </p>
-                <p style={{ color: paginaAtiva.acento, fontSize: '10px', margin: 0, opacity: 0.7, whiteSpace: 'nowrap' }}>
-                  Secretaria de Saúde
-                </p>
-              </div>
+            <div style={{ overflow: 'hidden' }}>
+              <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '12px', color: 'white', margin: '0 0 1px', whiteSpace: 'nowrap' }}>
+                SMS Conceição
+              </p>
+              <p style={{ color: '#64748b', fontSize: '10px', margin: 0, whiteSpace: 'nowrap' }}>
+                Secretaria de Saúde
+              </p>
             </div>
           )}
           <button
             onClick={toggleSidebar}
             title={recolhido ? 'Expandir menu' : 'Recolher menu'}
             style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '8px',
-              color: 'rgba(255,255,255,0.7)',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '6px',
+              color: '#64748b',
               cursor: 'pointer',
-              width: '26px', height: '26px',
+              width: '24px', height: '24px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '12px', flexShrink: 0,
-              transition: 'background 0.2s'
+              flexShrink: 0, transition: 'all 0.2s', padding: 0
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'white' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#64748b' }}
           >
-            {recolhido ? '›' : '‹'}
+            {recolhido
+              ? <ChevronRight size={13} />
+              : <ChevronLeft size={13} />
+            }
           </button>
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto', overflowX: 'hidden' }}>
+        <nav style={{ flex: 1, padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: '1px', overflowY: 'auto', overflowX: 'hidden' }}>
           {menus.filter(m => !m.adminOnly || usuario?.perfil === 'admin').map(m => {
-            const ativo = pathname === m.path
+            const ativo = pathEfetivo === m.path
             return (
               <button
                 key={m.path}
@@ -138,94 +115,104 @@ export default function Layout({ children, usuario }) {
                 title={recolhido ? m.label : ''}
                 style={{
                   display: 'flex', alignItems: 'center',
-                  gap: recolhido ? '0' : '10px',
+                  gap: '10px',
                   justifyContent: recolhido ? 'center' : 'flex-start',
-                  padding: recolhido ? '10px 0' : '10px 12px',
-                  borderRadius: '10px', width: '100%',
+                  padding: recolhido ? '9px 0' : '9px 12px',
+                  borderRadius: '8px', width: '100%',
                   textAlign: 'left', cursor: 'pointer',
-                  background: ativo ? m.corBg : 'transparent',
-                  border: ativo ? `1px solid ${m.acento}50` : '1px solid transparent',
-                  color: ativo ? m.cor : '#9ca3af',
+                  background: ativo ? `${m.acento}18` : 'transparent',
+                  border: 'none',
+                  color: ativo ? m.acento : '#64748b',
                   fontSize: '13px', fontWeight: ativo ? '600' : '400',
-                  fontFamily: 'DM Sans, sans-serif', transition: 'all 0.2s',
+                  fontFamily: 'DM Sans, sans-serif', transition: 'all 0.15s',
                   overflow: 'hidden', whiteSpace: 'nowrap'
                 }}
-                onMouseEnter={e => { if (!ativo) { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'white' } }}
-                onMouseLeave={e => { if (!ativo) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af' } }}
+                onMouseEnter={e => { if (!ativo) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#cbd5e1' } }}
+                onMouseLeave={e => { if (!ativo) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b' } }}
               >
-                <span style={{ fontSize: '17px', flexShrink: 0 }}>{m.icon}</span>
-                {!recolhido && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.label}</span>}
-                {!recolhido && ativo && (
-                  <span style={{ marginLeft: 'auto', width: '6px', height: '6px', background: m.acento, borderRadius: '50%', flexShrink: 0 }} />
+                <m.Icon size={16} strokeWidth={ativo ? 2.2 : 1.7} style={{ flexShrink: 0 }} />
+                {!recolhido && (
+                  <>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flexGrow: 1 }}>{m.label}</span>
+                    {ativo && <span style={{ width: '5px', height: '5px', background: m.acento, borderRadius: '50%', flexShrink: 0 }} />}
+                  </>
                 )}
               </button>
             )
           })}
         </nav>
 
-        {/* User + Sair */}
-        <div style={{ padding: recolhido ? '12px 6px' : '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        {/* Usuário */}
+        <div style={{ padding: recolhido ? '10px 8px' : '10px 8px', borderTop: `1px solid ${sidebarBorder}` }}>
           {!recolhido ? (
             <>
               <div style={{
-                display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '8px 10px', borderRadius: '10px',
-                background: 'rgba(255,255,255,0.05)', marginBottom: '8px'
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 10px', borderRadius: '8px',
+                background: 'rgba(255,255,255,0.04)', marginBottom: '6px'
               }}>
                 <div style={{
-                  width: '30px', height: '30px', flexShrink: 0,
-                  background: paginaAtiva.corBg,
-                  border: `1px solid ${paginaAtiva.acento}40`,
-                  borderRadius: '8px', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', fontSize: '13px', fontWeight: '700',
-                  color: paginaAtiva.acento, fontFamily: 'Sora, sans-serif'
+                  width: '28px', height: '28px', flexShrink: 0,
+                  background: 'rgba(99,102,241,0.2)',
+                  border: '1px solid rgba(99,102,241,0.3)',
+                  borderRadius: '7px', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: '12px', fontWeight: '700',
+                  color: '#818cf8', fontFamily: 'Sora, sans-serif'
                 }}>
                   {usuario?.nome?.charAt(0) || 'U'}
                 </div>
-                <div style={{ overflowX: 'hidden', overflowY: 'hidden', flexGrow: 1 }}>
-                  <p style={{ color: 'white', fontSize: '11px', fontWeight: '600', margin: 0, fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ overflow: 'hidden', flexGrow: 1 }}>
+                  <p style={{ color: '#e2e8f0', fontSize: '11px', fontWeight: '600', margin: 0, fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {usuario?.nome || 'Usuário'}
                   </p>
-                  <p style={{ color: paginaAtiva.acento, fontSize: '10px', margin: 0, opacity: 0.7 }}>Online</p>
+                  <p style={{ color: '#475569', fontSize: '10px', margin: 0 }}>
+                    {usuario?.perfil === 'admin' ? 'Administrador' : 'Usuário'}
+                  </p>
                 </div>
                 {usuario?.perfil === 'admin' && (
                   <button
                     title="Gerenciar usuários"
                     onClick={() => router.push('/usuarios')}
                     style={{
-                      background: pathname === '/usuarios' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.07)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      borderRadius: '7px', width: '26px', height: '26px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '14px', cursor: 'pointer', flexShrink: 0
+                      background: 'transparent', border: 'none',
+                      color: '#475569', cursor: 'pointer', padding: '4px',
+                      borderRadius: '6px', display: 'flex', alignItems: 'center',
+                      transition: 'color 0.2s'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
-                    onMouseLeave={e => e.currentTarget.style.background = pathname === '/usuarios' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.07)'}
-                  >⚙️</button>
+                    onMouseEnter={e => e.currentTarget.style.color = '#94a3b8'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#475569'}
+                  >
+                    <Settings size={14} />
+                  </button>
                 )}
               </div>
               <button
                 onClick={() => { localStorage.clear(); router.push('/') }}
                 style={{
-                  width: '100%', padding: '8px',
-                  background: 'rgba(239,68,68,0.1)',
+                  width: '100%', padding: '7px 10px',
+                  background: 'transparent',
                   border: '1px solid rgba(239,68,68,0.2)',
-                  borderRadius: '10px', color: '#f87171',
-                  fontSize: '12px', fontWeight: '600',
-                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
-                }}>
-                ← Sair
+                  borderRadius: '8px', color: '#64748b',
+                  fontSize: '12px', fontWeight: '500',
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)'; e.currentTarget.style.background = 'rgba(239,68,68,0.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)'; e.currentTarget.style.background = 'transparent' }}
+              >
+                <LogOut size={13} /> Sair
               </button>
             </>
           ) : (
             <>
               <div title={usuario?.nome || 'Usuário'} style={{
                 width: '36px', height: '36px', margin: '0 auto 6px',
-                background: paginaAtiva.corBg,
-                border: `1px solid ${paginaAtiva.acento}40`,
+                background: 'rgba(99,102,241,0.2)',
+                border: '1px solid rgba(99,102,241,0.3)',
                 borderRadius: '8px', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', fontSize: '14px', fontWeight: '700',
-                color: paginaAtiva.acento, fontFamily: 'Sora, sans-serif', cursor: 'default'
+                color: '#818cf8', fontFamily: 'Sora, sans-serif', cursor: 'default'
               }}>
                 {usuario?.nome?.charAt(0) || 'U'}
               </div>
@@ -234,17 +221,22 @@ export default function Layout({ children, usuario }) {
                 onClick={() => { localStorage.clear(); router.push('/') }}
                 style={{
                   width: '100%', padding: '7px 0',
-                  background: 'rgba(239,68,68,0.1)',
+                  background: 'transparent',
                   border: '1px solid rgba(239,68,68,0.2)',
-                  borderRadius: '10px', color: '#f87171',
-                  fontSize: '14px', cursor: 'pointer'
-                }}>
-                ←
+                  borderRadius: '8px', color: '#64748b',
+                  fontSize: '13px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(239,68,68,0.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'transparent' }}
+              >
+                <LogOut size={14} />
               </button>
             </>
           )}
         </div>
-      </aside>
+      </motion.aside>
 
       <main style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <div style={{ flex: 1 }}>
@@ -255,7 +247,7 @@ export default function Layout({ children, usuario }) {
           color: '#94a3b8', fontSize: '11px',
           fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.03em'
         }}>
-          © Fernando Cerqueira de Sousa
+          {anoAtual ? `© ${anoAtual} GestSus — Todos os direitos reservados` : ''}
         </footer>
       </main>
     </div>

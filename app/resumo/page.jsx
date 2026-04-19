@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { abrirJanelaImpressao } from '@/lib/printHeader'
+import { Printer, MapPin } from 'lucide-react'
 
 export default function Resumo() {
   const router = useRouter()
@@ -132,19 +133,20 @@ export default function Resumo() {
 
     const montarTabela = (titulo, lista, corHeader) => {
       const linhas = lista.length === 0
-        ? `<tr><td colspan="10" style="text-align:center;padding:10px;">Nenhum paciente para ${titulo}.</td></tr>`
+        ? `<tr><td colspan="9" style="text-align:center;padding:10px;">Nenhum paciente para ${titulo}.</td></tr>`
         : lista.map((v, i) => {
-            const acomps = [v.acomp1_nome, v.acomp2_nome].filter(Boolean).join(' / ') || ''
+            const acomps = [v.acomp1_nome, v.acomp2_nome].filter(Boolean).join(' / ') || '-'
+            const cpfAcomps = [v.acomp1_cpf, v.acomp2_cpf].filter(Boolean).map(formatarCpf).join(' / ') || '-'
             return `<tr>
-              <td style="text-align:center;">${formatarData(v.data_viagem)}</td>
-              <td style="text-align:left;font-weight:bold;">${v.paciente_nome || ''}</td>
+              <td style="text-align:center;white-space:nowrap;">${formatarData(v.data_viagem)}</td>
+              <td style="text-align:left;font-weight:bold;">${v.paciente_nome || '-'}</td>
+              <td style="font-size:10px;">${formatarCpf(v.paciente_cpf)}</td>
               <td>${acomps}</td>
-              <td>${formatarTelefone(v.telefone)}</td>
-              <td>${v.motivo || ''}</td>
-              <td style="text-align:center;">${v.hora || ''}</td>
-              <td>${v.local_destino || ''}</td>
-              <td>${v.tipo_viagem || ''}</td>
-              <td></td>
+              <td style="font-size:10px;">${cpfAcomps}</td>
+              <td style="white-space:nowrap;">${formatarTelefone(v.telefone)}</td>
+              <td style="text-align:center;">${v.hora || '-'}</td>
+              <td>${v.local_destino || '-'}</td>
+              <td style="white-space:nowrap;">${v.tipo_viagem || '-'}</td>
             </tr>`
           }).join('')
 
@@ -156,14 +158,15 @@ export default function Resumo() {
         <p style="font-size:12px;margin:2px 0 6px;"><strong>NOME DA CIDADE DESTINO:</strong> ${titulo}</p>
         <table style="table-layout:fixed;width:100%;">
           <colgroup>
-            <col style="width:8%"><col style="width:18%"><col style="width:16%">
-            <col style="width:10%"><col style="width:10%"><col style="width:6%">
-            <col style="width:12%"><col style="width:9%"><col style="width:11%">
+            <col style="width:8%"><col style="width:17%"><col style="width:12%">
+            <col style="width:14%"><col style="width:10%"><col style="width:11%">
+            <col style="width:6%"><col style="width:12%"><col style="width:10%">
           </colgroup>
           <thead>
             <tr>
-              <th>DATA</th><th>PACIENTE</th><th>ACOMPANHANTE</th><th>TELEFONE</th>
-              <th>MOTIVO</th><th>HORA</th><th>LOCAL</th><th>OBS</th><th>CONTROLE</th>
+              <th>DATA</th><th>PACIENTE</th><th>CPF/CNS</th>
+              <th>ACOMPANHANTE</th><th>CPF ACOMP.</th><th>TELEFONE</th>
+              <th>HORA</th><th>LOCAL</th><th>OBS</th>
             </tr>
           </thead>
           <tbody>${linhas}</tbody>
@@ -232,12 +235,12 @@ export default function Resumo() {
     return (
       <div style={{ marginBottom: '28px' }}>
         <div style={{
-          background: cor || 'linear-gradient(135deg, #450a0a, #7f1d1d)',
+          background: cor || 'linear-gradient(135deg, #dc2626, #f87171)',
           color: 'white', padding: '10px 16px', borderRadius: '10px 10px 0 0',
           fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '14px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
-          <span>📍 {titulo}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {titulo}</span>
           <span style={{ fontSize: '12px', opacity: 0.9 }}>{contarPessoas(lista)} pessoas</span>
         </div>
 
@@ -251,23 +254,22 @@ export default function Resumo() {
           <div style={{ border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
             <table className="table-modern" style={{ fontSize: '12px', tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
-              <col style={{ width: '7%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '6%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '9%' }} />
-              <col style={{ width: '9%' }} />
-            </colgroup>
+                <col style={{ width: '8%' }} />
+                <col style={{ width: '17%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '6%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '10%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Data</th><th>Paciente</th><th>CPF/CNS</th>
                   <th>Acompanhante</th><th>CPF Acomp.</th>
                   <th>Telefone</th><th>Hora</th>
-                  <th>Local</th><th>Obs</th><th>Controle</th>
+                  <th>Local</th><th>Obs</th>
                 </tr>
               </thead>
               <tbody>
@@ -275,17 +277,15 @@ export default function Resumo() {
                   const acomps = [v.acomp1_nome, v.acomp2_nome].filter(Boolean).join(' / ') || '-'
                   return (
                     <tr key={v.id}>
-                      <td style={{ whiteSpace: 'nowrap', color: '#000000' }}>{formatarData(v.data_viagem)}</td>
-                      <td style={{ fontWeight: '600', color: '#0f172a' }}>{v.paciente_nome || '-'}</td>
-                      <td style={{ fontSize: '11px', color: '#000000' }}>{formatarCpf(v.paciente_cpf)}</td>
-                      <td>{acomps}</td>
-                      <td style={{ fontSize: '11px', color: '#000000' }}>{[v.acomp1_cpf, v.acomp2_cpf].filter(Boolean).join(' / ') || '-'}
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap', color: '#000000' }}>{formatarTelefone(v.telefone)}</td>
-                      <td style={{ textAlign: 'center', color: '#000000' }}>{v.hora || '-'}</td>
-                      <td style={{ color: '#000000'}}>{v.local_destino || '-'}</td>
-                      <td style={{ color: '#000000' }}>{v.tipo_viagem || '-'}</td>
-                      <td></td>
+                      <td style={{ whiteSpace: 'nowrap', color: '#475569' }}>{formatarData(v.data_viagem)}</td>
+                      <td style={{ fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v.paciente_nome}>{v.paciente_nome || '-'}</td>
+                      <td style={{ fontSize: '11px', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatarCpf(v.paciente_cpf)}</td>
+                      <td style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={acomps}>{acomps}</td>
+                      <td style={{ fontSize: '11px', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[v.acomp1_cpf, v.acomp2_cpf].filter(Boolean).map(formatarCpf).join(' / ') || '-'}</td>
+                      <td style={{ whiteSpace: 'nowrap', color: '#475569' }}>{formatarTelefone(v.telefone)}</td>
+                      <td style={{ textAlign: 'center', fontWeight: '600', color: '#991b1b' }}>{v.hora || '-'}</td>
+                      <td style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.local_destino || '-'}</td>
+                      <td style={{ color: '#475569', whiteSpace: 'nowrap' }}>{v.tipo_viagem || '-'}</td>
                     </tr>
                   )
                 })}
@@ -315,11 +315,12 @@ export default function Resumo() {
           </div>
           {gerado && (
             <button type="button" onClick={imprimirResumo}
-              style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #450a0a, #7f1d1d)', border: 'none',
+              style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #dc2626, #f87171)', border: 'none',
                 borderRadius: '10px', color: 'white', fontSize: '13px', cursor: 'pointer',
                 fontFamily: 'Sora, sans-serif', fontWeight: '600',
-                boxShadow: '0 4px 12px rgba(69,10,10,0.3)' }}>
-              🖨️ Imprimir
+                boxShadow: '0 4px 12px rgba(69,10,10,0.3)',
+                display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Printer size={14} /> Imprimir
             </button>
           )}
         </div>
@@ -333,7 +334,7 @@ export default function Resumo() {
                 onChange={e => setMes(e.target.value)} style={{ width: '200px' }} />
             </div>
             <button type="button" onClick={gerar} disabled={carregando}
-              className="btn-primary" style={{ background: 'linear-gradient(135deg, #450a0a, #7f1d1d)', padding: '10px 28px' }}>
+              className="btn-primary" style={{ background: 'linear-gradient(135deg, #dc2626, #f87171)', padding: '10px 28px' }}>
               {carregando ? 'Buscando...' : '🔍 GERAR'}
             </button>
           </div>
@@ -343,38 +344,38 @@ export default function Resumo() {
         {gerado && (
           <>
             <TabelaResumo titulo="PORTO NACIONAL" lista={porto}
-              cor="linear-gradient(135deg, #5f1b1b, #ef4444)" />
+              cor="linear-gradient(135deg, #dc2626, #f87171)" />
             <TabelaResumo titulo="PALMAS" lista={palmas}
-              cor="linear-gradient(135deg, #5f1b1b, #ef4444)" />
+              cor="linear-gradient(135deg, #dc2626, #f87171)" />
 
             {/* Total geral */}
-            <div style={{ background: 'linear-gradient(135deg, #5f1b1b, #ef4444)',
+            <div style={{ background: 'linear-gradient(135deg, #dc2626, #f87171)',
               color: 'white', padding: '12px 20px', borderRadius: '10px',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               marginBottom: '24px' }}>
               <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '14px' }}>
                 Total Geral — {formatarMes(mes)}
               </span>
-              <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '18px', color: '#818cf8' }}>
+              <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '18px', color: '#f0c030' }}>
                 {contarPessoas(todos)} pessoas
               </span>
             </div>
 
             {/* Resumo TFD */}
             <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(135deg, #5f1b1b, #ef4444)', color: 'white',
+              <div style={{ background: 'linear-gradient(135deg, #dc2626, #f87171)', color: 'white',
                 padding: '10px 16px', fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '14px' }}>
-                📊 Resumo TFD — {formatarMes(mes)}
+                Resumo TFD — {formatarMes(mes)}
               </div>
               <table className="table-modern" style={{ fontSize: '13px' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: '4%', background: 'linear-gradient(135deg, #5f1b1b, #ef4444)', color: '#ffffff' }}>Nº</th>
-                    <th style={{ background: 'linear-gradient(135deg, #5f1b1b, #ef4444)', color: '#ffffff', textAlign: 'left', width: '35%' }}>Passagens</th>
-                    <th style={{ background: 'linear-gradient(135deg, #5f1b1b, #ef4444)', color: '#ffffff'}}>Pacientes</th>
-                    <th style={{ background: 'linear-gradient(135deg, #5f1b1b, #ef4444)', color: '#ffffff'}}>Acompanhantes</th>
-                    <th style={{ background: 'linear-gradient(135deg, #5f1b1b, #ef4444)', color: '#ffffff'}}>Total (Pessoas)</th>
-                    <th style={{ background: 'linear-gradient(135deg, #5f1b1b, #ef4444)', color: '#ffffff' }}>Passagens do Mês</th>
+                    <th style={{ width: '4%', background: 'linear-gradient(135deg, #dc2626, #f87171)', color: '#ffffff' }}>Nº</th>
+                    <th style={{ background: 'linear-gradient(135deg, #dc2626, #f87171)', color: '#ffffff', textAlign: 'left', width: '35%' }}>Passagens</th>
+                    <th style={{ background: 'linear-gradient(135deg, #dc2626, #f87171)', color: '#ffffff'}}>Pacientes</th>
+                    <th style={{ background: 'linear-gradient(135deg, #dc2626, #f87171)', color: '#ffffff'}}>Acompanhantes</th>
+                    <th style={{ background: 'linear-gradient(135deg, #dc2626, #f87171)', color: '#ffffff'}}>Total (Pessoas)</th>
+                    <th style={{ background: 'linear-gradient(135deg, #dc2626, #f87171)', color: '#ffffff' }}>Passagens do Mês</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -407,7 +408,7 @@ export default function Resumo() {
 
         {!gerado && !carregando && (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📅</div>
+            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Printer size={40} strokeWidth={1} color="#cbd5e1" /></div>
             <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '16px', margin: '0 0 4px' }}>
               Selecione o mês e clique em GERAR
             </p>

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
+import { Settings, BarChart2, Upload, ClipboardList, RefreshCw, Download, Search, Printer, CheckCircle, AlertTriangle } from 'lucide-react'
 
 const FIXOS_PADRAO = {
   urgencia: {
@@ -225,10 +226,45 @@ export default function BPA() {
     if (aba === 'historico') buscarHistorico()
   }, [aba])
 
-  const corPerfil = perfil === 'laboratorio' ? '#065f46' : '#064e3b'
-  const gradPerfil = perfil === 'laboratorio'
-    ? 'linear-gradient(135deg, #065f46, #059669)'
-    : 'linear-gradient(135deg, #064e3b, #047857)'
+  function imprimirHistorico() {
+    const titulo = `Relatório BPA-Histórico: ${perfil}${compHist ? ' — ' + compHist : ''}`
+    const linhas = historicoDados.map((r, i) => `
+      <tr style="background:${i % 2 === 0 ? '#fff' : '#f8fafc'}">
+        <td>${r.data_atendimento ? r.data_atendimento.split('-').reverse().join('/') : '-'}</td>
+        <td>${r.competencia || '-'}</td>
+        <td style="font-family:monospace">${r.procedimento || '-'}</td>
+        <td style="font-weight:600">${r.nome_paciente || '-'}</td>
+        <td>${r.cpf_cns || '-'}</td>
+      </tr>`).join('')
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <title>${titulo}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; margin: 12mm; color: #000; }
+        h2 { font-size: 14px; margin: 0 0 12px; }
+        p { margin: 0 0 10px; font-size: 11px; color: #444; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #1e293b; color: #fff; padding: 7px 8px; text-align: left; font-size: 10px; letter-spacing: 0.05em; }
+        td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
+      </style>
+    </head><body>
+      <h2>${titulo}</h2>
+      <p>Total de registros: ${historicoDados.length}</p>
+      <table>
+        <thead><tr>
+          <th>Atendimento</th><th>Competência</th><th>Procedimento</th><th>Paciente</th><th>CPF/CNS</th>
+        </tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </body></html>`
+    const w = window.open('', '_blank')
+    w.document.write(html)
+    w.document.close()
+    w.focus()
+    setTimeout(() => { w.print(); w.close() }, 400)
+  }
+
+  const corPerfil = '#059669'
+  const gradPerfil = 'linear-gradient(135deg, #059669, #34d399)'
 
   return (
     <Layout usuario={usuario}>
@@ -245,9 +281,9 @@ export default function BPA() {
             </p>
           </div>
           <button
-            style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #475569, #64748b)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '13px', cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: '600' }}
-            onClick={() => setMostrarConfig(v => !v)}>
-            ⚙️ Configurar
+            onClick={() => setMostrarConfig(v => !v)}
+            style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #475569, #64748b)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '13px', cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Settings size={14} /> Configurar
           </button>
         </div>
 
@@ -257,13 +293,13 @@ export default function BPA() {
             style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'importacao' ? corPerfil : '#64748b', borderBottom: aba === 'importacao' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif' }}
             onClick={() => setAba('importacao')}
           >
-            📥 Nova Importação
+            <Upload size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Nova Importação
           </button>
-          <button 
-            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'historico' ? corPerfil : '#64748b', borderBottom: aba === 'historico' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif' }}
+          <button
+            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'historico' ? corPerfil : '#64748b', borderBottom: aba === 'historico' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}
             onClick={() => setAba('historico')}
           >
-            📊 Relatório Histórico
+            <BarChart2 size={14} /> Relatório Histórico
           </button>
         </div>
 
@@ -279,7 +315,7 @@ export default function BPA() {
         {mostrarConfig && (
           <div className="card" style={{ padding: '20px', marginBottom: '20px', border: '1px solid #d1fae5' }}>
             <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700', color: corPerfil, margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              ⚙️ Configuração do Profissional — {perfil === 'laboratorio' ? 'Laboratório' : 'Urgência'}
+              <Settings size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Configuração do Profissional — {perfil === 'laboratorio' ? 'Laboratório' : 'Urgência'}
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '16px' }}>
               {[
@@ -307,7 +343,7 @@ export default function BPA() {
         {/* Controles */}
         <div className="card" style={{ padding: '20px', marginBottom: '20px' }}>
           <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700', color: corPerfil, margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            📋 Parâmetros
+            <ClipboardList size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Parâmetros
           </h3>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div>
@@ -335,11 +371,11 @@ export default function BPA() {
           {perfil === 'laboratorio' && (
             <div style={{ marginTop: '16px', padding: '16px', background: '#f0fdf4', border: '1.5px dashed #34d399', borderRadius: '10px' }}>
               <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '13px', color: '#065f46', margin: '0 0 10px' }}>
-                📥 Importar arquivo do laboratório
+                <Upload size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Importar arquivo do laboratório
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: 'white', border: '1.5px solid #34d399', borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: '600', color: '#065f46' }}>
-                  📂 Escolher arquivo (.xls / .xlsx / .tsv)
+                  <Upload size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Escolher arquivo (.xls / .xlsx / .tsv)
                   <input ref={fileRef} type="file" accept=".xls,.xlsx,.tsv,.csv,.txt" style={{ display: 'none' }} onChange={lerArquivoLab} />
                 </label>
                 {nomeArquivoLab && (
@@ -382,11 +418,11 @@ export default function BPA() {
           <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
             <button className="btn-primary" style={{ background: gradPerfil }}
               onClick={consolidar} disabled={etapa === 'consolidando' || etapa === 'gerando'}>
-              {etapa === 'consolidando' ? '⏳ Consolidando...' : '🔄 Consolidar'}
+              {etapa === 'consolidando' ? 'Consolidando...' : <><RefreshCw size={14} /> Consolidar</>}
             </button>
             <button className="btn-primary" style={{ background: gradPerfil }}
               onClick={gerarTxt} disabled={!consolidados.length || etapa === 'gerando' || etapa === 'consolidando'}>
-              {etapa === 'gerando' ? '⏳ Gerando...' : '⬇️ Gerar TXT'}
+              {etapa === 'gerando' ? 'Gerando...' : <><Download size={14} /> Gerar TXT</>}
             </button>
             {(consolidados.length > 0 || erros.length > 0) && (
               <button className="btn-secondary" onClick={() => { setConsolidados([]); setErros([]); setEtapa('idle') }}>
@@ -401,7 +437,7 @@ export default function BPA() {
           <div className="card" style={{ padding: '20px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700', color: corPerfil, margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                ✅ {consolidados.length} registros consolidados — {labelCompetencia()}
+                <CheckCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />{consolidados.length} registros consolidados — {labelCompetencia()}
               </h3>
             </div>
             <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
@@ -437,12 +473,12 @@ export default function BPA() {
           <div className="card print-area" style={{ padding: '20px', border: '1px solid #fecaca' }}>
             <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700', color: '#991b1b', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                ⚠️ {erros.length} registro(s) com erro
+                <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />{erros.length} registro(s) com erro
               </h3>
               <button 
                 onClick={() => window.print()}
                 style={{ padding: '6px 12px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', fontSize: '11px', cursor: 'pointer', fontWeight: '600', fontFamily: 'Sora, sans-serif' }}>
-                🖨️ Imprimir Erros
+                <Printer size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Imprimir Erros
               </button>
             </div>
             
@@ -503,7 +539,7 @@ export default function BPA() {
               </div>
               <div>
                 <button className="btn-primary" style={{ background: gradPerfil }} onClick={buscarHistorico}>
-                  🔍 Buscar
+                  <Search size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Buscar
                 </button>
               </div>
             </div>
@@ -514,27 +550,14 @@ export default function BPA() {
               <p style={{ color: '#64748b', fontSize: '13px' }}>Nenhum registro encontrado para estes filtros.</p>
             ) : (
               <div className="print-area">
-                <style dangerouslySetInnerHTML={{__html: `
-                  @media print {
-                    body * { visibility: hidden; }
-                    .print-area, .print-area * { visibility: visible; }
-                    .print-area { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
-                    .no-print { display: none !important; }
-                    .print-title { display: block !important; }
-                  }
-                `}} />
-                <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <span style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
                     Encontrados: {historicoDados.length}
                   </span>
-                  <button onClick={() => window.print()} style={{ padding: '6px 12px', background: '#e2e8f0', border: 'none', borderRadius: '6px', color: '#1e293b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
-                    🖨️ Imprimir
+                  <button onClick={imprimirHistorico} style={{ padding: '6px 14px', background: 'linear-gradient(135deg, #059669, #34d399)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Printer size={13} /> Imprimir
                   </button>
                 </div>
-                
-                <h3 style={{ display: 'none', color: '#000', fontSize: '16px', marginBottom: '15px' }} className="print-title">
-                   Relatório BPA-Histórico: {perfil} {compHist}
-                </h3>
                 
                 <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>

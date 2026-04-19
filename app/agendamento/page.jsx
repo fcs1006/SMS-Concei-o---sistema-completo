@@ -1,9 +1,10 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { cabecalhoImpressao } from '@/lib/printHeader'
+import { Printer, UserPlus, User, Users, MapPin } from 'lucide-react'
 
 /* ─── IMPRESSÃO ─────────────────────────────────────────────────── */
 function gerarHtmlAgendamento(d) {
@@ -136,6 +137,10 @@ export default function Agendamento() {
   const [status, setStatus] = useState({ msg: '', tipo: '' })
   const [salvando, setSalvando] = useState(false)
   const [ultimoAgendamento, setUltimoAgendamento] = useState(null)
+  const [pacienteSelecionado, setPacienteSelecionado] = useState(false)
+  const skipBuscaRef  = useRef(false)
+  const skipBuscaA1Ref = useRef(false)
+  const skipBuscaA2Ref = useRef(false)
 
   // Busca acompanhantes
   const [buscaA1, setBuscaA1] = useState('')
@@ -160,6 +165,7 @@ export default function Agendamento() {
   }, [])
 
   useEffect(() => {
+    if (skipBuscaRef.current) { skipBuscaRef.current = false; return }
     if (busca.length < 3) { setPacientes([]); return }
     const timer = setTimeout(async () => {
       const termoBusca = busca.replace(/\D/g, '')
@@ -176,20 +182,34 @@ export default function Agendamento() {
   }, [busca])
 
   useEffect(() => {
+    if (skipBuscaA1Ref.current) { skipBuscaA1Ref.current = false; return }
     if (buscaA1.length < 3) { setSugestoesA1([]); return }
     const timer = setTimeout(async () => {
-      const { data } = await supabase.from('pacientes').select('*')
-        .ilike('nome', `%${buscaA1.toUpperCase()}%`).limit(8)
+      const soDigitos = buscaA1.replace(/\D/g, '')
+      let query = supabase.from('pacientes').select('*').limit(8)
+      if (soDigitos.length >= 3 && soDigitos === buscaA1.replace(/\s/g, '')) {
+        query = query.ilike('cpf_cns', `%${soDigitos}%`)
+      } else {
+        query = query.ilike('nome', `%${buscaA1.toUpperCase()}%`)
+      }
+      const { data } = await query
       setSugestoesA1(data || [])
     }, 300)
     return () => clearTimeout(timer)
   }, [buscaA1])
 
   useEffect(() => {
+    if (skipBuscaA2Ref.current) { skipBuscaA2Ref.current = false; return }
     if (buscaA2.length < 3) { setSugestoesA2([]); return }
     const timer = setTimeout(async () => {
-      const { data } = await supabase.from('pacientes').select('*')
-        .ilike('nome', `%${buscaA2.toUpperCase()}%`).limit(8)
+      const soDigitos = buscaA2.replace(/\D/g, '')
+      let query = supabase.from('pacientes').select('*').limit(8)
+      if (soDigitos.length >= 3 && soDigitos === buscaA2.replace(/\s/g, '')) {
+        query = query.ilike('cpf_cns', `%${soDigitos}%`)
+      } else {
+        query = query.ilike('nome', `%${buscaA2.toUpperCase()}%`)
+      }
+      const { data } = await query
       setSugestoesA2(data || [])
     }, 300)
     return () => clearTimeout(timer)
@@ -213,6 +233,7 @@ export default function Agendamento() {
   }
 
   function selecionarPaciente(p) {
+    skipBuscaRef.current = true
     setForm(f => ({
       ...f,
       nome: p.nome, cpf: p.cpf_cns,
@@ -222,9 +243,11 @@ export default function Agendamento() {
     }))
     setBusca(p.nome)
     setPacientes([])
+    setPacienteSelecionado(true)
   }
 
   function selecionarAcomp1(p) {
+    skipBuscaA1Ref.current = true
     setForm(f => ({
       ...f,
       nomeA1: p.nome, cpfA1: p.cpf_cns,
@@ -236,6 +259,7 @@ export default function Agendamento() {
   }
 
   function selecionarAcomp2(p) {
+    skipBuscaA2Ref.current = true
     setForm(f => ({
       ...f,
       nomeA2: p.nome, cpfA2: p.cpf_cns,
@@ -264,12 +288,42 @@ export default function Agendamento() {
 
   async function salvar(e) {
     e.preventDefault()
+    if (!pacienteSelecionado || !form.nome) {
+      setStatus({ msg: 'Selecione um paciente cadastrado na lista antes de agendar.', tipo: 'erro' })
+      return
+    }
     const faltando = []
+    // Dados do paciente
+    if (!form.cpf)      faltando.push('CPF/CNS do paciente')
+    if (!form.dtNasc)   faltando.push('Data de nascimento')
+    if (!form.sexo)     faltando.push('Sexo')
+    if (!form.telefone) faltando.push('Telefone')
+    if (!form.endereco) faltando.push('Endereço')
+    if (!form.bairro)   faltando.push('Bairro')
+    // Viagem
     if (!form.tipoViagem) faltando.push('Tipo de Viagem')
-    if (!form.temAcomp) faltando.push('Acompanhante')
-    if (!form.agendadoPor) faltando.push('Agendado por')
+    if (!form.temAcomp)   faltando.push('Acompanhante?')
+    if (!form.destino)    faltando.push('Destino')
+    if (!form.local)      faltando.push('Local')
+    if (!form.motivo)     faltando.push('Motivo')
+    // Acompanhante 1 (se houver)
+    if (form.temAcomp === 'SIM' && form.nomeA1) {
+      if (!form.cpfA1)   faltando.push('CPF/CNS do Acompanhante 1')
+      if (!form.nascA1)  faltando.push('Data nasc. do Acompanhante 1')
+      if (!form.sexoA1)  faltando.push('Sexo do Acompanhante 1')
+      if (!form.telA1)   faltando.push('Telefone do Acompanhante 1')
+      if (!form.endA1)   faltando.push('Endereço do Acompanhante 1')
+    }
+    // Acompanhante 2 (se houver)
+    if (form.temAcomp === 'SIM' && form.nomeA2) {
+      if (!form.cpfA2)   faltando.push('CPF/CNS do Acompanhante 2')
+      if (!form.nascA2)  faltando.push('Data nasc. do Acompanhante 2')
+      if (!form.sexoA2)  faltando.push('Sexo do Acompanhante 2')
+      if (!form.telA2)   faltando.push('Telefone do Acompanhante 2')
+      if (!form.endA2)   faltando.push('Endereço do Acompanhante 2')
+    }
     if (faltando.length > 0) {
-      setStatus({ msg: `⚠️ Preencha os campos obrigatórios: ${faltando.join(', ')}`, tipo: 'erro' })
+      setStatus({ msg: `Campos obrigatórios incompletos: ${faltando.join(', ')}`, tipo: 'erro' })
       return
     }
     setSalvando(true)
@@ -287,12 +341,13 @@ export default function Agendamento() {
       competencia: form.data ? form.data.substring(5, 7) + '/' + form.data.substring(0, 4) : ''
     }])
     if (error) {
-      setStatus({ msg: '❌ Erro: ' + error.message, tipo: 'erro' })
+      setStatus({ msg: 'Erro: ' + error.message, tipo: 'erro' })
     } else {
       setUltimoAgendamento({ ...form })
-      setStatus({ msg: '✅ Viagem agendada com sucesso!', tipo: 'ok' })
+      setStatus({ msg: 'Viagem agendada com sucesso!', tipo: 'ok' })
       setForm(FORM_VAZIO)
       setBusca('')
+      setPacienteSelecionado(false)
     }
     setSalvando(false)
   }
@@ -346,14 +401,14 @@ export default function Agendamento() {
   const hoje = new Date()
   const dataHoje = `CONCEIÇÃO DO TOCANTINS-TO, ${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`
 
-  const SectionHeader = ({ title, icon }) => (
+  const SectionHeader = ({ title, Icon }) => (
     <div style={{
       background: 'linear-gradient(135deg, #172554, #1e3a8a)',
       color: 'white', padding: '10px 16px', borderRadius: '10px',
       fontFamily: 'Sora, sans-serif', fontWeight: '600', fontSize: '13px',
       display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px'
     }}>
-      {icon} {title}
+      {Icon && <Icon size={14} />} {title}
     </div>
   )
 
@@ -375,18 +430,20 @@ export default function Agendamento() {
                 padding: '9px 16px', background: 'linear-gradient(135deg, #172554, #1e3a8a)',
                 border: 'none', borderRadius: '10px', fontSize: '13px', color: 'white',
                 cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: '600',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)', whiteSpace: 'nowrap'
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)', whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: '6px'
               }}>
-              🖨️ Reimprimir
+              <Printer size={14} /> Reimprimir
             </button>
             <button onClick={() => router.push('/cadastro')}
               style={{
                 padding: '9px 16px', background: 'linear-gradient(135deg, #172554, #1e3a8a)',
                 border: 'none', borderRadius: '10px', fontSize: '13px', color: 'white',
                 cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: '600',
-                boxShadow: '0 4px 12px rgba(23,37,84,0.3)', whiteSpace: 'nowrap'
+                boxShadow: '0 4px 12px rgba(23,37,84,0.3)', whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: '6px'
               }}>
-              👤 Novo Paciente
+              <UserPlus size={14} /> Novo Paciente
             </button>
           </div>
         </div>
@@ -413,13 +470,19 @@ export default function Agendamento() {
               </div>
             </div>
 
-            <SectionHeader title="Dados do Paciente" icon="👤" />
+            <SectionHeader title="Dados do Paciente" Icon={User} />
 
             {/* Busca */}
             <div style={{ position: 'relative' }}>
               <label className={lbl}>Nome do Paciente *</label>
               <input className={inp} value={busca}
-                onChange={e => setBusca(e.target.value)}
+                onChange={e => {
+                  setBusca(e.target.value)
+                  if (pacienteSelecionado) {
+                    setPacienteSelecionado(false)
+                    setForm(f => ({ ...f, nome: '', cpf: '', dtNasc: '', idade: '', sexo: '', telefone: '', endereco: '', bairro: '', cep: '' }))
+                  }
+                }}
                 placeholder="Digite nome ou CPF/CNS para buscar..." required />
               {pacientes.length > 0 && (
                 <div className="search-dropdown">
@@ -436,28 +499,24 @@ export default function Agendamento() {
             {/* CPF | Telefone | Sexo */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
               <div><label className={lbl}>CPF/CNS</label>
-                <input className={inp} value={form.cpf} onChange={e => setField('cpf', e.target.value)} /></div>
+                <input className={inp} value={form.cpf} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
               <div><label className={lbl}>Telefone</label>
-                <input className={inp} value={form.telefone} onChange={e => setField('telefone', e.target.value)} /></div>
+                <input className={inp} value={form.telefone} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
               <div><label className={lbl}>Sexo</label>
-                <select className={inp} value={form.sexo} onChange={e => setField('sexo', e.target.value)}>
-                  <option value="">--</option>
-                  <option value="M">Masculino</option>
-                  <option value="F">Feminino</option>
-                </select>
+                <input className={inp} value={form.sexo === 'M' ? 'Masculino' : form.sexo === 'F' ? 'Feminino' : ''} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} />
               </div>
             </div>
 
             {/* Nasc | Idade | Endereço | Bairro */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr 1fr', gap: '12px' }}>
               <div><label className={lbl}>Data Nasc.</label>
-                <input type="date" className={inp} value={form.dtNasc} onChange={e => setField('dtNasc', e.target.value)} /></div>
+                <input className={inp} value={form.dtNasc ? new Date(form.dtNasc + 'T12:00:00').toLocaleDateString('pt-BR') : ''} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
               <div><label className={lbl}>Idade</label>
-                <input className={inp} value={form.idade} readOnly style={{ background: '#f8fafc' }} /></div>
+                <input className={inp} value={form.idade} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
               <div><label className={lbl}>Endereço</label>
-                <input className={inp} value={form.endereco} onChange={e => setField('endereco', e.target.value.toUpperCase())} /></div>
+                <input className={inp} value={form.endereco} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
               <div><label className={lbl}>Bairro</label>
-                <input className={inp} value={form.bairro} onChange={e => setField('bairro', e.target.value.toUpperCase())} /></div>
+                <input className={inp} value={form.bairro} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
             </div>
 
             {/* Tipo Viagem | Acompanhante */}
@@ -478,13 +537,16 @@ export default function Agendamento() {
             {/* Acompanhantes */}
             {form.temAcomp === 'SIM' && (
               <>
-                <SectionHeader title="Acompanhante 1" icon="👥" />
+                <SectionHeader title="Acompanhante 1" Icon={Users} />
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
                   <div style={{ position: 'relative' }}>
                     <label className={lbl}>Nome</label>
                     <input className={inp} value={buscaA1}
-                      onChange={e => { setBuscaA1(e.target.value); setField('nomeA1', e.target.value.toUpperCase()) }}
-                      placeholder="Digite para buscar..." />
+                      onChange={e => {
+                        setBuscaA1(e.target.value)
+                        setForm(f => ({ ...f, nomeA1: '', cpfA1: '', nascA1: '', sexoA1: '', telA1: '', endA1: '', bairA1: '' }))
+                      }}
+                      placeholder="Digite nome ou CPF/CNS para buscar..." />
                     {sugestoesA1.length > 0 && (
                       <div className="search-dropdown">
                         {sugestoesA1.map(p => (
@@ -497,29 +559,29 @@ export default function Agendamento() {
                     )}
                   </div>
                   <div><label className={lbl}>CPF/CNS</label>
-                    <input className={inp} value={form.cpfA1} onChange={e => setField('cpfA1', e.target.value)} /></div>
+                    <input className={inp} value={form.cpfA1} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
                   <div><label className={lbl}>Telefone</label>
-                    <input className={inp} value={form.telA1} onChange={e => setField('telA1', e.target.value)} /></div>
+                    <input className={inp} value={form.telA1} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '12px' }}>
                   <div><label className={lbl}>Data Nasc.</label>
-                    <input type="date" className={inp} value={form.nascA1} onChange={e => setField('nascA1', e.target.value)} /></div>
+                    <input className={inp} value={form.nascA1 ? new Date(form.nascA1 + 'T12:00:00').toLocaleDateString('pt-BR') : ''} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
                   <div><label className={lbl}>Sexo</label>
-                    <select className={inp} value={form.sexoA1} onChange={e => setField('sexoA1', e.target.value)}>
-                      <option value="">--</option>
-                      <option value="M">M</option><option value="F">F</option>
-                    </select></div>
+                    <input className={inp} value={form.sexoA1 === 'M' ? 'Masculino' : form.sexoA1 === 'F' ? 'Feminino' : ''} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
                   <div><label className={lbl}>Endereço</label>
-                    <input className={inp} value={form.endA1} onChange={e => setField('endA1', e.target.value.toUpperCase())} /></div>
+                    <input className={inp} value={form.endA1} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
                 </div>
 
-                <SectionHeader title="Acompanhante 2" icon="👥" />
+                <SectionHeader title="Acompanhante 2" Icon={Users} />
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
                   <div style={{ position: 'relative' }}>
                     <label className={lbl}>Nome</label>
                     <input className={inp} value={buscaA2}
-                      onChange={e => { setBuscaA2(e.target.value); setField('nomeA2', e.target.value.toUpperCase()) }}
-                      placeholder="Digite para buscar..." />
+                      onChange={e => {
+                        setBuscaA2(e.target.value)
+                        setForm(f => ({ ...f, nomeA2: '', cpfA2: '', nascA2: '', sexoA2: '', telA2: '', endA2: '', bairA2: '' }))
+                      }}
+                      placeholder="Digite nome ou CPF/CNS para buscar..." />
                     {sugestoesA2.length > 0 && (
                       <div className="search-dropdown">
                         {sugestoesA2.map(p => (
@@ -532,25 +594,22 @@ export default function Agendamento() {
                     )}
                   </div>
                   <div><label className={lbl}>CPF/CNS</label>
-                    <input className={inp} value={form.cpfA2} onChange={e => setField('cpfA2', e.target.value)} /></div>
+                    <input className={inp} value={form.cpfA2} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
                   <div><label className={lbl}>Telefone</label>
-                    <input className={inp} value={form.telA2} onChange={e => setField('telA2', e.target.value)} /></div>
+                    <input className={inp} value={form.telA2} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '12px' }}>
                   <div><label className={lbl}>Data Nasc.</label>
-                    <input type="date" className={inp} value={form.nascA2} onChange={e => setField('nascA2', e.target.value)} /></div>
+                    <input className={inp} value={form.nascA2 ? new Date(form.nascA2 + 'T12:00:00').toLocaleDateString('pt-BR') : ''} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
                   <div><label className={lbl}>Sexo</label>
-                    <select className={inp} value={form.sexoA2} onChange={e => setField('sexoA2', e.target.value)}>
-                      <option value="">--</option>
-                      <option value="M">M</option><option value="F">F</option>
-                    </select></div>
+                    <input className={inp} value={form.sexoA2 === 'M' ? 'Masculino' : form.sexoA2 === 'F' ? 'Feminino' : ''} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
                   <div><label className={lbl}>Endereço</label>
-                    <input className={inp} value={form.endA2} onChange={e => setField('endA2', e.target.value.toUpperCase())} /></div>
+                    <input className={inp} value={form.endA2} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
                 </div>
               </>
             )}
 
-            <SectionHeader title="Destino e Motivo" icon="📍" />
+            <SectionHeader title="Destino e Motivo" Icon={MapPin} />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
               <div><label className={lbl}>Destino *</label>
@@ -572,11 +631,8 @@ export default function Agendamento() {
                     'PERÍCIA MÉDICA', 'ALTA HOSPITALAR', 'CAPACITAÇÃO', 'ESTUDANTE', 'SÓ RETORNO']
                     .map(o => <option key={o} value={o}>{o}</option>)}
                 </select></div>
-              <div><label className={lbl}>Agendado por *</label>
-                <select className={inp} value={form.agendadoPor} onChange={e => setField('agendadoPor', e.target.value)}>
-                  <option value="">-- Selecione --</option>
-                  {['GLEICYANE', 'FERNANDO', 'ALSIONY'].map(o => <option key={o} value={o}>{o}</option>)}
-                </select></div>
+              <div><label className={lbl}>Agendado por</label>
+                <input className={inp} value={form.agendadoPor} readOnly style={{ background: '#f8fafc', cursor: 'not-allowed' }} /></div>
             </div>
 
             <p style={{ textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#000000' }}>{dataHoje}</p>
@@ -597,9 +653,10 @@ export default function Agendamento() {
                     padding: '12px 28px', background: 'linear-gradient(135deg, #b45309, #f59e0b)',
                     border: 'none', borderRadius: '10px', color: 'white', fontSize: '14px',
                     fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif',
-                    boxShadow: '0 4px 12px rgba(180,83,9,0.3)'
+                    boxShadow: '0 4px 12px rgba(180,83,9,0.3)',
+                    display: 'flex', alignItems: 'center', gap: '6px'
                   }}>
-                  🖨️ IMPRIMIR
+                  <Printer size={14} /> IMPRIMIR
                 </button>
               )}
             </div>
@@ -613,7 +670,7 @@ export default function Agendamento() {
         <div className="modal-overlay">
           <div className="modal-card" style={{ maxWidth: '560px' }}>
             <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
-              🖨️ Reimprimir Agendamento
+              <Printer size={16} style={{ display: 'inline', marginRight: '6px' }} /> Reimprimir Agendamento
             </h2>
             <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Busque pelo nome do paciente ou data da viagem — os resultados aparecem automaticamente.</p>
 
@@ -651,9 +708,10 @@ export default function Agendamento() {
                       style={{
                         padding: '6px 14px', background: 'linear-gradient(135deg, #172554, #1e3a8a)',
                         border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px',
-                        fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap'
+                        fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap',
+                        display: 'flex', alignItems: 'center', gap: '5px'
                       }}>
-                      🖨️ Imprimir
+                      <Printer size={12} /> Imprimir
                     </button>
                   </div>
                 ))}

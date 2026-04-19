@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { abrirJanelaImpressaoComTitulo } from '@/lib/printHeader'
+import { Settings, ClipboardList, Users, Printer, CalendarDays, Calendar } from 'lucide-react'
 
 const SERVIDORES_ESTADO = [
   { nome: 'RENILDA TELES DE FRAGA',   cargo: 'TÉC. DE ENFERMAGEM' },
@@ -750,23 +751,23 @@ export default function Frequencia() {
 
         <div className="card" style={{ padding: '20px', marginBottom: '20px', border: '1px solid #bae6fd' }}>
           <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700',
-            color: '#0369a1', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            ⚙️ Ações
+            color: '#0284c7', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <Settings size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Ações
           </h3>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '10px' }}>
             <button className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)', width: '130px', whiteSpace: 'nowrap' }}
+              style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)', width: '130px', whiteSpace: 'nowrap' }}
               onClick={sincronizarServidoresPortal}
               disabled={sincronizando}>
               {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
             </button>
             <button className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)' }}
+              style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
               onClick={abrirModalCadastrar}>
               Cadastrar
             </button>
             <button className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)' }}
+              style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
               onClick={abrirModalAlterar}
               disabled={!servidorAtual}>
               Alterar
@@ -776,23 +777,23 @@ export default function Frequencia() {
             </button>
             <div style={{ width: '1px', height: '28px', background: '#e2e8f0' }} />
             <button className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)' }}
+              style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
               onClick={() => imprimirFolha(emEscala ? 'escala' : 'normal')}
               disabled={!servidorAtual}>
               Imprimir
             </button>
             <button className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)' }}
+              style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
               onClick={imprimirEscala}>
               Escala
             </button>
             <button className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)' }}
+              style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
               onClick={imprimirNormal}>
               Normal
             </button>
             <button className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)' }}
+              style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
               onClick={() => setModalRelatorio(true)}>
               Relatório mensal
             </button>
@@ -807,8 +808,8 @@ export default function Frequencia() {
         {/* Selecionar Servidor e Competência */}
         <div className="card" style={{ padding: '20px', marginBottom: '20px' }}>
           <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700',
-            color: '#0369a1', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            📋 Selecionar Servidor e Competência
+            color: '#0284c7', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <ClipboardList size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Selecionar Servidor e Competência
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 2fr', gap: '12px', alignItems: 'end' }}>
             <div>
@@ -852,13 +853,13 @@ export default function Frequencia() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: escalaAberta ? '12px' : 0 }}
             onClick={() => setEscalaAberta(v => !v)}>
             <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700',
-              color: '#0369a1', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              📋 Profissionais em ESCALA — Folha em Branco
+              color: '#0284c7', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <Users size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Profissionais em ESCALA — Folha em Branco
               <span style={{ marginLeft: '10px', fontSize: '12px', color: '#64748b', fontWeight: '400', textTransform: 'none' }}>
                 ({emEscalaLista.length} profissional{emEscalaLista.length !== 1 ? 'is' : ''})
               </span>
             </h3>
-            <span style={{ fontSize: '18px', color: '#0369a1', userSelect: 'none' }}>{escalaAberta ? '▲' : '▼'}</span>
+            <span style={{ fontSize: '18px', color: '#0284c7', userSelect: 'none' }}>{escalaAberta ? '▲' : '▼'}</span>
           </div>
 
           {escalaAberta && (
@@ -871,15 +872,15 @@ export default function Frequencia() {
 
               {servidorAtual && (
                 <div style={{ background: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: '8px',
-                  padding: '8px 14px', marginBottom: '12px', fontSize: '13px', color: '#0369a1', fontWeight: '600' }}>
+                  padding: '8px 14px', marginBottom: '12px', fontSize: '13px', color: '#0284c7', fontWeight: '600' }}>
                   Servidor selecionado: {servidorAtual.nome} ({servidorAtual.matricula})
-                  {emEscala && <span style={{ marginLeft: '12px', color: '#0ea5e9' }}>✓ Em ESCALA</span>}
+                  {emEscala && <span style={{ marginLeft: '12px', color: '#38bdf8' }}>✓ Em ESCALA</span>}
                 </div>
               )}
 
               <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
                 <button onClick={adicionarEscala} className="btn-primary"
-                  style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)' }}>
+                  style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}>
                   + Adicionar à ESCALA
                 </button>
                 <button onClick={removerEscala} className="btn-danger">
@@ -887,7 +888,7 @@ export default function Frequencia() {
                 </button>
               </div>
 
-              <div style={{ fontSize: '13px', color: '#0369a1', marginBottom: '6px', fontWeight: '600' }}>
+              <div style={{ fontSize: '13px', color: '#0284c7', marginBottom: '6px', fontWeight: '600' }}>
                 {emEscalaLista.length} profissional(is) em ESCALA → receberão folha em branco:
               </div>
               <div style={{ border: '1px solid #bae6fd', borderRadius: '8px', maxHeight: '160px',
@@ -896,7 +897,7 @@ export default function Frequencia() {
                   <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>Nenhum servidor na ESCALA</p>
                 ) : (
                   emEscalaLista.map((s, i) => (
-                    <p key={s.id} style={{ margin: '2px 0', fontSize: '13px', color: '#0369a1' }}>
+                    <p key={s.id} style={{ margin: '2px 0', fontSize: '13px', color: '#0284c7' }}>
                       {i + 1}. {s.nome} ({s.matricula || s.id})
                     </p>
                   ))
@@ -908,10 +909,10 @@ export default function Frequencia() {
 
 
         {/* ── Servidores do Estado ── */}
-        <div className="card" style={{ padding: '20px', marginBottom: '20px', border: '1px solid #d1fae5' }}>
+        <div className="card" style={{ padding: '20px', marginBottom: '20px', border: '1px solid #bae6fd' }}>
           <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700',
-            color: '#065f46', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            📄 Folha de Ponto — Servidores do Estado
+            color: '#0284c7', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <ClipboardList size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Folha de Ponto — Servidores do Estado
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '12px', alignItems: 'end' }}>
             <div>
@@ -940,9 +941,9 @@ export default function Frequencia() {
             </div>
             <button
               className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #059669, #34d399)', whiteSpace: 'nowrap' }}
+              style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)', whiteSpace: 'nowrap' }}
               onClick={imprimirFolhaPonto}>
-              🖨️ Imprimir
+              <Printer size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '5px' }} />Imprimir
             </button>
           </div>
           <p style={{ fontSize: '11px', color: '#64748b', margin: '10px 0 0' }}>
@@ -955,8 +956,8 @@ export default function Frequencia() {
           {/* Dia Facultativo */}
           <div className="card" style={{ padding: '20px' }}>
             <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700',
-              color: '#0369a1', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              📅 Dia Facultativo — {nomesMeses[mesNum - 1]}/{anoNum}
+              color: '#0284c7', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <CalendarDays size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Dia Facultativo — {nomesMeses[mesNum - 1]}/{anoNum}
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr auto', gap: '8px', alignItems: 'end', marginBottom: '12px' }}>
               <div>
@@ -969,7 +970,7 @@ export default function Frequencia() {
                 <input className={inp} placeholder="Ex.: PONTO FACULTATIVO"
                   value={novoFacDesc} onChange={e => setNovoFacDesc(e.target.value.toUpperCase())} />
               </div>
-              <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)',padding: '9px 14px' }} onClick={adicionarFacultativo}>
+              <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)',padding: '9px 14px' }} onClick={adicionarFacultativo}>
                 Adicionar
               </button>
             </div>
@@ -990,8 +991,8 @@ export default function Frequencia() {
           {/* Feriados */}
           <div className="card" style={{ padding: '20px' }}>
             <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700',
-              color: '#0369a1', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              🗓️ Feriados Locais — {anoNum}
+              color: '#0284c7', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <Calendar size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Feriados Locais — {anoNum}
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '70px 70px 1fr auto', gap: '8px', alignItems: 'end', marginBottom: '12px' }}>
               <div>
@@ -1009,7 +1010,7 @@ export default function Frequencia() {
                 <input className={inp} placeholder="Ex.: ANIVERSÁRIO DA CIDADE"
                   value={novoFerDesc} onChange={e => setNovoFerDesc(e.target.value.toUpperCase())} />
               </div>
-              <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #0369a1, #0ea5e9)',padding: '9px 14px' }} onClick={adicionarFeriado}>+</button>
+              <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)',padding: '9px 14px' }} onClick={adicionarFeriado}>+</button>
             </div>
             <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '8px' }}>
               * Feriados nacionais já reconhecidos automaticamente: fixos (1/1, 21/4, 1/5, 7/9, 12/10, 2/11, 15/11, 20/11, 25/12) e móveis (2ª e 3ª de Carnaval, Sexta-feira Santa, Corpus Christi)
@@ -1139,14 +1140,14 @@ export default function Frequencia() {
                 <label key={op.valor} style={{
                   display: 'flex', alignItems: 'flex-start', gap: '12px',
                   padding: '14px 16px', borderRadius: '10px', cursor: 'pointer',
-                  border: `2px solid ${grupoRelatorio === op.valor ? '#0369a1' : '#e2e8f0'}`,
+                  border: `2px solid ${grupoRelatorio === op.valor ? '#0284c7' : '#e2e8f0'}`,
                   background: grupoRelatorio === op.valor ? '#e0f2fe' : '#f8fafc',
                   transition: 'all 0.15s'
                 }}>
                   <input type="radio" name="grupo" value={op.valor}
                     checked={grupoRelatorio === op.valor}
                     onChange={() => setGrupoRelatorio(op.valor)}
-                    style={{ marginTop: '2px', accentColor: '#0369a1' }} />
+                    style={{ marginTop: '2px', accentColor: '#0284c7' }} />
                   <div>
                     <p style={{ margin: '0 0 2px', fontWeight: '700', fontSize: '13px',
                       color: '#0f172a', fontFamily: 'Sora, sans-serif' }}>{op.titulo}</p>
@@ -1162,7 +1163,7 @@ export default function Frequencia() {
                 CANCELAR
               </button>
               <button className="btn-primary"
-                style={{ flex: 1, background: 'linear-gradient(135deg, #0369a1, #0ea5e9)' }}
+                style={{ flex: 1, background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
                 onClick={imprimirRelatorioMensal}>
                 IMPRIMIR
               </button>
