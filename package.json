@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.88.0",
     "@supabase/supabase-js": "^2.101.1",
     "adm-zip": "^0.5.17",
+    "framer-motion": "^12.38.0",
     "groq-sdk": "^1.1.2",
     "lucide-react": "^1.8.0",
     "next": "16.2.2",

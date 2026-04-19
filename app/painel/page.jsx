@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { Bus, ClipboardList, UserCheck, Users } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 const COR       = '#34d399'
 const COR_BG    = 'rgba(52,211,153,0.12)'
@@ -119,34 +120,19 @@ export default function PainelGeral() {
           <>
             {/* Cards de métricas */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' }}>
-              <Card
-                titulo="Viagens hoje"
-                valor={stats.viagensHoje}
-                sub="agendamentos para hoje"
-                icon={<Bus size={20} color="#3b82f6" />}
-                corBg="rgba(59,130,246,0.12)"
-              />
-              <Card
-                titulo={`Viagens previstas em ${mesAtual}`}
-                valor={stats.viagensMes}
-                sub="no mês corrente"
-                icon={<ClipboardList size={20} color="#8b5cf6" />}
-                corBg="rgba(139,92,246,0.12)"
-              />
-              <Card
-                titulo="Pacientes cadastrados"
-                valor={stats.totalPacientes}
-                sub="no banco de dados"
-                icon={<UserCheck size={20} color="#10b981" />}
-                corBg="rgba(16,185,129,0.12)"
-              />
-              <Card
-                titulo="Servidores ativos"
-                valor={stats.servidoresAtivos}
-                sub="em atividade"
-                icon={<Users size={20} color="#f59e0b" />}
-                corBg="rgba(245,158,11,0.12)"
-              />
+              {[
+                { titulo: 'Viagens hoje', valor: stats.viagensHoje, sub: 'agendamentos para hoje', icon: <Bus size={20} color="#3b82f6" />, corBg: 'rgba(59,130,246,0.12)' },
+                { titulo: `Viagens previstas em ${mesAtual}`, valor: stats.viagensMes, sub: 'no mês corrente', icon: <ClipboardList size={20} color="#8b5cf6" />, corBg: 'rgba(139,92,246,0.12)' },
+                { titulo: 'Pacientes cadastrados', valor: stats.totalPacientes, sub: 'no banco de dados', icon: <UserCheck size={20} color="#10b981" />, corBg: 'rgba(16,185,129,0.12)' },
+                { titulo: 'Servidores ativos', valor: stats.servidoresAtivos, sub: 'em atividade', icon: <Users size={20} color="#f59e0b" />, corBg: 'rgba(245,158,11,0.12)' },
+              ].map((card, i) => (
+                <motion.div key={card.titulo}
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.08, ease: 'easeOut' }}>
+                  <Card {...card} />
+                </motion.div>
+              ))}
             </div>
 
             {/* Linha inferior: destinos + últimas viagens */}
