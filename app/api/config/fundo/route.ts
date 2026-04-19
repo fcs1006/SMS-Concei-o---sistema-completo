@@ -6,7 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const CHAVES = ['login_fundo_id', 'login_fundo_bgSize', 'login_fundo_bgPos', 'login_fundo_ajX', 'login_fundo_ajY', 'login_fundo_zoom', 'login_fundo_url']
+const CHAVES = ['login_fundo_id', 'login_fundo_bgSize', 'login_fundo_bgPos', 'login_fundo_ajX', 'login_fundo_ajY', 'login_fundo_zoom', 'login_fundo_url', 'login_fundo_modoAj']
 
 export async function GET() {
   const { data } = await supabase

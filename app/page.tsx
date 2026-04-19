@@ -49,9 +49,10 @@ export default function Login() {
         if (cfg.login_fundo_id)     setFundoId(cfg.login_fundo_id)
         if (cfg.login_fundo_bgSize) setBgSize(cfg.login_fundo_bgSize)
         if (cfg.login_fundo_bgPos)  setBgPos(cfg.login_fundo_bgPos)
-        if (cfg.login_fundo_ajX)    { setAjX(Number(cfg.login_fundo_ajX)); setModoAj(true) }
+        if (cfg.login_fundo_ajX)    setAjX(Number(cfg.login_fundo_ajX))
         if (cfg.login_fundo_ajY)    setAjY(Number(cfg.login_fundo_ajY))
-        if (cfg.login_fundo_zoom && cfg.login_fundo_zoom !== '100') setAjZoom(Number(cfg.login_fundo_zoom))
+        if (cfg.login_fundo_zoom)   setAjZoom(Number(cfg.login_fundo_zoom))
+        if (cfg.login_fundo_modoAj) setModoAj(cfg.login_fundo_modoAj === '1')
         if (cfg.login_fundo_url)    setCustomUrl(cfg.login_fundo_url)
       })
       .catch(() => {})
@@ -90,14 +91,14 @@ export default function Login() {
 
   function aplicarAjuste() {
     setModoAj(true)
-    salvarNoBanco({ login_fundo_ajX: String(ajX), login_fundo_ajY: String(ajY), login_fundo_zoom: String(ajZoom) })
+    salvarNoBanco({ login_fundo_ajX: String(ajX), login_fundo_ajY: String(ajY), login_fundo_zoom: String(ajZoom), login_fundo_modoAj: '1' })
     setAjuste(false)
   }
 
   function resetarAjuste() {
     setModoAj(false); setAjX(50); setAjY(50); setAjZoom(100)
     setBgSize('cover'); setBgPos('center')
-    salvarNoBanco({ login_fundo_bgSize: 'cover', login_fundo_bgPos: 'center', login_fundo_ajX: '50', login_fundo_ajY: '50', login_fundo_zoom: '100' })
+    salvarNoBanco({ login_fundo_bgSize: 'cover', login_fundo_bgPos: 'center', login_fundo_ajX: '50', login_fundo_ajY: '50', login_fundo_zoom: '100', login_fundo_modoAj: '0' })
     setAjuste(false)
   }
 
