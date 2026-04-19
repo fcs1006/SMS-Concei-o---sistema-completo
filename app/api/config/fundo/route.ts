@@ -24,23 +24,24 @@ export async function POST(req: Request) {
   const body = await req.json()
   const { adminCpf, ...campos } = body
 
-  const { data: adm } = await supabase
-    .from('usuarios')
-    .select('perfil')
-    .eq('usuario', adminCpf)
-    .eq('ativo', true)
-    .single()
-
-  if (adm?.perfil !== 'admin') {
-    return NextResponse.json({ ok: false, error: 'Acesso negado.' }, { status: 403 })
+  // Requer admin logado se CPF informado; sem CPF, aceita apenas chaves de fundo (cosmético)
+  if (adminCpf) {
+    const { data: adm } = await supabase
+      .from('usuarios')
+      .select('perfil')
+      .eq('usuario', adminCpf)
+      .eq('ativo', true)
+      .single()
+    if (adm?.perfil !== 'admin') {
+      return NextResponse.json({ ok: false, error: 'Acesso negado.' }, { status: 403 })
+    }
   }
 
-  const updates = Object.entries(campos)
-    .filter(([k]) => CHAVES.includes(k))
-    .map(([chave, valor]) => ({ chave, valor: String(valor), updated_at: new Date().toISOString() }))
+  const entries = Object.entries(campos).filter(([k]) => CHAVES.includes(k))
 
-  for (const u of updates) {
-    await supabase.from('configuracoes_app').update({ valor: u.valor, updated_at: u.updated_at }).eq('chave', u.chave)
+  for (const [chave, valor] of entries) {
+    await supabase.from('configuracoes_app')
+      .upsert({ chave, valor: String(valor), updated_at: new Date().toISOString() }, { onConflict: 'chave' })
   }
 
   return NextResponse.json({ ok: true })

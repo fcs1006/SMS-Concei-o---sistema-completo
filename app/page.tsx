@@ -58,17 +58,11 @@ export default function Login() {
       .catch(() => {})
   }, [])
 
-  function getAdminCpf(): string | null {
-    try { return JSON.parse(localStorage.getItem('sms_user') || '{}')?.usuario || null } catch { return null }
-  }
-
   function salvarNoBanco(campos: Record<string, string>) {
-    const adminCpf = getAdminCpf()
-    if (!adminCpf) return
     fetch('/api/config/fundo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adminCpf, ...campos })
+      body: JSON.stringify(campos)
     }).catch(() => {})
   }
 
