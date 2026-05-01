@@ -755,6 +755,7 @@ export default function Especialidades() {
           observacao: form.observacao.trim() || null,
           profissional_nome: form.profissional_nome || null,
           prioridade: form.prioridade || null,
+          sexo: form.sexo || null,
           mes, ano,
           criado_por: usuario?.nome || null,
         })
@@ -1461,16 +1462,17 @@ export default function Especialidades() {
                     <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: 'Sora, sans-serif', fontSize: '12px' }}>
                       <colgroup>
                         <col style={{ width: '28px' }} />
-                        <col style={{ width: '22%' }} />
-                        <col style={{ width: '11%' }} />
-                        <col style={{ width: '11%' }} />
-                        <col style={{ width: '14%' }} />
-                        <col style={{ width: '9%' }} />
+                        <col style={{ width: '20%' }} />
+                        <col style={{ width: '10%' }} />
+                        <col style={{ width: '10%' }} />
+                        <col style={{ width: '13%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '10%' }} />
                         <col style={{ width: '120px' }} />
                       </colgroup>
                       <thead>
                         <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                          {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Data', 'Ações'].map(h => (
+                          {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Data', 'Prioridade', 'Ações'].map(h => (
                             <th key={h} style={{ padding: '7px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                           ))}
                         </tr>
@@ -1498,13 +1500,19 @@ export default function Especialidades() {
                               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                               <td style={{ padding: '8px', color: '#94a3b8', fontSize: '11px' }}>{i + 1}</td>
                               <td style={{ padding: '8px', fontWeight: '700', color: '#0f172a', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {(() => { const m = MANCHESTER.find(x => x.valor === a.prioridade); return m ? <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: m.cor, marginRight: '5px', flexShrink: 0, verticalAlign: 'middle' }} title={`${m.label} — ${m.desc}`} /> : null })()}
                                 {a.paciente_nome}
                               </td>
                               <td style={{ padding: '8px', color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.paciente_cns || '—'}</td>
                               <td style={{ padding: '8px', color: '#475569', fontSize: '11px' }}>{a.telefone || '—'}</td>
                               <td style={{ padding: '8px', fontSize: '11px', color: '#0f172a', fontWeight: a.tipo_exame ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.tipo_exame || '—'}</td>
                               <td style={{ padding: '8px', color: '#475569', fontSize: '11px', whiteSpace: 'nowrap' }}>{fmtData(a.data_consulta)}</td>
+                              <td style={{ padding: '8px', fontSize: '11px' }}>
+                                {(() => {
+                                  const m = MANCHESTER.find(x => x.valor === a.prioridade)
+                                  if (!m) return <span style={{ color: '#cbd5e1' }}>—</span>
+                                  return <span style={{ padding: '3px 8px', borderRadius: '12px', background: m.bg, color: m.cor, border: `1px solid ${m.borda}`, fontWeight: '600', whiteSpace: 'nowrap', fontSize: '10px' }}>{m.label}</span>
+                                })()}
+                              </td>
                               <td style={{ padding: '6px 8px' }}>
                                 <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexWrap: 'nowrap' }}>
                                   {btn(async () => {
@@ -1730,18 +1738,19 @@ export default function Especialidades() {
                         <col style={{ width: '32px' }} />
                         {!relFiltroEsp && <col style={{ width: '96px' }} />}
                         <col />
+                        <col style={{ width: '90px' }} />
                         <col style={{ width: '100px' }} />
-                        <col style={{ width: '116px' }} />
-                        <col style={{ width: '76px' }} />
-                        <col style={{ width: '66px' }} />
-                        <col style={{ width: '120px' }} />
+                        <col style={{ width: '70px' }} />
+                        <col style={{ width: '60px' }} />
+                        <col style={{ width: '100px' }} />
+                        <col style={{ width: '80px' }} />
                         <col style={{ width: '84px' }} />
-                        <col style={{ width: '120px' }} />
+                        <col style={{ width: '90px' }} />
                         <col style={{ width: '92px' }} />
                       </colgroup>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                          {['#', ...(!relFiltroEsp ? ['Especialidade'] : []), 'Paciente', 'Telefone', 'Tipo', 'Data', 'Período', 'Profissional', 'Status', 'Operador', 'Ações'].map(h => (
+                          {['#', ...(!relFiltroEsp ? ['Especialidade'] : []), 'Paciente', 'Telefone', 'Tipo', 'Data', 'Período', 'Profissional', 'Prioridade', 'Status', 'Operador', 'Ações'].map(h => (
                             <th key={h} style={{ padding: '7px 8px', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden' }}>{h}</th>
                           ))}
                         </tr>
@@ -1774,6 +1783,13 @@ export default function Especialidades() {
                                 {r.periodo ? <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '10px', fontWeight: '600', fontSize: '10px', whiteSpace: 'nowrap' }}>{r.periodo}</span> : <span style={{ color: '#cbd5e1' }}>—</span>}
                               </td>
                               <td style={{ padding: '7px 8px', fontSize: '11px', ...trunc }} title={r.profissional_nome}>{r.profissional_nome || '—'}</td>
+                              <td style={{ padding: '7px 8px', fontSize: '11px' }}>
+                                {(() => {
+                                  const m = MANCHESTER.find(x => x.valor === r.prioridade)
+                                  if (!m) return <span style={{ color: '#cbd5e1' }}>—</span>
+                                  return <span style={{ padding: '2px 6px', borderRadius: '12px', background: m.bg, color: m.cor, border: `1px solid ${m.borda}`, fontWeight: '600', whiteSpace: 'nowrap', fontSize: '9px' }}>{m.label}</span>
+                                })()}
+                              </td>
                               <td style={{ padding: '7px 8px' }}>
                                 <span title={motivo || ''} style={{ fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '12px', background: st.bg, color: st.cor, border: `1px solid ${st.borda}`, whiteSpace: 'nowrap', cursor: motivo ? 'help' : 'default' }}>
                                   {STATUS_LABEL[r.status]}{motivo ? ' *' : ''}
