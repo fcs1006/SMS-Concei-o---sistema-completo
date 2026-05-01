@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Francisco Avatar</title></head>
+<body style="background:#1a1a2e;display:flex;align-items:center;justify-content:center;min-height:100vh;gap:32px;flex-wrap:wrap">
+
+<script>
+function download(id, name) {
+  const canvas = document.getElementById(id)
+  const a = document.createElement('a')
+  a.download = name
+  a.href = canvas.toDataURL('image/png')
+  a.click()
+}
+</script>
+
+<!-- Versão Verde SMS -->
+<div style="text-align:center">
+  <canvas id="c1" width="500" height="500" style="border-radius:50%;display:block;margin-bottom:12px"></canvas>
+  <button onclick="download('c1','francisco-avatar.png')"
+    style="padding:10px 24px;background:#25d366;border:none;border-radius:8px;color:white;font-size:14px;font-weight:700;cursor:pointer">
+    ⬇ Baixar
+  </button>
+</div>
+
+<script>
+const c = document.getElementById('c1')
+const ctx = c.getContext('2d')
+const s = 500
+
+// Fundo gradiente verde saúde
+const grad = ctx.createRadialGradient(s/2, s/2, 0, s/2, s/2, s/2)
+grad.addColorStop(0, '#1a7a4a')
+grad.addColorStop(1, '#0d4a2c')
+ctx.fillStyle = grad
+ctx.beginPath()
+ctx.arc(s/2, s/2, s/2, 0, Math.PI*2)
+ctx.fill()
+
+// Círculo interno claro
+ctx.fillStyle = 'rgba(255,255,255,0.07)'
+ctx.beginPath()
+ctx.arc(s/2, s/2, s*0.42, 0, Math.PI*2)
+ctx.fill()
+
+// Cruz médica
+ctx.fillStyle = 'rgba(255,255,255,0.12)'
+const cw = 60, ch = 180, cx = s/2 - cw/2, cy = s/2 - ch/2
+ctx.beginPath()
+ctx.roundRect(cx, cy, cw, ch, 8)
+ctx.fill()
+ctx.beginPath()
+ctx.roundRect(cy, cx, ch, cw, 8)
+ctx.fill()
+
+// Ícone robô / cabeça
+// Cabeça
+ctx.fillStyle = 'white'
+ctx.beginPath()
+ctx.roundRect(s/2-70, s/2-90, 140, 120, 18)
+ctx.fill()
+
+// Antena
+ctx.fillStyle = 'white'
+ctx.fillRect(s/2-4, s/2-130, 8, 44)
+ctx.beginPath()
+ctx.arc(s/2, s/2-132, 10, 0, Math.PI*2)
+ctx.fill()
+
+// Olhos
+ctx.fillStyle = '#1a7a4a'
+ctx.beginPath(); ctx.arc(s/2-28, s/2-40, 16, 0, Math.PI*2); ctx.fill()
+ctx.beginPath(); ctx.arc(s/2+28, s/2-40, 16, 0, Math.PI*2); ctx.fill()
+
+// Brilho olhos
+ctx.fillStyle = 'white'
+ctx.beginPath(); ctx.arc(s/2-22, s/2-46, 5, 0, Math.PI*2); ctx.fill()
+ctx.beginPath(); ctx.arc(s/2+34, s/2-46, 5, 0, Math.PI*2); ctx.fill()
+
+// Boca sorriso
+ctx.strokeStyle = '#1a7a4a'
+ctx.lineWidth = 5
+ctx.lineCap = 'round'
+ctx.beginPath()
+ctx.arc(s/2, s/2-20, 30, 0.2, Math.PI-0.2)
+ctx.stroke()
+
+// Corpo
+ctx.fillStyle = 'white'
+ctx.beginPath()
+ctx.roundRect(s/2-55, s/2+40, 110, 80, 12)
+ctx.fill()
+
+// Botões no peito
+ctx.fillStyle = '#25d366'
+ctx.beginPath(); ctx.arc(s/2-20, s/2+80, 8, 0, Math.PI*2); ctx.fill()
+ctx.fillStyle = '#1a7a4a'
+ctx.beginPath(); ctx.arc(s/2+10, s/2+80, 8, 0, Math.PI*2); ctx.fill()
+ctx.fillStyle = '#0d4a2c'
+ctx.beginPath(); ctx.arc(s/2+35, s/2+80, 8, 0, Math.PI*2); ctx.fill()
+
+// Nome Francisco
+ctx.fillStyle = 'white'
+ctx.font = 'bold 38px Arial'
+ctx.textAlign = 'center'
+ctx.fillText('Francisco', s/2, s/2+170)
+
+// Subtítulo SMS
+ctx.font = '18px Arial'
+ctx.fillStyle = 'rgba(255,255,255,0.7)'
+ctx.fillText('Assistente Virtual • SMS', s/2, s/2+200)
+</script>
+
+</body>
+</html>
