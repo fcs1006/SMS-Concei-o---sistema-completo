@@ -180,6 +180,11 @@ async function consolidarUrgencia(competencia: string, fixos: any) {
         continue
       }
 
+      if (pessoa.isAcompanhante && (idade < 18 || idade >= 60)) {
+        erros.push({ nome: nomePaciente, data: v.data_viagem, motivo: 'Acompanhante deve ter entre 18 e 59 anos', valor: `${idade} anos` })
+        continue
+      }
+
       const sexoTratado = tratarSexo(pac.sexo || '')
       if (!sexoTratado) {
         erros.push({ nome: nomePaciente, data: v.data_viagem, motivo: 'Sexo não informado', valor: pac.sexo || `CPF: ${cpfNorm}` })
@@ -196,6 +201,15 @@ async function consolidarUrgencia(competencia: string, fixos: any) {
       const bairro = pac.bairro || ''
       const cep = (String(pac.cep || fixos.CEP_PADRAO)).replace(/\D/g, '').padStart(8, '0')
       const telefone = (pac.telefone || '').replace(/\D/g, '')
+
+      if (!endereco.trim()) {
+        erros.push({ nome: nomePaciente, data: v.data_viagem, motivo: 'Endereço não informado na base de pacientes', valor: '' })
+        continue
+      }
+      if (!bairro.trim()) {
+        erros.push({ nome: nomePaciente, data: v.data_viagem, motivo: 'Bairro não informado na base de pacientes', valor: '' })
+        continue
+      }
 
       if (seq > 99) { folha++; seq = 1 }
 
@@ -428,6 +442,18 @@ async function consolidarLaboratorio(linhas: any[], competencia: string, fixos: 
       }
     }
 
+    const endereco = String(linha.endereco || pacDb.endereco || '')
+    const bairro = String(linha.bairro || pacDb.bairro || '')
+
+    if (!endereco.trim()) {
+      erros.push({ nome: nomePaciente, data: dtAtendRaw, motivo: 'Endereço não informado', valor: '' })
+      continue
+    }
+    if (!bairro.trim()) {
+      erros.push({ nome: nomePaciente, data: dtAtendRaw, motivo: 'Bairro não informado', valor: '' })
+      continue
+    }
+
     individualizados.push({
       nomePaciente,
       dataAtend,
@@ -436,8 +462,8 @@ async function consolidarLaboratorio(linhas: any[], competencia: string, fixos: 
       sexoTratado,
       doc,
       procedimento,
-      endereco: String(linha.endereco || pacDb.endereco || ''),
-      bairro: String(linha.bairro || pacDb.bairro || ''),
+      endereco,
+      bairro,
       cep: String(linha.cep || pacDb.cep || fixos.CEP_PADRAO).replace(/\D/g, '').padStart(8, '0'),
       numero: String(linha.numero || 'SN').substring(0, 5),
       telefone: String(linha.telefone || pacDb.telefone || '').replace(/\D/g, ''),

@@ -430,7 +430,7 @@ function BuscaPaciente({ onSelect }) {
     if (v.trim().length < 2) { setSugestoes([]); setAberto(false); return }
     timer.current = setTimeout(async () => {
       const soDigitos = v.replace(/\D/g, '')
-      let query = supabase.from('pacientes').select('id, nome, cpf_cns, telefone, sexo').order('nome').limit(8)
+      let query = supabase.from('pacientes').select('id, nome, cpf_cns, telefone, sexo, endereco, bairro').order('nome').limit(8)
       if (soDigitos.length >= 3 && !/[a-zA-ZÀ-ÿ]/.test(v)) {
         query = query.ilike('cpf_cns', `%${soDigitos}%`)
       } else {
@@ -508,7 +508,7 @@ export default function Especialidades() {
 
   // Formulário de agendamento
   const [mostrarForm, setMostrarForm] = useState(false)
-  const [form, setForm] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '', data_atendimento: '', prioridade: '' })
+  const [form, setForm] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', endereco: '', bairro: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '', data_atendimento: '', prioridade: '' })
   const [salvando, setSalvando] = useState(false)
 
   // Modal profissionais
@@ -716,6 +716,8 @@ export default function Especialidades() {
       paciente_cns: p.cpf_cns || '',
       telefone: p.telefone || '',
       sexo: p.sexo || '',
+      endereco: p.endereco || '',
+      bairro: p.bairro || '',
       // limpa tipo de exame se o sexo mudou e o exame selecionado fosse incompatível
       tipo_exame: '',
     }))
@@ -725,6 +727,10 @@ export default function Especialidades() {
     const isUsg = esp === 'usg'
     if (!form.paciente_nome.trim()) { mostrarMsg('Informe o nome do paciente', false); return }
     if (!form.telefone.trim()) { mostrarMsg('Informe o telefone', false); return }
+    if (!form.endereco || !form.bairro) {
+      mostrarMsg('Atualize o endereço e bairro deste paciente na aba "Pacientes" antes de agendar.', false)
+      return
+    }
     if (!form.data_consulta) { mostrarMsg('Informe a data de solicitação', false); return }
     if (!form.tipo_exame) { mostrarMsg(isUsg ? 'Selecione o tipo de exame' : 'Selecione o tipo de consulta', false); return }
     if (escala.length > 0 && !form.profissional_nome) { mostrarMsg('Selecione o profissional', false); return }
@@ -952,6 +958,7 @@ export default function Especialidades() {
             observacao: formEditar.observacao || null,
             profissional_nome: formEditar.profissional_nome || null,
             periodo: formEditar.periodo || null,
+            prioridade: formEditar.prioridade || null,
           }
         })
       })
@@ -1879,7 +1886,10 @@ export default function Especialidades() {
               </div>
               <div>
                 <label className="label-modern">Sexo</label>
-                <select className="input-modern" value={formEditar.sexo} onChange={e => setFormEditar(f => ({ ...f, sexo: e.target.value, tipo_exame: '' }))} style={{ width: '100%' }}>
+                <select className="input-modern" value={
+                  ['M', 'MASCULINO', 'Masculino', 'm'].includes(formEditar.sexo) ? 'M' : 
+                  ['F', 'FEMININO', 'Feminino', 'f'].includes(formEditar.sexo) ? 'F' : ''
+                } onChange={e => setFormEditar(f => ({ ...f, sexo: e.target.value, tipo_exame: '' }))} style={{ width: '100%' }}>
                   <option value="">— Não informado —</option>
                   <option value="M">Masculino</option>
                   <option value="F">Feminino</option>

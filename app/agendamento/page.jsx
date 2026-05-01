@@ -326,6 +326,22 @@ export default function Agendamento() {
       setStatus({ msg: `Campos obrigatórios incompletos: ${faltando.join(', ')}`, tipo: 'erro' })
       return
     }
+
+    if (form.temAcomp === 'SIM' && form.nomeA1) {
+      const i1 = Number(calcularIdade(form.nascA1))
+      if (i1 < 18 || i1 >= 60) {
+        setStatus({ msg: `O Acompanhante 1 (${form.nomeA1}) tem ${i1} anos. O sistema exige entre 18 e 59 anos.`, tipo: 'erro' })
+        return
+      }
+    }
+
+    if (form.temAcomp === 'SIM' && form.nomeA2) {
+      const i2 = Number(calcularIdade(form.nascA2))
+      if (i2 < 18 || i2 >= 60) {
+        setStatus({ msg: `O Acompanhante 2 (${form.nomeA2}) tem ${i2} anos. O sistema exige entre 18 e 59 anos.`, tipo: 'erro' })
+        return
+      }
+    }
     setSalvando(true)
     setStatus({ msg: '', tipo: '' })
     setUltimoAgendamento(null)
