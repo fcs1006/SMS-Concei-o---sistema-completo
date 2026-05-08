@@ -18,15 +18,15 @@ function gerarHtmlAgendamento(d) {
   }
 
   function linha(label, valor, colspan = 1) {
-    return `<td colspan="${colspan}" style="padding:5px 7px;border:1px solid #000;vertical-align:top;">
-      <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:#555;display:block;">${label}</span>
-      <span style="font-size:11px;">${valor || '-'}</span>
+    return `<td colspan="${colspan}" style="padding:8px 10px;border:1px solid #000;vertical-align:top;">
+      <span style="font-size:14px;font-weight:700;text-transform:uppercase;color:#555;display:block;">${label}</span>
+      <span style="font-size:16px;">${valor || '-'}</span>
     </td>`
   }
 
   const secao = (titulo) => `
-    <tr><td colspan="4" style="background:#172554;color:#fff;font-weight:700;font-size:11px;
-      text-transform:uppercase;padding:6px 8px;border:1px solid #000;letter-spacing:.5px;">
+    <tr><td colspan="4" style="background:#172554;color:#fff;font-weight:700;font-size:14px;
+      text-transform:uppercase;padding:8px 10px;border:1px solid #000;letter-spacing:.5px;">
       ${titulo}
     </td></tr>`
 
@@ -60,13 +60,13 @@ function gerarHtmlAgendamento(d) {
 
   return `
     <style>
-      body { font-family: Arial, sans-serif; font-size: 11px; padding: 14px; color: #000; }
+      body { font-family: Arial, sans-serif; font-size: 14px; padding: 14px; color: #000; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
       @page { size: A4 portrait; margin: 10mm; }
     </style>
     ${cabecalhoImpressao()}
-    <h2 style="text-align:center;font-size:14px;font-weight:700;text-transform:uppercase;
-      margin:10px 0;letter-spacing:1px;border-bottom:2px solid #172554;padding-bottom:6px;">
+    <h2 style="text-align:center;font-size:18px;font-weight:700;text-transform:uppercase;
+      margin:15px 0;letter-spacing:1px;border-bottom:2px solid #172554;padding-bottom:6px;">
       Controle de Viagem
     </h2>
     <table>
@@ -104,9 +104,9 @@ function gerarHtmlAgendamento(d) {
         ${linha('Agendado por', d.agendadoPor || d.agendado_por)}
       </tr>
     </table>
-    <div style="margin-top:24px;text-align:center;font-size:11px;font-weight:600;">
-      <p style="margin:0 0 40px;">${dataLocal}</p>
-      <div style="border-top:1px solid #000;width:260px;margin:0 auto;padding-top:4px;">
+    <div style="margin-top:30px;text-align:center;font-size:14px;font-weight:600;">
+      <p style="margin:0 0 50px;">${dataLocal}</p>
+      <div style="border-top:1px solid #000;width:300px;margin:0 auto;padding-top:4px;">
         ASSINATURA
       </div>
     </div>

@@ -91,7 +91,7 @@ function fmtData(v) {
 }
 
 // ── Comprovante de Autorização ────────────────────────────────────────────────
-function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins/TO', preparos = PREPARO_USG) {
+function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins/TO', preparos = PREPARO_USG, dtNasc = null) {
   const hoje = new Date()
   const dataEmissao = hoje.toLocaleDateString('pt-BR')
   const horaEmissao = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -155,8 +155,9 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
     <div class="secao">
       <div class="secao-titulo">Dados do Paciente</div>
       <div class="linha-campos">
-        <div class="campo"><label>Nome completo</label><span>${ag.paciente_nome || '—'}</span></div>
+        <div class="campo"><label>Nome completo</label><span style="white-space:normal;overflow:visible;text-overflow:clip;">${ag.paciente_nome || '—'}</span></div>
         <div class="campo" style="max-width:160px"><label>CPF / CNS</label><span>${ag.paciente_cns || '—'}</span></div>
+        <div class="campo" style="max-width:130px"><label>Data de Nascimento</label><span>${dtNasc ? dtNasc.split('-').reverse().join('/') : '—'}</span></div>
         <div class="campo" style="max-width:130px"><label>Telefone</label><span>${ag.telefone || '—'}</span></div>
       </div>
     </div>
@@ -800,8 +801,25 @@ export default function Especialidades() {
       setJustificativaCota('')
       mostrarMsg('Agendamento autorizado')
       // Abre comprovante automaticamente
-      imprimirComprovante(registroAtualizado, espAtiva.label, undefined, preparosDb)
+      imprimirComprovanteComDados(registroAtualizado, espAtiva.label)
     } catch (e) { mostrarMsg('' + e.message, false) }
+  }
+
+  // Busca dt_nasc do paciente e imprime o comprovante com a data de nascimento
+  async function imprimirComprovanteComDados(ag, espLabel) {
+    let dtNasc = null
+    try {
+      const cns = ag.paciente_cns
+      if (cns) {
+        const { data } = await supabase
+          .from('pacientes')
+          .select('dt_nasc')
+          .eq('cpf_cns', cns)
+          .maybeSingle()
+        dtNasc = data?.dt_nasc || null
+      }
+    } catch (_) { }
+    imprimirComprovante(ag, espLabel, undefined, preparosDb, dtNasc)
   }
 
   async function voltarPendente(id) {
@@ -1808,7 +1826,7 @@ export default function Especialidades() {
                               <td style={{ padding: '5px 8px' }}>
                                 <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
                                   {r.status !== 'excluido' && btn2(() => voltarPendente(r.id).then(() => buscarRelatorio()), 'Voltar para pendente', '#fef9c3', '#fde047', '#854d0e', '↩')}
-                                  {r.status === 'autorizado' && btn2(() => imprimirComprovante(r, esp2?.label || r.especialidade, undefined, preparosDb), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', <Printer size={11} />)}
+                                  {r.status === 'autorizado' && btn2(() => imprimirComprovanteComDados(r, esp2?.label || r.especialidade), 'Imprimir comprovante', '#eff6ff', '#93c5fd', '#1d4ed8', <Printer size={11} />)}
                                   {r.status !== 'excluido' && btn2(() => { setModalExcluir({ show: true, id: r.id }); setMotivoExclusao('') }, 'Excluir', '#f1f5f9', '#cbd5e1', '#64748b', <Trash2 size={11} />)}
                                 </div>
                               </td>

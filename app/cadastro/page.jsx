@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
+import { Upload, X } from 'lucide-react'
 
 const FORM_INICIAL = {
   nome: '',
@@ -94,6 +95,11 @@ export default function Cadastro() {
   const [carregandoLista, setCarregandoLista] = useState(false)
   const [editandoId, setEditandoId] = useState(null)
   const [excluindo, setExcluindo] = useState(null)
+  
+  // Importação e-SUS
+  const [modalImportar, setModalImportar] = useState(false)
+  const [arqImportacao, setArqImportacao] = useState(null)
+  const [importando, setImportando] = useState(false)
 
   function setField(id, val) {
     setForm(f => ({ ...f, [id]: val }))
@@ -253,24 +259,104 @@ export default function Cadastro() {
     return () => clearTimeout(timer)
   }, [busca, usuario])
 
+  function lerCsv(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = async (ev) => {
+      try {
+        const texto = ev.target.result
+        const separador = texto.includes(';') ? ';' : (texto.includes('\t') ? '\t' : ',')
+        const linhasRaw = texto.split('\n')
+        const cabecalho = linhasRaw[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(separador).map(c => c.trim().replace(/^"|"$/g, ''))
+        
+        const idxNome = cabecalho.findIndex(c => c.includes('cidadao') || c === 'nome')
+        const idxCns = cabecalho.findIndex(c => c === 'cns')
+        const idxCpf = cabecalho.findIndex(c => c === 'cpf')
+        const idxNasc = cabecalho.findIndex(c => c.includes('nasc'))
+        const idxSexo = cabecalho.findIndex(c => c === 'sexo')
+        const idxTelefone = cabecalho.findIndex(c => c.includes('telefone') || c.includes('celular'))
+        const idxLogradouro = cabecalho.findIndex(c => c.includes('logradouro') || c.includes('endereco'))
+        const idxBairro = cabecalho.findIndex(c => c === 'bairro')
+        const idxCep = cabecalho.findIndex(c => c === 'cep')
+
+        const dados = []
+        for (let i = 1; i < linhasRaw.length; i++) {
+          const l = linhasRaw[i].split(separador).map(c => c.trim().replace(/^"|"$/g, ''))
+          if (l.length > 1 && l[idxNome] && idxNome >= 0) {
+            dados.push({
+              nome: l[idxNome],
+              cns: idxCns >= 0 ? l[idxCns] : '',
+              cpf: idxCpf >= 0 ? l[idxCpf] : '',
+              dtNasc: idxNasc >= 0 ? l[idxNasc] : '',
+              sexo: idxSexo >= 0 ? l[idxSexo] : '',
+              telefone: idxTelefone >= 0 ? l[idxTelefone] : '',
+              endereco: idxLogradouro >= 0 ? l[idxLogradouro] : '',
+              bairro: idxBairro >= 0 ? l[idxBairro] : '',
+              cep: idxCep >= 0 ? l[idxCep] : ''
+            })
+          }
+        }
+        setArqImportacao({ nome: file.name, total: dados.length, dados })
+      } catch (err) {
+        setStatus({ msg: 'Erro ao ler arquivo CSV. Verifique o formato.', tipo: 'erro' })
+      }
+    }
+    reader.readAsText(file, 'utf-8')
+    e.target.value = ''
+  }
+
+  async function enviarImportacao() {
+    if (!arqImportacao || !arqImportacao.dados) return
+    setImportando(true)
+    setStatus({ msg: '', tipo: '' })
+    try {
+      const resp = await fetch('/api/pacientes/importar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linhas: arqImportacao.dados })
+      })
+      const json = await resp.json()
+      if (!json.ok) throw new Error(json.error || 'Erro na importação')
+      
+      setStatus({ 
+        msg: `✅ Importação concluída! Novos: ${json.resultados.inseridos} | Atualizados: ${json.resultados.atualizados} | Sem alteração: ${json.resultados.ignorados}`, 
+        tipo: 'ok' 
+      })
+      setModalImportar(false)
+      setArqImportacao(null)
+      carregarPacientes(busca)
+    } catch (err) {
+      setStatus({ msg: `❌ Erro na importação: ${err.message}`, tipo: 'erro' })
+    }
+    setImportando(false)
+  }
+
   const lbl = 'label-modern'
 
   return (
     <Layout usuario={usuario}>
       <div style={{ padding: '28px', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '24px' }}>
-          <h1 style={{
-            fontFamily: 'Sora, sans-serif',
-            fontSize: '22px',
-            fontWeight: '700',
-            color: '#0f172a',
-            margin: '0 0 4px'
-          }}>
-            Pacientes
-          </h1>
-          <p style={{ color: '#000000', fontSize: '13px', margin: 0 }}>
-            Cadastre, busque e atualize pacientes usados no BPA e nos agendamentos
-          </p>
+        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h1 style={{
+              fontFamily: 'Sora, sans-serif',
+              fontSize: '22px',
+              fontWeight: '700',
+              color: '#0f172a',
+              margin: '0 0 4px'
+            }}>
+              Pacientes
+            </h1>
+            <p style={{ color: '#000000', fontSize: '13px', margin: 0 }}>
+              Cadastre, busque e atualize pacientes usados no BPA e nos agendamentos
+            </p>
+          </div>
+          <button
+            onClick={() => setModalImportar(true)}
+            style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #059669, #10b981)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '13px', cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Upload size={14} /> Importar e-SUS
+          </button>
         </div>
 
         {status.msg && (
@@ -539,6 +625,49 @@ export default function Cadastro() {
           </div>
         </div>
       </div>
+
+      {/* Modal Importar */}
+      {modalImportar && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: 'white', borderRadius: '16px', width: '100%', maxWidth: '500px', padding: '24px', boxShadow: '0 25px 50px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Upload size={18} color="#059669" /> Importar CSV do e-SUS
+              </h2>
+              <button onClick={() => { setModalImportar(false); setArqImportacao(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <p style={{ fontSize: '13px', color: '#475569', marginBottom: '20px', lineHeight: '1.5' }}>
+              Exporte a planilha de <strong>Cidadãos Vinculados</strong> do seu e-SUS (Botão Exportar CSV) e envie aqui. O sistema irá cadastrar os novos e atualizar dados faltantes dos existentes (preservando telefones atuais).
+            </p>
+
+            <div style={{ border: '1.5px dashed #10b981', background: '#ecfdf5', borderRadius: '12px', padding: '24px', textAlign: 'center', marginBottom: '20px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: 'white', border: '1px solid #10b981', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: '600', color: '#047857' }}>
+                <Upload size={16} /> {arqImportacao ? 'Trocar Arquivo' : 'Escolher Arquivo CSV'}
+                <input type="file" accept=".csv,.tsv,.txt" style={{ display: 'none' }} onChange={lerCsv} disabled={importando} />
+              </label>
+              {arqImportacao && (
+                <div style={{ marginTop: '12px', fontSize: '13px', color: '#065f46', fontWeight: '600' }}>
+                  📄 {arqImportacao.nome} <br/>
+                  <span style={{ fontSize: '12px', fontWeight: '400' }}>{arqImportacao.total} pacientes identificados</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button className="btn-secondary" onClick={() => { setModalImportar(false); setArqImportacao(null) }} disabled={importando}>
+                Cancelar
+              </button>
+              <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }} onClick={enviarImportacao} disabled={!arqImportacao || importando}>
+                {importando ? 'Sincronizando...' : 'Iniciar Sincronização'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   )
 }
