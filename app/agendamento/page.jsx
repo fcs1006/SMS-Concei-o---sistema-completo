@@ -6,6 +6,25 @@ import Layout from '@/components/Layout'
 import { cabecalhoImpressao } from '@/lib/printHeader'
 import { Printer, UserPlus, User, Users, MapPin } from 'lucide-react'
 
+/* ─── MÁSCARAS ─────────────────────────────────────────────────── */
+function mascaraCpf(v) {
+  if (!v) return '-'
+  const d = v.replace(/\D/g, '')
+  if (d.length === 11)
+    return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+  return v // CNS ou outro formato: devolve como está
+}
+
+function mascaraTelefone(v) {
+  if (!v) return '-'
+  const d = v.replace(/\D/g, '')
+  if (d.length === 11)
+    return d.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+  if (d.length === 10)
+    return d.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+  return v
+}
+
 /* ─── IMPRESSÃO ─────────────────────────────────────────────────── */
 function gerarHtmlAgendamento(d) {
   const hoje = new Date()
@@ -34,8 +53,8 @@ function gerarHtmlAgendamento(d) {
     ${secao('Acompanhante 1')}
     <tr>
       ${linha('Nome', d.nomeA1 || d.acomp1_nome, 2)}
-      ${linha('CPF/CNS', d.cpfA1 || d.acomp1_cpf)}
-      ${linha('Telefone', d.telA1)}
+      ${linha('CPF/CNS', mascaraCpf(d.cpfA1 || d.acomp1_cpf))}
+      ${linha('Telefone', mascaraTelefone(d.telA1))}
     </tr>
     <tr>
       ${linha('Data Nasc.', formatarData(d.nascA1))}
@@ -48,8 +67,8 @@ function gerarHtmlAgendamento(d) {
     ${secao('Acompanhante 2')}
     <tr>
       ${linha('Nome', d.nomeA2 || d.acomp2_nome, 2)}
-      ${linha('CPF/CNS', d.cpfA2 || d.acomp2_cpf)}
-      ${linha('Telefone', d.telA2)}
+      ${linha('CPF/CNS', mascaraCpf(d.cpfA2 || d.acomp2_cpf))}
+      ${linha('Telefone', mascaraTelefone(d.telA2))}
     </tr>
     <tr>
       ${linha('Data Nasc.', formatarData(d.nascA2))}
@@ -63,6 +82,7 @@ function gerarHtmlAgendamento(d) {
       body { font-family: Arial, sans-serif; font-size: 14px; padding: 14px; color: #000; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
       @page { size: A4 portrait; margin: 10mm; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
     </style>
     ${cabecalhoImpressao()}
     <h2 style="text-align:center;font-size:18px;font-weight:700;text-transform:uppercase;
@@ -77,8 +97,8 @@ function gerarHtmlAgendamento(d) {
       ${secao('Dados do Paciente')}
       <tr>
         ${linha('Nome do Paciente', d.nome || d.paciente_nome, 2)}
-        ${linha('CPF/CNS', d.cpf || d.paciente_cpf)}
-        ${linha('Telefone', d.telefone)}
+        ${linha('CPF/CNS', mascaraCpf(d.cpf || d.paciente_cpf))}
+        ${linha('Telefone', mascaraTelefone(d.telefone))}
       </tr>
       <tr>
         ${linha('Data Nasc.', formatarData(d.dtNasc))}
