@@ -58,41 +58,54 @@ export default function PainelGeral() {
   }, [])
 
   async function carregarDados() {
-    setCarregando(true)
-    const hoje = new Date()
-    const pad = (n) => String(n).padStart(2, '0')
-    const hojeStr = `${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}-${pad(hoje.getDate())}`
-    const inicioMes = `${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}-01`
+    try {
+      setCarregando(true)
+      const hoje = new Date()
+      const pad = (n) => String(n).padStart(2, '0')
+      const hojeStr = `${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}-${pad(hoje.getDate())}`
+      const inicioMes = `${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}-01`
 
-    const [
-      { count: viagensHoje },
-      { count: viagensMes },
-      { count: totalPacientes },
-      { count: servidoresAtivos },
-      { data: viagensDestinoRaw },
-      { data: ultimasViagens }
-    ] = await Promise.all([
-      supabase.from('viagens').select('*', { count: 'exact', head: true }).eq('data_viagem', hojeStr),
-      supabase.from('viagens').select('*', { count: 'exact', head: true }).gte('data_viagem', inicioMes),
-      supabase.from('pacientes').select('*', { count: 'exact', head: true }),
-      supabase.from('servidores').select('*', { count: 'exact', head: true }).eq('ativo', true),
-      supabase.from('viagens').select('destino').gte('data_viagem', inicioMes),
-      supabase.from('viagens').select('data_viagem, hora, paciente_nome, destino, created_at').order('created_at', { ascending: false, nullsFirst: false }).order('data_viagem', { ascending: false }).limit(5)
-    ])
+      // Consultas individuais para evitar que um erro em uma trave tudo
+      const { count: vHoje } = await supabase.from('viagens').select('*', { count: 'exact', head: true }).eq('data_viagem', hojeStr)
+      const { count: vMes } = await supabase.from('viagens').select('*', { count: 'exact', head: true }).gte('data_viagem', inicioMes)
+      const { count: pTot } = await supabase.from('pacientes').select('*', { count: 'exact', head: true })
+      
+      // Corrigido: a tabela de login é 'usuarios'
+      const { count: sAtv } = await supabase.from('usuarios').select('*', { count: 'exact', head: true }).eq('ativo', true)
+      
+      const { data: vDest } = await supabase.from('viagens').select('destino').gte('data_viagem', inicioMes)
+      const { data: vUlt } = await supabase.from('viagens')
+        .select('data_viagem, hora, paciente_nome, destino, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5)
 
-    // Contagem por destino
-    const contagem = {}
-    for (const v of (viagensDestinoRaw || [])) {
-      const d = v.destino || 'Não informado'
-      contagem[d] = (contagem[d] || 0) + 1
+      // Processar destinos
+      const contagem = {}
+      if (vDest) {
+        vDest.forEach(v => {
+          const d = v.destino || 'Não informado'
+          contagem[d] = (contagem[d] || 0) + 1
+        })
+      }
+      
+      const destinosTop = Object.entries(contagem)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([destino, total]) => ({ destino, total }))
+
+      setStats({
+        viagensHoje: vHoje || 0,
+        viagensMes: vMes || 0,
+        totalPacientes: pTot || 0,
+        servidoresAtivos: sAtv || 0,
+        destinosTop,
+        ultimasViagens: vUlt || []
+      })
+    } catch (err) {
+      console.error("Erro no painel:", err)
+    } finally {
+      setCarregando(false)
     }
-    const destinosTop = Object.entries(contagem)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([destino, total]) => ({ destino, total }))
-
-    setStats({ viagensHoje, viagensMes, totalPacientes, servidoresAtivos, destinosTop, ultimasViagens: ultimasViagens || [] })
-    setCarregando(false)
   }
 
   const mesAtual = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })

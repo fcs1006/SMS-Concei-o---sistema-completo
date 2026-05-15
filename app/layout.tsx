@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: "Secretaria Municipal de Saúde de Conceição do Tocantins",
 };
 
+import LGPDConsent from "@/components/LGPDConsent";
+
 export default function RootLayout({
   children,
 }: {
@@ -25,6 +27,7 @@ export default function RootLayout({
       </head>
       <body>
         {children}
+        <LGPDConsent />
         <Script id="sw-register" strategy="afterInteractive">{`
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {})

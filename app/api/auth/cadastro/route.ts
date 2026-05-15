@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (!nome || !cpf || !senha || !telefone || !email) {
       return NextResponse.json({ ok: false, error: 'Todos os campos são obrigatórios.' }, { status: 400 })
     }
-    if (cpf.length !== 11) {
+    if (cpf.replace(/\D/g, '').length !== 11) {
       return NextResponse.json({ ok: false, error: 'CPF inválido.' }, { status: 400 })
     }
     if (senha.length < 6) {

@@ -8,13 +8,21 @@ import {
   Bot, Settings, LogOut, ChevronLeft, ChevronRight
 } from 'lucide-react'
 
-export default function Layout({ children, usuario }) {
+import Link from 'next/link'
+
+export default function Layout({ children }) {
   const router = useRouter()
   const pathname = usePathname()
   const [recolhido, setRecolhido] = useState(false)
   const [anoAtual, setAnoAtual] = useState('')
+  const [usuario, setUsuario] = useState(null)
 
-  useEffect(() => { setAnoAtual(String(new Date().getFullYear())) }, [])
+  useEffect(() => { 
+    setAnoAtual(String(new Date().getFullYear()))
+    // Carrega o usuário localmente no Layout para ser independente
+    const u = localStorage.getItem('sms_user')
+    if (u) setUsuario(JSON.parse(u))
+  }, [])
 
   useEffect(() => {
     const salvo = localStorage.getItem('sidebar_recolhido')
@@ -245,9 +253,15 @@ export default function Layout({ children, usuario }) {
         <footer style={{
           textAlign: 'center', padding: '12px',
           color: '#94a3b8', fontSize: '11px',
-          fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.03em'
+          fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.03em',
+          display: 'flex', flexDirection: 'column', gap: '6px'
         }}>
-          {anoAtual ? `© ${anoAtual} GestSus — Todos os direitos reservados` : ''}
+          <div>{anoAtual ? `© ${anoAtual} GestSus — Todos os direitos reservados` : ''}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+            <Link href="/privacidade" style={{ color: '#64748b', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#3b82f6'} onMouseLeave={e => e.currentTarget.style.color = '#64748b'}>Política de Privacidade</Link>
+            <span>•</span>
+            <Link href="/termos" style={{ color: '#64748b', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#3b82f6'} onMouseLeave={e => e.currentTarget.style.color = '#64748b'}>Termos de Uso</Link>
+          </div>
         </footer>
       </main>
     </div>

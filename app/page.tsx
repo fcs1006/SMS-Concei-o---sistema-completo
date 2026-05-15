@@ -339,7 +339,7 @@ function FormLogin({ irPara, router }: { irPara: (t: Tela) => void; router: any 
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario: usuario.replace(/\D/g, ''), senha: senha.trim() })
+        body: JSON.stringify({ usuario: usuario.trim(), senha: senha.trim() })
       })
       const data = await res.json()
       if (!data?.ok) { setErro('Usuário ou senha incorretos.'); setCarregando(false); return }
@@ -425,7 +425,7 @@ function FormCadastro({ irPara }: { irPara: (t: Tela) => void }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nome: form.nome.trim().replace(/\b\w/g, c => c.toUpperCase()),
-          cpf: form.cpf.replace(/\D/g, ''),
+          cpf: form.cpf,
           telefone: form.telefone,
           email: form.email.trim().toLowerCase(),
           senha: form.senha
@@ -517,39 +517,61 @@ function FormCadastro({ irPara }: { irPara: (t: Tela) => void }) {
 
 /* ─── ESQUECI A SENHA ────────────────────────────────────────────── */
 function FormEsqueci({ irPara }: { irPara: (t: Tela) => void }) {
-  const [form, setForm] = useState({ cpf: '', contato: '', senha: '', confirmar: '' })
-  const [erro, setErro] = useState('')
-  const [sucesso, setSucesso] = useState(false)
+  const [etapa, setEtapa] = useState(1) // 1: solicitar, 2: confirmar
+  const [form, setForm] = useState({ cpf: '', codigo: '', senha: '', confirmar: '' })
   const [salvando, setSalvando] = useState(false)
+  const [sucesso, setSucesso] = useState(false)
+  const [erro, setErro] = useState('')
 
   function mascaraCPF(v: string) {
     const d = v.replace(/\D/g, '').slice(0, 11)
     return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2')
   }
 
-  async function recuperar(e: React.FormEvent) {
+  async function handleSolicitar(e: React.FormEvent) {
+    e.preventDefault()
+    setErro('')
+    setSalvando(true)
+    try {
+      const res = await fetch('/api/auth/recuperar-senha/solicitar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cpf: form.cpf })
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error || 'Erro ao enviar código.')
+      setEtapa(2)
+    } catch (err: any) {
+      setErro(err.message)
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  async function handleConfirmar(e: React.FormEvent) {
     e.preventDefault()
     setErro('')
     if (form.senha !== form.confirmar) { setErro('As senhas não coincidem.'); return }
     if (form.senha.length < 6) { setErro('Mínimo 6 caracteres.'); return }
     setSalvando(true)
     try {
-      const res = await fetch('/api/auth/recuperar-senha', {
+      const res = await fetch('/api/auth/recuperar-senha/confirmar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cpf: form.cpf.replace(/\D/g, ''),
-          contato: form.contato.trim(),
+          cpf: form.cpf,
+          codigo: form.codigo,
           novaSenha: form.senha
         })
       })
       const data = await res.json()
-      if (!data?.ok) { setErro(data.error || 'Erro ao recuperar.'); setSalvando(false); return }
+      if (!data.ok) throw new Error(data.error || 'Código inválido ou expirado.')
       setSucesso(true)
-    } catch {
-      setErro('Erro de conexão. Tente novamente.')
+    } catch (err: any) {
+      setErro(err.message)
+    } finally {
+      setSalvando(false)
     }
-    setSalvando(false)
   }
 
   if (sucesso) return (
@@ -571,40 +593,62 @@ function FormEsqueci({ irPara }: { irPara: (t: Tela) => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      onSubmit={recuperar}
+      onSubmit={etapa === 1 ? handleSolicitar : handleConfirmar}
       style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
     >
       <p style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: '700', fontSize: '15px', color: '#f1f5f9', margin: 0 }}>
         Recuperar senha
       </p>
+      <p style={{ color: '#cbd5e1', fontSize: '12px', margin: '0 0 8px' }}>
+        {etapa === 1 
+          ? 'Insira seu CPF para receber um código de segurança via e-mail.' 
+          : 'Digite o código de 6 dígitos enviado para seu e-mail.'}
+      </p>
+
       <div>
-        <label className="label-modern">CPF (seu usuário)</label>
+        <label className="label-modern">CPF</label>
         <input className="input-modern" value={form.cpf} inputMode="numeric" required
+          disabled={etapa === 2 || salvando}
           onChange={e => setForm(f => ({ ...f, cpf: mascaraCPF(e.target.value) }))}
           placeholder="000.000.000-00" />
       </div>
-      <div>
-        <label className="label-modern">Telefone ou e-mail cadastrado</label>
-        <input className="input-modern" value={form.contato} required
-          onChange={e => setForm(f => ({ ...f, contato: e.target.value }))}
-          placeholder="(00) 00000-0000 ou email@..." />
-      </div>
-      <div>
-        <label className="label-modern">Nova senha</label>
-        <input className="input-modern" type="password" value={form.senha} required
-          onChange={e => setForm(f => ({ ...f, senha: e.target.value }))}
-          placeholder="Mínimo 6 caracteres" />
-      </div>
-      <div>
-        <label className="label-modern">Confirmar nova senha</label>
-        <input className="input-modern" type="password" value={form.confirmar} required
-          onChange={e => setForm(f => ({ ...f, confirmar: e.target.value }))}
-          placeholder="Repita a senha" />
-      </div>
+
+      {etapa === 2 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label className="label-modern">Código de Verificação</label>
+            <input className="input-modern" value={form.codigo} required
+              onChange={e => setForm(f => ({ ...f, codigo: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+              placeholder="000000" style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '18px' }} />
+          </div>
+          <div>
+            <label className="label-modern">Nova senha</label>
+            <input className="input-modern" type="password" value={form.senha} required
+              onChange={e => setForm(f => ({ ...f, senha: e.target.value }))}
+              placeholder="Mínimo 6 caracteres" />
+          </div>
+          <div>
+            <label className="label-modern">Confirmar nova senha</label>
+            <input className="input-modern" type="password" value={form.confirmar} required
+              onChange={e => setForm(f => ({ ...f, confirmar: e.target.value }))}
+              placeholder="Repita a senha" />
+          </div>
+        </motion.div>
+      )}
+
       {erro && <div className="status-err" style={{ textAlign: 'center' }}>{erro}</div>}
+
       <button type="submit" disabled={salvando} className="btn-primary" style={{ padding: '12px', fontSize: '14px' }}>
-        {salvando ? 'Verificando...' : 'REDEFINIR SENHA'}
+        {salvando ? 'Processando...' : (etapa === 1 ? 'ENVIAR CÓDIGO' : 'REDEFINIR SENHA')}
       </button>
+
+      {etapa === 2 && (
+        <button type="button" onClick={() => setEtapa(1)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '11px', textAlign: 'center', textDecoration: 'underline' }}>
+          Não recebi o código / Alterar CPF
+        </button>
+      )}
+
       <button type="button" onClick={() => irPara('login')}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', fontSize: '13px', fontFamily: 'Inter, sans-serif', textAlign: 'center' }}>
         ← Voltar ao login
