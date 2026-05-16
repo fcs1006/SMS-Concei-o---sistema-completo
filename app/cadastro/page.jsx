@@ -100,6 +100,8 @@ export default function Cadastro() {
   const [modalImportar, setModalImportar] = useState(false)
   const [arqImportacao, setArqImportacao] = useState(null)
   const [importando, setImportando] = useState(false)
+  const [sobrescreverTelefones, setSobrescreverTelefones] = useState(false)
+  const [progressImportacao, setProgressImportacao] = useState({ atual: 0, total: 0 })
 
   function setField(id, val) {
     setForm(f => ({ ...f, [id]: val }))
@@ -268,32 +270,98 @@ export default function Cadastro() {
         const texto = ev.target.result
         const separador = texto.includes(';') ? ';' : (texto.includes('\t') ? '\t' : ',')
         const linhasRaw = texto.split('\n')
-        const cabecalho = linhasRaw[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(separador).map(c => c.trim().replace(/^"|"$/g, ''))
         
-        const idxNome = cabecalho.findIndex(c => c.includes('cidadao') || c === 'nome')
-        const idxCns = cabecalho.findIndex(c => c === 'cns')
-        const idxCpf = cabecalho.findIndex(c => c === 'cpf')
-        const idxNasc = cabecalho.findIndex(c => c.includes('nasc'))
+        let idxCabecalho = 0
+        for (let i = 0; i < linhasRaw.length; i++) {
+          if (linhasRaw[i].toLowerCase().includes('cpf/cns') && linhasRaw[i].toLowerCase().includes('nome')) {
+            idxCabecalho = i
+            break
+          }
+        }
+
+        const cabecalho = linhasRaw[idxCabecalho].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(separador).map(c => c.trim().replace(/^"|"$/g, ''))
+        
+        const idxNome = cabecalho.findIndex(c => c === 'nome')
+        const idxCpfCns = cabecalho.findIndex(c => c === 'cpf/cns')
+        const idxNasc = cabecalho.findIndex(c => c.includes('nascimento'))
         const idxSexo = cabecalho.findIndex(c => c === 'sexo')
-        const idxTelefone = cabecalho.findIndex(c => c.includes('telefone') || c.includes('celular'))
-        const idxLogradouro = cabecalho.findIndex(c => c.includes('logradouro') || c.includes('endereco'))
-        const idxBairro = cabecalho.findIndex(c => c === 'bairro')
-        const idxCep = cabecalho.findIndex(c => c === 'cep')
+        const idxTelefoneCel = cabecalho.findIndex(c => c.includes('telefone celular'))
+        const idxTelefoneRes = cabecalho.findIndex(c => c.includes('telefone residencial'))
+        const idxTelefoneCont = cabecalho.findIndex(c => c.includes('telefone de contato'))
+        const idxLogradouro = cabecalho.findIndex(c => c.includes('endereco') || c.includes('logradouro'))
+
+        // DEBUG: log de índices para diagnóstico
+        console.log('=== DEBUG IMPORTACAO ===')
+        console.log('Separador detectado:', JSON.stringify(separador))
+        console.log('Linha cabeçalho idx:', idxCabecalho)
+        console.log('Cabeçalho completo:', cabecalho)
+        console.log('idxNome:', idxNome, '| idxCpfCns:', idxCpfCns, '| idxLogradouro:', idxLogradouro, '| idxSexo:', idxSexo)
+        if (linhasRaw[idxCabecalho + 1]) {
+          const primLinha = linhasRaw[idxCabecalho + 1].split(separador)
+          console.log('Primeira linha de dados (colunas):', primLinha)
+          console.log('Valor coluna endereço (idx', idxLogradouro, '):', idxLogradouro >= 0 ? primLinha[idxLogradouro] : 'NÃO ENCONTRADO')
+        }
 
         const dados = []
-        for (let i = 1; i < linhasRaw.length; i++) {
+        for (let i = idxCabecalho + 1; i < linhasRaw.length; i++) {
+          if (!linhasRaw[i].trim()) continue
+          // No CSV do e-SUS, o nome e endereço podem ou não estar entre aspas, o split simples por separador pode falhar se houver ; dentro de aspas, 
+          // mas o padrão do e-SUS costuma ser limpo ou usar aspas simples nas microáreas. Usaremos split simples pra manter compatibilidade
           const l = linhasRaw[i].split(separador).map(c => c.trim().replace(/^"|"$/g, ''))
-          if (l.length > 1 && l[idxNome] && idxNome >= 0) {
+          
+          if (l.length > 1 && l[idxNome] && l[idxNome] !== '-' && idxNome >= 0) {
+            let enderecoCompleto = idxLogradouro >= 0 ? l[idxLogradouro] : ''
+            let cep = ''
+            let endereco = enderecoCompleto
+            let bairro = ''
+
+            if (enderecoCompleto && enderecoCompleto !== '-' && enderecoCompleto.includes('|')) {
+              const partes = enderecoCompleto.split('|')
+              endereco = partes[0].trim()
+              cep = partes[1].trim()
+            }
+            
+            if (endereco && endereco !== '-') {
+              const partesVirgula = endereco.split(',')
+              if (partesVirgula.length >= 2) {
+                // A primeira parte é o logradouro
+                let logradouro = partesVirgula[0].trim()
+                // A penúltima parte costuma conter o "Número. Bairro" ou "Número - Bairro"
+                // (a última parte normalmente é a "Cidade - UF")
+                let parteBairro = partesVirgula[partesVirgula.length - 2].trim()
+                
+                let numero = ''
+                if (parteBairro.includes(' - ')) {
+                  const sub = parteBairro.split(' - ')
+                  bairro = sub.pop().trim()
+                  numero = sub.join(' - ').trim()
+                } else if (parteBairro.includes('.')) {
+                  const sub = parteBairro.split('.')
+                  bairro = sub.pop().trim()
+                  numero = sub.join('.').trim()
+                } else {
+                  bairro = parteBairro
+                }
+                
+                endereco = numero ? `${logradouro}, ${numero}` : logradouro
+              }
+            }
+
+            let telefone = ''
+            if (idxTelefoneCel >= 0 && l[idxTelefoneCel] && l[idxTelefoneCel] !== '-') telefone = l[idxTelefoneCel]
+            else if (idxTelefoneCont >= 0 && l[idxTelefoneCont] && l[idxTelefoneCont] !== '-') telefone = l[idxTelefoneCont]
+            else if (idxTelefoneRes >= 0 && l[idxTelefoneRes] && l[idxTelefoneRes] !== '-') telefone = l[idxTelefoneRes]
+
             dados.push({
               nome: l[idxNome],
-              cns: idxCns >= 0 ? l[idxCns] : '',
-              cpf: idxCpf >= 0 ? l[idxCpf] : '',
-              dtNasc: idxNasc >= 0 ? l[idxNasc] : '',
-              sexo: idxSexo >= 0 ? l[idxSexo] : '',
-              telefone: idxTelefone >= 0 ? l[idxTelefone] : '',
-              endereco: idxLogradouro >= 0 ? l[idxLogradouro] : '',
-              bairro: idxBairro >= 0 ? l[idxBairro] : '',
-              cep: idxCep >= 0 ? l[idxCep] : ''
+              cns: idxCpfCns >= 0 ? l[idxCpfCns] : '',
+              cpf: idxCpfCns >= 0 ? l[idxCpfCns] : '',
+              dtNasc: idxNasc >= 0 && l[idxNasc] !== '-' ? l[idxNasc] : '',
+              sexo: idxSexo >= 0 && l[idxSexo] !== '-' ? l[idxSexo] : '',
+              telefone: telefone,
+              endereco: endereco !== '-' ? endereco : '',
+              bairro: bairro !== '-' ? bairro : '',
+              cep: cep !== '-' ? cep : ''
             })
           }
         }
@@ -302,7 +370,7 @@ export default function Cadastro() {
         setStatus({ msg: 'Erro ao ler arquivo CSV. Verifique o formato.', tipo: 'erro' })
       }
     }
-    reader.readAsText(file, 'utf-8')
+    reader.readAsText(file, 'iso-8859-1')
     e.target.value = ''
   }
 
@@ -310,18 +378,36 @@ export default function Cadastro() {
     if (!arqImportacao || !arqImportacao.dados) return
     setImportando(true)
     setStatus({ msg: '', tipo: '' })
+
+    const LOTE = 250
+    const todos = arqImportacao.dados
+    let totalInseridos = 0
+    let totalAtualizados = 0
+    let totalIgnorados = 0
+    let processados = 0
+
+    setProgressImportacao({ atual: 0, total: todos.length })
+
     try {
-      const resp = await fetch('/api/pacientes/importar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ linhas: arqImportacao.dados })
-      })
-      const json = await resp.json()
-      if (!json.ok) throw new Error(json.error || 'Erro na importação')
-      
-      setStatus({ 
-        msg: `✅ Importação concluída! Novos: ${json.resultados.inseridos} | Atualizados: ${json.resultados.atualizados} | Sem alteração: ${json.resultados.ignorados}`, 
-        tipo: 'ok' 
+      for (let i = 0; i < todos.length; i += LOTE) {
+        const lote = todos.slice(i, i + LOTE)
+        const resp = await fetch('/api/pacientes/importar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ linhas: lote, sobrescreverTelefones })
+        })
+        const json = await resp.json()
+        if (!json.ok) throw new Error(json.error || 'Erro na importação')
+        totalInseridos += json.resultados.inseridos
+        totalAtualizados += json.resultados.atualizados
+        totalIgnorados += json.resultados.ignorados
+        processados += json.resultados.totalProcessado
+        setProgressImportacao({ atual: processados, total: todos.length })
+      }
+
+      setStatus({
+        msg: `✅ Importação concluída! Novos: ${totalInseridos} | Atualizados: ${totalAtualizados} | Sem alteração: ${totalIgnorados}`,
+        tipo: 'ok'
       })
       setModalImportar(false)
       setArqImportacao(null)
@@ -329,6 +415,7 @@ export default function Cadastro() {
     } catch (err) {
       setStatus({ msg: `❌ Erro na importação: ${err.message}`, tipo: 'erro' })
     }
+    setProgressImportacao({ atual: 0, total: 0 })
     setImportando(false)
   }
 
@@ -652,16 +739,61 @@ export default function Cadastro() {
                 <div style={{ marginTop: '12px', fontSize: '13px', color: '#065f46', fontWeight: '600' }}>
                   📄 {arqImportacao.nome} <br/>
                   <span style={{ fontSize: '12px', fontWeight: '400' }}>{arqImportacao.total} pacientes identificados</span>
+                  
+                  {/* DEBUG VISUAL */}
+                  <div style={{ marginTop: '10px', textAlign: 'left', background: '#fff', border: '1px solid #10b981', padding: '10px', borderRadius: '8px', maxHeight: '150px', overflowY: 'auto' }}>
+                    <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: 'bold' }}>COMO O SISTEMA ESTÁ LENDO (3 primeiros):</p>
+                    {arqImportacao.dados.slice(0, 3).map((d, i) => (
+                      <div key={i} style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '8px', fontSize: '12px', fontWeight: 'normal', color: '#334155' }}>
+                        <strong>Nome:</strong> {d.nome} | <strong>CPF:</strong> {d.cpf}<br/>
+                        <strong style={{color: '#d97706'}}>Endereço Extraído:</strong> {d.endereco || '(VAZIO)'}<br/>
+                        <strong style={{color: '#059669'}}>Bairro Extraído:</strong> {d.bairro || '(VAZIO)'}
+                      </div>
+                    ))}
+                  </div>
+
                 </div>
               )}
             </div>
 
+            <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input 
+                type="checkbox" 
+                id="sobrescreverTelefones" 
+                checked={sobrescreverTelefones}
+                onChange={e => setSobrescreverTelefones(e.target.checked)}
+                disabled={importando}
+                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10b981' }}
+              />
+              <label htmlFor="sobrescreverTelefones" style={{ fontSize: '13px', color: '#475569', cursor: 'pointer' }}>
+                Sobrescrever telefones atuais com os da planilha (se houver)
+              </label>
+            </div>
+
+            {importando && progressImportacao.total > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569', marginBottom: '4px' }}>
+                  <span>Processando pacientes...</span>
+                  <span>{progressImportacao.atual} / {progressImportacao.total}</span>
+                </div>
+                <div style={{ background: '#e2e8f0', borderRadius: '99px', height: '8px', overflow: 'hidden' }}>
+                  <div style={{ 
+                    background: 'linear-gradient(90deg, #059669, #10b981)', 
+                    height: '100%', 
+                    borderRadius: '99px',
+                    width: `${Math.round((progressImportacao.atual / progressImportacao.total) * 100)}%`,
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button className="btn-secondary" onClick={() => { setModalImportar(false); setArqImportacao(null) }} disabled={importando}>
+              <button className="btn-secondary" onClick={() => { setModalImportar(false); setArqImportacao(null); setSobrescreverTelefones(false) }} disabled={importando}>
                 Cancelar
               </button>
               <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }} onClick={enviarImportacao} disabled={!arqImportacao || importando}>
-                {importando ? 'Sincronizando...' : 'Iniciar Sincronização'}
+                {importando ? `Sincronizando... (${progressImportacao.atual}/${progressImportacao.total})` : 'Iniciar Sincronização'}
               </button>
             </div>
           </div>

@@ -32,7 +32,7 @@ function definirCodigoLogradouro(endereco: string) {
 
 function extrairDocumento(cpfCns: string) {
   const limpo = String(cpfCns || '').replace(/\D/g, '')
-  if (limpo.length === 11) return { cpf: limpo.padStart(11, '0'), cns: '' }
+  if (limpo.length === 10 || limpo.length === 11) return { cpf: limpo.padStart(11, '0'), cns: '' }
   if (limpo.length >= 12 && limpo.length <= 15) return { cns: limpo.padStart(15, '0'), cpf: '' }
   return { cpf: '', cns: '' }
 }
@@ -77,6 +77,23 @@ function qtdPorDestino(destino: string): number {
   return 1
 }
 
+// Helper: busca paciente pela cadeia CPF/CNS → Nome → Nome+DataNasc
+function buscarPaciente(
+  docNorm: string,
+  nome: string,
+  dtNasc: string,
+  porDoc: Record<string, any>,
+  porNome: Record<string, any>,
+  porNomeNasc: Record<string, any>
+): any {
+  if (docNorm && porDoc[docNorm]) return porDoc[docNorm]
+  const nomeUp = String(nome || '').toUpperCase().trim()
+  if (nomeUp && porNome[nomeUp]) return porNome[nomeUp]
+  const chave = nomeUp + '_' + String(dtNasc || '').substring(0, 10)
+  if (nomeUp && dtNasc && porNomeNasc[chave]) return porNomeNasc[chave]
+  return null
+}
+
 // Urgência: dados do TFD (viagens) + pacientes
 // Cada viagem gera registro para o PACIENTE + cada ACOMPANHANTE (igual ao sistema antigo)
 async function consolidarUrgencia(competencia: string, fixos: any) {
@@ -97,38 +114,66 @@ async function consolidarUrgencia(competencia: string, fixos: any) {
 
   const registros = viagens || []
 
-  // Coletar todos os CPFs (pacientes + acompanhantes) para busca em lote
+  // Coletar CPFs e nomes de todos (pacientes + acompanhantes)
   const todosCpfs = new Set<string>()
+  const todosNomes = new Set<string>()
   for (const v of registros) {
-    const cpfLimpo = String(v.paciente_cpf || '').replace(/\D/g, '')
-    if (cpfLimpo) todosCpfs.add(cpfLimpo)
-    const a1 = String(v.acomp1_cpf || '').replace(/\D/g, '')
-    if (a1) todosCpfs.add(a1)
-    const a2 = String(v.acomp2_cpf || '').replace(/\D/g, '')
-    if (a2) todosCpfs.add(a2)
+    const cpfP = String(v.paciente_cpf || '').replace(/\D/g, '')
+    if (cpfP) todosCpfs.add(cpfP)
+    const nP = String(v.paciente_nome || '').toUpperCase().trim()
+    if (nP) todosNomes.add(nP)
+    const a1c = String(v.acomp1_cpf || '').replace(/\D/g, '')
+    if (a1c) todosCpfs.add(a1c)
+    const a1n = String(v.acomp1_nome || '').toUpperCase().trim()
+    if (a1n) todosNomes.add(a1n)
+    const a2c = String(v.acomp2_cpf || '').replace(/\D/g, '')
+    if (a2c) todosCpfs.add(a2c)
+    const a2n = String(v.acomp2_nome || '').toUpperCase().trim()
+    if (a2n) todosNomes.add(a2n)
   }
 
-  // Buscar apenas os pacientes cujos CPFs estão nas viagens do mês
-  // Normaliza ambos os lados para evitar falhas por formatação (123.456.789-00 vs 12345678900)
-  let mapaPacientes: Record<string, any> = {}
+  const mapaPorDoc: Record<string, any> = {}
+  const mapaPorNome: Record<string, any> = {}
+  const mapaPorNomeNasc: Record<string, any> = {}
+
+  const LOTE = 200
+
+  // 1) Busca por CPF/CNS (dígitos)
   if (todosCpfs.size > 0) {
-    const cpfsArray = Array.from(todosCpfs)
-    // Busca em lotes de 200 para não estourar limites de URL
-    const LOTE = 200
-    for (let i = 0; i < cpfsArray.length; i += LOTE) {
-      const lote = cpfsArray.slice(i, i + LOTE)
-      // Tenta buscar pelos CPFs limpos e também pelos formatados
-      const cpfsFormatados = lote.map(c => {
-        if (c.length === 11) return c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-        return c
-      })
-      const { data: pacs } = await supabase
-        .from('pacientes')
-        .select('*')
-        .or(`cpf_cns.in.(${lote.join(',')}),cpf_cns.in.(${cpfsFormatados.join(',')})`)
+    const arr = Array.from(todosCpfs)
+    for (let i = 0; i < arr.length; i += LOTE) {
+      const lote = arr.slice(i, i + LOTE)
+      const formatados = lote.map(c => c.length === 11 ? c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : c)
+      const { data: pacs } = await supabase.from('pacientes').select('*')
+        .or(`cpf_cns.in.(${lote.join(',')}),cpf_cns.in.(${formatados.join(',')})`)
       ;(pacs || []).forEach((p: any) => {
-        const cpfNorm = String(p.cpf_cns || '').replace(/\D/g, '')
-        if (cpfNorm) mapaPacientes[cpfNorm] = p
+        const doc = String(p.cpf_cns || '').replace(/\D/g, '')
+        if (doc) mapaPorDoc[doc] = p
+        const nomeP = String(p.nome || '').toUpperCase().trim()
+        if (nomeP) {
+          mapaPorNome[nomeP] = mapaPorNome[nomeP] || p
+          const chave = nomeP + '_' + String(p.dt_nasc || '').substring(0, 10)
+          mapaPorNomeNasc[chave] = p
+        }
+      })
+    }
+  }
+
+  // 2) Busca por Nome (para quem não tem CPF/CNS ou mudou)
+  if (todosNomes.size > 0) {
+    const arr = Array.from(todosNomes)
+    for (let i = 0; i < arr.length; i += LOTE) {
+      const lote = arr.slice(i, i + LOTE)
+      const { data: pacs } = await supabase.from('pacientes').select('*').in('nome', lote)
+      ;(pacs || []).forEach((p: any) => {
+        const doc = String(p.cpf_cns || '').replace(/\D/g, '')
+        if (doc && !mapaPorDoc[doc]) mapaPorDoc[doc] = p
+        const nomeP = String(p.nome || '').toUpperCase().trim()
+        if (nomeP) {
+          mapaPorNome[nomeP] = mapaPorNome[nomeP] || p
+          const chave = nomeP + '_' + String(p.dt_nasc || '').substring(0, 10)
+          mapaPorNomeNasc[chave] = p
+        }
       })
     }
   }
@@ -161,7 +206,7 @@ async function consolidarUrgencia(competencia: string, fixos: any) {
       if (!nomePaciente) continue
 
       const cpfNorm = String(pessoa.cpfRaw || '').replace(/\D/g, '')
-      const pac = mapaPacientes[cpfNorm] || {}
+      const pac = buscarPaciente(cpfNorm, nomePaciente, '', mapaPorDoc, mapaPorNome, mapaPorNomeNasc) || {}
 
       const dtNascRaw = pac.dt_nasc || ''
       const dataNasc = dtNascRaw ? new Date(dtNascRaw + 'T12:00:00') : null
@@ -327,33 +372,48 @@ async function consolidarLaboratorio(linhas: any[], competencia: string, fixos: 
     if (nome) todosNomes.add(nome)
   }
 
-  const mapaPacientesPorCpf: Record<string, any> = {}
-  const mapaPacientesPorNome: Record<string, any> = {}
+  const mapaPorDocLab: Record<string, any> = {}
+  const mapaPorNomeLab: Record<string, any> = {}
+  const mapaPorNomeNascLab: Record<string, any> = {}
 
   const LOTE = 200
-  // Busca por CPFs
+
+  // 1) Busca por CPF/CNS
   if (todosCpfs.size > 0) {
     const cpfsArray = Array.from(todosCpfs)
     for (let i = 0; i < cpfsArray.length; i += LOTE) {
       const lote = cpfsArray.slice(i, i + LOTE)
       const cpfsFormatados = lote.map(c => c.length === 11 ? c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : c)
-      const { data: pacs } = await supabase.from('pacientes').select('*').or(`cpf_cns.in.(${lote.join(',')}),cpf_cns.in.(${cpfsFormatados.join(',')})`)
+      const { data: pacs } = await supabase.from('pacientes').select('*')
+        .or(`cpf_cns.in.(${lote.join(',')}),cpf_cns.in.(${cpfsFormatados.join(',')})`)
       ;(pacs || []).forEach((p: any) => {
-        const cpfNorm = String(p.cpf_cns || '').replace(/\D/g, '')
-        if (cpfNorm) mapaPacientesPorCpf[cpfNorm] = p
+        const doc = String(p.cpf_cns || '').replace(/\D/g, '')
+        if (doc) mapaPorDocLab[doc] = p
+        const nomeP = String(p.nome || '').toUpperCase().trim()
+        if (nomeP) {
+          mapaPorNomeLab[nomeP] = mapaPorNomeLab[nomeP] || p
+          const chave = nomeP + '_' + String(p.dt_nasc || '').substring(0, 10)
+          mapaPorNomeNascLab[chave] = p
+        }
       })
     }
   }
 
-  // Busca por Nomes
+  // 2) Busca por Nome
   if (todosNomes.size > 0) {
     const nomesArray = Array.from(todosNomes)
     for (let i = 0; i < nomesArray.length; i += LOTE) {
       const lote = nomesArray.slice(i, i + LOTE)
       const { data: pacs } = await supabase.from('pacientes').select('*').in('nome', lote)
       ;(pacs || []).forEach((p: any) => {
-        const nomeNorm = String(p.nome || '').trim().toUpperCase()
-        if (nomeNorm) mapaPacientesPorNome[nomeNorm] = p
+        const doc = String(p.cpf_cns || '').replace(/\D/g, '')
+        if (doc && !mapaPorDocLab[doc]) mapaPorDocLab[doc] = p
+        const nomeP = String(p.nome || '').toUpperCase().trim()
+        if (nomeP) {
+          mapaPorNomeLab[nomeP] = mapaPorNomeLab[nomeP] || p
+          const chave = nomeP + '_' + String(p.dt_nasc || '').substring(0, 10)
+          mapaPorNomeNascLab[chave] = p
+        }
       })
     }
   }
@@ -386,7 +446,8 @@ async function consolidarLaboratorio(linhas: any[], competencia: string, fixos: 
     // Resolver procedimento via base de exames
     const exameRaw = String(linha.procedimento || '').trim()
     const def = resolverProcedimentoLab(exameRaw)
-    const procedimento = def?.procedimento || String(exameRaw).replace(/\D/g, '') || fixos.PROCEDIMENTO
+    let procedimento = def?.procedimento || String(exameRaw).replace(/\D/g, '') || fixos.PROCEDIMENTO
+    if (procedimento.length === 9) procedimento = '0' + procedimento
     const tipoReg = def?.tipo || 'I'
 
     if (!procedimento) {
@@ -403,7 +464,11 @@ async function consolidarLaboratorio(linhas: any[], competencia: string, fixos: 
     // BPA Individualizado: precisa de dados completos
     const cpfCSV = String(linha.cpf || linha.cns || '').replace(/\D/g, '')
     const nomeCSV = nomePaciente.toUpperCase()
-    const pacDb = mapaPacientesPorCpf[cpfCSV] || mapaPacientesPorNome[nomeCSV] || {}
+    // Converte data do CSV para formato YYYY-MM-DD para comparação
+    const dtNascCSV = String(linha.dtNasc || '').includes('/')
+      ? String(linha.dtNasc).split('/').reverse().join('-')
+      : String(linha.dtNasc || '')
+    const pacDb = buscarPaciente(cpfCSV, nomeCSV, dtNascCSV, mapaPorDocLab, mapaPorNomeLab, mapaPorNomeNascLab) || {}
 
     const dtNascRaw = String(linha.dtNasc || '')
     let dataNasc = new Date(dtNascRaw.includes('/')

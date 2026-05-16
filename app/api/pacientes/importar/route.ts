@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const maxDuration = 60
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -23,59 +25,53 @@ function tratarSexo(v: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { linhas } = await request.json()
+    const { linhas, sobrescreverTelefones } = await request.json()
     if (!linhas || !Array.isArray(linhas) || linhas.length === 0) {
       return NextResponse.json({ error: 'Nenhum dado recebido.' }, { status: 400 })
     }
 
-    const todosDocumentos = new Set<string>()
-    const todosNomes = new Set<string>()
+    // Coleta documentos válidos (apenas quem tem CPF/CNS)
+    const docsNormalizados: string[] = []
+    const docsFormatados: string[] = []
 
     linhas.forEach(l => {
       const doc = normalizarDocumento(l.cpf || l.cns)
-      if (doc) todosDocumentos.add(doc)
-      const nome = normalizarTexto(l.nome)
-      if (nome) todosNomes.add(nome)
+      if (doc && doc.length >= 11) {
+        docsNormalizados.push(doc)
+        if (doc.length === 11) {
+          docsFormatados.push(doc.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'))
+        }
+      }
     })
 
     const mapaPacientesPorDoc: Record<string, any> = {}
-    const mapaPacientesPorNome: Record<string, any> = {}
 
-    // Busca pacientes existentes no banco em lotes
-    const LOTE = 200
+    // Busca por documentos normalizados (dígitos) — query única eficiente
+    if (docsNormalizados.length > 0) {
+      // Busca por dígitos puros
+      const { data: pac1 } = await supabase
+        .from('pacientes')
+        .select('id, nome, cpf_cns, dt_nasc, sexo, telefone, endereco, bairro, cep')
+        .in('cpf_cns', docsNormalizados)
+      ;(pac1 || []).forEach(p => {
+        mapaPacientesPorDoc[normalizarDocumento(p.cpf_cns)] = p
+      })
 
-    if (todosDocumentos.size > 0) {
-      const docsArray = Array.from(todosDocumentos)
-      for (let i = 0; i < docsArray.length; i += LOTE) {
-        const lote = docsArray.slice(i, i + LOTE)
-        const formatados = lote.map(c => c.length === 11 ? c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : c)
-        
-        const { data: pacs } = await supabase
+      // Busca pelos CPFs formatados (xxx.xxx.xxx-xx) que o banco possa ter
+      if (docsFormatados.length > 0) {
+        const { data: pac2 } = await supabase
           .from('pacientes')
-          .select('*')
-          .or(`cpf_cns.in.(${lote.join(',')}),cpf_cns.in.(${formatados.join(',')})`)
-        
-        ;(pacs || []).forEach(p => {
+          .select('id, nome, cpf_cns, dt_nasc, sexo, telefone, endereco, bairro, cep')
+          .in('cpf_cns', docsFormatados)
+        ;(pac2 || []).forEach(p => {
           const doc = normalizarDocumento(p.cpf_cns)
-          if (doc) mapaPacientesPorDoc[doc] = p
+          if (!mapaPacientesPorDoc[doc]) mapaPacientesPorDoc[doc] = p
         })
       }
     }
 
-    if (todosNomes.size > 0) {
-      const nomesArray = Array.from(todosNomes)
-      for (let i = 0; i < nomesArray.length; i += LOTE) {
-        const lote = nomesArray.slice(i, i + LOTE)
-        const { data: pacs } = await supabase.from('pacientes').select('*').in('nome', lote)
-        ;(pacs || []).forEach(p => {
-          const nome = normalizarTexto(p.nome)
-          if (nome) mapaPacientesPorNome[nome] = p
-        })
-      }
-    }
-
-    const inserts = []
-    const updates = []
+    const inserts: any[] = []
+    const updates: any[] = []
     let ignorados = 0
 
     for (const linha of linhas) {
@@ -88,42 +84,45 @@ export async function POST(request: NextRequest) {
       }
 
       const docLinha = normalizarDocumento(linha.cpf || linha.cns)
-      const pacDb = mapaPacientesPorDoc[docLinha] || mapaPacientesPorNome[nome]
+      const pacDb = docLinha ? mapaPacientesPorDoc[docLinha] : null
 
       const telefoneCSV = normalizarDocumento(linha.telefone)
-      
+      const enderecoNovo = normalizarTexto(linha.endereco)
+      const bairroNovo = normalizarTexto(linha.bairro)
+      const cepNovo = normalizarDocumento(linha.cep)
+      const sexoNovo = tratarSexo(linha.sexo)
+
       const payload: any = {
-        nome: nome,
+        nome,
         cpf_cns: docLinha || (pacDb ? pacDb.cpf_cns : ''),
         dt_nasc: dtNasc || (pacDb ? pacDb.dt_nasc : null),
-        sexo: tratarSexo(linha.sexo) || (pacDb ? pacDb.sexo : ''),
-        endereco: normalizarTexto(linha.endereco) || (pacDb ? pacDb.endereco : ''),
-        bairro: normalizarTexto(linha.bairro) || (pacDb ? pacDb.bairro : ''),
-        cep: normalizarDocumento(linha.cep) || (pacDb ? pacDb.cep : '')
+        sexo: sexoNovo || (pacDb ? pacDb.sexo : ''),
+        endereco: enderecoNovo || (pacDb ? pacDb.endereco : ''),
+        bairro: bairroNovo || (pacDb ? pacDb.bairro : ''),
+        cep: cepNovo || (pacDb ? pacDb.cep : '')
       }
 
       if (!pacDb) {
-        // NOVO PACIENTE
         payload.telefone = telefoneCSV
         inserts.push(payload)
       } else {
-        // PACIENTE EXISTENTE
-        // Regra de Ouro: NÃO ATUALIZAR O TELEFONE SE O BANCO JÁ TIVER UM TELEFONE
         const telefoneBanco = normalizarDocumento(pacDb.telefone)
-        if (telefoneBanco) {
-          payload.telefone = telefoneBanco // preserva o do banco
+        if (telefoneCSV && sobrescreverTelefones) {
+          payload.telefone = telefoneCSV
+        } else if (telefoneBanco) {
+          payload.telefone = telefoneBanco
         } else {
-          payload.telefone = telefoneCSV // atualiza se estava vazio
+          payload.telefone = telefoneCSV
         }
 
-        // Verifica se há alguma alteração real para evitar updates desnecessários
         let mudou = false
-        if (payload.cpf_cns !== pacDb.cpf_cns) mudou = true
-        if (payload.dt_nasc !== pacDb.dt_nasc) mudou = true
-        if (payload.sexo !== pacDb.sexo) mudou = true
+        if (docLinha && docLinha !== normalizarDocumento(pacDb.cpf_cns)) mudou = true
+        if (dtNasc && dtNasc !== pacDb.dt_nasc) mudou = true
+        if (sexoNovo && sexoNovo !== pacDb.sexo) mudou = true
         if (payload.telefone !== normalizarDocumento(pacDb.telefone)) mudou = true
-        if (payload.endereco !== pacDb.endereco && payload.endereco) mudou = true
-        if (payload.bairro !== pacDb.bairro && payload.bairro) mudou = true
+        if (enderecoNovo && enderecoNovo !== normalizarTexto(pacDb.endereco)) mudou = true
+        if (bairroNovo && bairroNovo !== normalizarTexto(pacDb.bairro)) mudou = true
+        if (cepNovo && cepNovo !== normalizarDocumento(pacDb.cep)) mudou = true
 
         if (mudou) {
           payload.id = pacDb.id
@@ -134,23 +133,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Executar operações em lotes
+    // Inserir novos em lote único
     let inseridosReal = 0
-    let atualizadosReal = 0
-
     if (inserts.length > 0) {
-      for (let i = 0; i < inserts.length; i += LOTE) {
-        const { error } = await supabase.from('pacientes').insert(inserts.slice(i, i + LOTE))
-        if (!error) inseridosReal += inserts.slice(i, i + LOTE).length
-      }
+      const { error } = await supabase.from('pacientes').insert(inserts)
+      if (!error) inseridosReal = inserts.length
+      else console.error('Erro insert:', error.message)
     }
 
-    if (updates.length > 0) {
-      // Upsert é seguro aqui pois temos os IDs
-      for (let i = 0; i < updates.length; i += LOTE) {
-        const { error } = await supabase.from('pacientes').upsert(updates.slice(i, i + LOTE))
-        if (!error) atualizadosReal += updates.slice(i, i + LOTE).length
-      }
+    // Atualizar existentes: lotes de 25 em paralelo (controlado)
+    let atualizadosReal = 0
+    const LOTE_UP = 25
+    for (let i = 0; i < updates.length; i += LOTE_UP) {
+      const lote = updates.slice(i, i + LOTE_UP)
+      const resultados = await Promise.all(
+        lote.map(({ id, ...payload }) =>
+          supabase.from('pacientes').update(payload).eq('id', id)
+        )
+      )
+      atualizadosReal += resultados.filter(r => !r.error).length
     }
 
     return NextResponse.json({
@@ -164,6 +165,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
+    console.error('Erro importar:', error)
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
   }
 }

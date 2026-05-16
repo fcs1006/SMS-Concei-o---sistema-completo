@@ -158,6 +158,8 @@ export default function Agendamento() {
   const [salvando, setSalvando] = useState(false)
   const [ultimoAgendamento, setUltimoAgendamento] = useState(null)
   const [pacienteSelecionado, setPacienteSelecionado] = useState(false)
+  const [acomp1Selecionado, setAcomp1Selecionado] = useState(false)
+  const [acomp2Selecionado, setAcomp2Selecionado] = useState(false)
   const skipBuscaRef  = useRef(false)
   const skipBuscaA1Ref = useRef(false)
   const skipBuscaA2Ref = useRef(false)
@@ -276,6 +278,7 @@ export default function Agendamento() {
     }))
     setBuscaA1(p.nome)
     setSugestoesA1([])
+    setAcomp1Selecionado(true)
   }
 
   function selecionarAcomp2(p) {
@@ -288,6 +291,7 @@ export default function Agendamento() {
     }))
     setBuscaA2(p.nome)
     setSugestoesA2([])
+    setAcomp2Selecionado(true)
   }
 
   function setField(id, val) {
@@ -310,6 +314,15 @@ export default function Agendamento() {
     e.preventDefault()
     if (!pacienteSelecionado || !form.nome) {
       setStatus({ msg: 'Selecione um paciente cadastrado na lista antes de agendar.', tipo: 'erro' })
+      return
+    }
+    // Validar acompanhantes: se digitou algo no campo mas não selecionou da lista
+    if (form.temAcomp === 'SIM' && buscaA1 && !acomp1Selecionado) {
+      setStatus({ msg: 'Selecione o Acompanhante 1 na lista de pacientes cadastrados antes de agendar.', tipo: 'erro' })
+      return
+    }
+    if (form.temAcomp === 'SIM' && buscaA2 && !acomp2Selecionado) {
+      setStatus({ msg: 'Selecione o Acompanhante 2 na lista de pacientes cadastrados antes de agendar.', tipo: 'erro' })
       return
     }
     const faltando = []
@@ -383,7 +396,11 @@ export default function Agendamento() {
       setStatus({ msg: 'Viagem agendada com sucesso!', tipo: 'ok' })
       setForm(FORM_VAZIO)
       setBusca('')
+      setBuscaA1('')
+      setBuscaA2('')
       setPacienteSelecionado(false)
+      setAcomp1Selecionado(false)
+      setAcomp2Selecionado(false)
     }
     setSalvando(false)
   }
@@ -580,9 +597,11 @@ export default function Agendamento() {
                     <input className={inp} value={buscaA1}
                       onChange={e => {
                         setBuscaA1(e.target.value)
+                        setAcomp1Selecionado(false)
                         setForm(f => ({ ...f, nomeA1: '', cpfA1: '', nascA1: '', sexoA1: '', telA1: '', endA1: '', bairA1: '' }))
                       }}
-                      placeholder="Digite nome ou CPF/CNS para buscar..." />
+                      placeholder="Digite nome ou CPF/CNS para buscar..."
+                      style={buscaA1 && !acomp1Selecionado ? { borderColor: '#f97316' } : {}} />
                     {sugestoesA1.length > 0 && (
                       <div className="search-dropdown">
                         {sugestoesA1.map(p => (
@@ -615,9 +634,11 @@ export default function Agendamento() {
                     <input className={inp} value={buscaA2}
                       onChange={e => {
                         setBuscaA2(e.target.value)
+                        setAcomp2Selecionado(false)
                         setForm(f => ({ ...f, nomeA2: '', cpfA2: '', nascA2: '', sexoA2: '', telA2: '', endA2: '', bairA2: '' }))
                       }}
-                      placeholder="Digite nome ou CPF/CNS para buscar..." />
+                      placeholder="Digite nome ou CPF/CNS para buscar..."
+                      style={buscaA2 && !acomp2Selecionado ? { borderColor: '#f97316' } : {}} />
                     {sugestoesA2.length > 0 && (
                       <div className="search-dropdown">
                         {sugestoesA2.map(p => (

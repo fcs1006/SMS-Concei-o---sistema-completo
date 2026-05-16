@@ -41,6 +41,7 @@ export default function BPA() {
   const [mostrarConfig, setMostrarConfig] = useState(false)
   const [consolidados, setConsolidados] = useState([])
   const [erros, setErros] = useState([])
+  const [errosSelecionados, setErrosSelecionados] = useState(new Set())
   const [etapa, setEtapa] = useState('idle') // idle | consolidando | consolidado | gerando | pronto
   const [msg, setMsg] = useState({ txt: '', ok: true })
   const [linhasLab, setLinhasLab] = useState([])
@@ -109,18 +110,41 @@ export default function BPA() {
         const idxTel = cabecalho.findIndex(c => c.includes('tel') || c.includes('fone') || c.includes('celular'))
 
         const dados = linhas.slice(1).filter(l => l.length > 1 && l[idxNome] && l[idxNome] !== '')
-          .map(l => ({
-            nome: idxNome >= 0 ? l[idxNome] : '',
-            dtNasc: idxNasc >= 0 ? l[idxNasc] : '',
-            cpf: idxCpf >= 0 ? l[idxCpf] : '',
-            procedimento: idxExame >= 0 ? l[idxExame] : '',
-            dataAtendimento: idxData >= 0 ? l[idxData] : '',
-            sexo: idxSexo >= 0 ? l[idxSexo] : '',
-            endereco: idxEndereco >= 0 ? l[idxEndereco] : '',
-            bairro: idxBairro >= 0 ? l[idxBairro] : '',
-            cep: idxCep >= 0 ? l[idxCep] : '',
-            telefone: idxTel >= 0 ? l[idxTel] : '',
-          }))
+          .map(l => {
+            let nome = idxNome >= 0 ? l[idxNome] : ''
+            let dtNasc = idxNasc >= 0 ? l[idxNasc] : ''
+            let cpf = idxCpf >= 0 ? l[idxCpf] : ''
+            let procedimento = idxExame >= 0 ? l[idxExame] : ''
+            let dataAtendimento = idxData >= 0 ? l[idxData] : ''
+            let sexo = idxSexo >= 0 ? l[idxSexo] : ''
+            let endereco = idxEndereco >= 0 ? l[idxEndereco] : ''
+            let bairro = idxBairro >= 0 ? l[idxBairro] : ''
+            let cep = idxCep >= 0 ? l[idxCep] : ''
+            let telefone = idxTel >= 0 ? l[idxTel] : ''
+
+            // Restaura zero à esquerda perdido no Excel
+            const cpfNum = cpf.replace(/\D/g, '')
+            if (cpfNum.length === 10) cpf = '0' + cpfNum
+            
+            const procNum = procedimento.replace(/\D/g, '')
+            if (procNum.length === 9) procedimento = '0' + procNum
+            
+            const cepNum = cep.replace(/\D/g, '')
+            if (cepNum.length === 7) cep = '0' + cepNum
+
+            return {
+              nome,
+              dtNasc,
+              cpf,
+              procedimento,
+              dataAtendimento,
+              sexo,
+              endereco,
+              bairro,
+              cep,
+              telefone,
+            }
+          })
 
         setLinhasLab(dados)
         mostrarMsg(`✅ ${dados.length} registros lidos de "${file.name}"`)
@@ -158,6 +182,7 @@ export default function BPA() {
       if (!resp.ok || !json.ok) throw new Error(json.error || 'Erro ao consolidar')
       setConsolidados(json.consolidados || [])
       setErros(json.erros || [])
+      setErrosSelecionados(new Set())
       setEtapa('consolidado')
       mostrarMsg(`✅ ${json.consolidados?.length || 0} registros consolidados${json.erros?.length ? ` | ⚠️ ${json.erros.length} erros` : ''}`)
     } catch (err) {
@@ -471,25 +496,58 @@ export default function BPA() {
         {/* Erros */}
         {erros.length > 0 && (
           <div className="card print-area" style={{ padding: '20px', border: '1px solid #fecaca' }}>
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
               <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700', color: '#991b1b', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />{erros.length} registro(s) com erro
+                <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />
+                {erros.length} registro(s) com erro
+                {errosSelecionados.size > 0 && (
+                  <span style={{ marginLeft: '8px', fontSize: '11px', color: '#64748b', fontWeight: '400', textTransform: 'none' }}>
+                    ({errosSelecionados.size} selecionado{errosSelecionados.size > 1 ? 's' : ''})
+                  </span>
+                )}
               </h3>
-              <button 
-                onClick={() => window.print()}
-                style={{ padding: '6px 12px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', fontSize: '11px', cursor: 'pointer', fontWeight: '600', fontFamily: 'Sora, sans-serif' }}>
-                <Printer size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Imprimir Erros
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {errosSelecionados.size > 0 && (
+                  <button
+                    onClick={() => {
+                      setErros(prev => prev.filter((_, i) => !errosSelecionados.has(i)))
+                      setErrosSelecionados(new Set())
+                    }}
+                    style={{ padding: '6px 12px', background: '#dc2626', border: 'none', borderRadius: '6px', color: 'white', fontSize: '11px', cursor: 'pointer', fontWeight: '600', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    🗑️ Excluir Selecionados ({errosSelecionados.size})
+                  </button>
+                )}
+                <button
+                  onClick={() => window.print()}
+                  style={{ padding: '6px 12px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', fontSize: '11px', cursor: 'pointer', fontWeight: '600', fontFamily: 'Sora, sans-serif' }}>
+                  <Printer size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Imprimir Erros
+                </button>
+              </div>
             </div>
-            
+
             <h3 style={{ display: 'none', color: '#000', fontSize: '16px', marginBottom: '15px', fontFamily: 'Sora, sans-serif' }} className="print-title">
                Relatório de Cuidados Cadastrais - BPA ({labelCompetencia()})
             </h3>
 
-            <div className="print-container" style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #fee2e2', borderRadius: '8px' }}>
+            <div className="print-container" style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid #fee2e2', borderRadius: '8px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #991b1b, #ef4444)', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                    <th className="no-print" style={{ padding: '8px', width: '36px' }}>
+                      <input
+                        type="checkbox"
+                        checked={errosSelecionados.size === erros.length && erros.length > 0}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setErrosSelecionados(new Set(erros.map((_, i) => i)))
+                          } else {
+                            setErrosSelecionados(new Set())
+                          }
+                        }}
+                        style={{ cursor: 'pointer', accentColor: '#fff' }}
+                        title="Selecionar todos"
+                      />
+                    </th>
                     {['Nome', 'Data', 'Motivo do Erro', 'Valor encontrado'].map(h => (
                       <th key={h} style={{ padding: '8px', color: 'white', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '10px', fontWeight: '600', letterSpacing: '0.06em' }}>{h}</th>
                     ))}
@@ -497,7 +555,26 @@ export default function BPA() {
                 </thead>
                 <tbody>
                   {erros.map((e, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #fee2e2', background: i % 2 === 0 ? '#fff' : '#fff5f5', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                    <tr
+                      key={i}
+                      style={{ borderBottom: '1px solid #fee2e2', background: errosSelecionados.has(i) ? '#fef2f2' : (i % 2 === 0 ? '#fff' : '#fff5f5'), WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', cursor: 'pointer' }}
+                      onClick={() => {
+                        setErrosSelecionados(prev => {
+                          const next = new Set(prev)
+                          if (next.has(i)) next.delete(i); else next.add(i)
+                          return next
+                        })
+                      }}
+                    >
+                      <td className="no-print" style={{ padding: '7px 8px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={errosSelecionados.has(i)}
+                          onChange={() => {}}
+                          style={{ cursor: 'pointer', accentColor: '#dc2626' }}
+                          onClick={ev => ev.stopPropagation()}
+                        />
+                      </td>
                       <td style={{ padding: '7px 8px', fontWeight: '600', color: '#0f172a' }}>{e.nome}</td>
                       <td style={{ padding: '7px 8px', whiteSpace: 'nowrap', color: '#64748b' }}>{e.data}</td>
                       <td style={{ padding: '7px 8px', color: '#991b1b', fontWeight: '500' }}>{e.motivo}</td>
