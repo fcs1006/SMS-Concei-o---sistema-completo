@@ -28,6 +28,8 @@ export default function Relatorio() {
   const [buscaAcomp2, setBuscaAcomp2] = useState('')
   const [sugestoesAcomp1, setSugestoesAcomp1] = useState([])
   const [sugestoesAcomp2, setSugestoesAcomp2] = useState([])
+  const [acomp1Sel, setAcomp1Sel] = useState(true)  // true = veio do banco ou foi selecionado
+  const [acomp2Sel, setAcomp2Sel] = useState(true)
 
   async function buscarAcomp(texto, numero) {
   if (texto.length < 3) {
@@ -145,9 +147,23 @@ async function abrirEditar(v) {
 
   setModalEditar(true)
   setStatusMsg({ msg: '', tipo: '' })
+  // Ao abrir edição, considera acompanhantes existentes como já selecionados
+  setAcomp1Sel(true)
+  setAcomp2Sel(true)
+  setSugestoesAcomp1([])
+  setSugestoesAcomp2([])
 }
 
   async function salvarEdicao() {
+    // Bloquear se digitou no campo mas não selecionou da lista
+    if (viagemEditando.acomp1_nome && !acomp1Sel) {
+      setStatusMsg({ msg: 'Selecione o Acompanhante 1 na lista de pacientes cadastrados.', tipo: 'erro' })
+      return
+    }
+    if (viagemEditando.acomp2_nome && !acomp2Sel) {
+      setStatusMsg({ msg: 'Selecione o Acompanhante 2 na lista de pacientes cadastrados.', tipo: 'erro' })
+      return
+    }
     setSalvandoEdicao(true)
     const { error } = await supabase.from('viagens').update({
       data_viagem:   viagemEditando.data_viagem,
@@ -534,9 +550,14 @@ async function abrirEditar(v) {
       const v = e.target.value.toUpperCase()
       setViagemEditando(prev => ({ ...prev, acomp1_nome: v }))
       setBuscaAcomp1(v)
+      setAcomp1Sel(false)
       buscarAcomp(v, 1)
     }}
-    placeholder="Digite para buscar..." />
+    placeholder="Digite para buscar na lista..."
+    style={viagemEditando.acomp1_nome && !acomp1Sel ? { borderColor: '#f97316' } : {}} />
+  {!acomp1Sel && viagemEditando.acomp1_nome && (
+    <p style={{ fontSize: '11px', color: '#f97316', margin: '2px 0 0', fontWeight: '600' }}>⚠️ Selecione um paciente cadastrado na lista</p>
+  )}
   {sugestoesAcomp1.length > 0 && (
     <div className="search-dropdown">
       {sugestoesAcomp1.map((p, i) => (
@@ -544,6 +565,7 @@ async function abrirEditar(v) {
           onMouseDown={() => {
             setViagemEditando(prev => ({ ...prev, acomp1_nome: p.nome }))
             setSugestoesAcomp1([])
+            setAcomp1Sel(true)
           }}>
           {p.nome}
         </div>
@@ -552,7 +574,6 @@ async function abrirEditar(v) {
   )}
 </div>
 
-{/* Acompanhante 2 */}
 <div style={{ position: 'relative' }}>
   <label className="label-modern">Acompanhante 2</label>
   <input className={inp}
@@ -561,9 +582,14 @@ async function abrirEditar(v) {
       const v = e.target.value.toUpperCase()
       setViagemEditando(prev => ({ ...prev, acomp2_nome: v }))
       setBuscaAcomp2(v)
+      setAcomp2Sel(false)
       buscarAcomp(v, 2)
     }}
-    placeholder="Digite para buscar..." />
+    placeholder="Digite para buscar na lista..."
+    style={viagemEditando.acomp2_nome && !acomp2Sel ? { borderColor: '#f97316' } : {}} />
+  {!acomp2Sel && viagemEditando.acomp2_nome && (
+    <p style={{ fontSize: '11px', color: '#f97316', margin: '2px 0 0', fontWeight: '600' }}>⚠️ Selecione um paciente cadastrado na lista</p>
+  )}
   {sugestoesAcomp2.length > 0 && (
     <div className="search-dropdown">
       {sugestoesAcomp2.map((p, i) => (
@@ -571,6 +597,7 @@ async function abrirEditar(v) {
           onMouseDown={() => {
             setViagemEditando(prev => ({ ...prev, acomp2_nome: p.nome }))
             setSugestoesAcomp2([])
+            setAcomp2Sel(true)
           }}>
           {p.nome}
         </div>
