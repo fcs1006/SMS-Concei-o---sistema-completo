@@ -211,6 +211,10 @@ async function executarFerramenta(nome: string, input: any, telefone: string): P
         const solicitacoes = await buscarSolicitacoesSisreg(input.busca, input.tipo)
         if (solicitacoes.length === 0) return `Nenhuma solicitação encontrada para este paciente.`
 
+        if (solicitacoes.length === 1 && solicitacoes[0].codigo_procedimento === 'NENHUM_ATIVO') {
+          return `Paciente identificado no SISREG, mas não possui nenhuma solicitação ativa ou pendente de *${input.tipo}* no momento.`
+        }
+
         const formatadas = solicitacoes.map((s: SisregSolicitacaoComFila) => {
           const procedimento = s.procedimento
           const dataSolicitacao = s.data_solicitacao ? s.data_solicitacao.split('T')[0].split('-').reverse().join('/') : '—'
@@ -755,9 +759,16 @@ export async function POST(request: NextRequest) {
       }
 
       const resultado = await executarFerramenta('buscar_sisreg', { busca: soDigitos, tipo: tipoBusca }, telefone)
-      const resposta = resultado.includes('Nenhuma solicitação') || resultado.includes('Erro')
-        ? `❌ ${resultado}\n\nVerifique se o CPF/CNS está correto e tente novamente, ou ligue para a SMS: *(63) 99130-6916*`
-        : `📋 *Resultado da sua busca:*\n\n${resultado}`
+      
+      let resposta = ''
+      if (resultado.includes('Nenhuma solicitação encontrada')) {
+        resposta = `❌ *Paciente não encontrado.*\n\nNenhum registro foi localizado no SISREG com este CPF/CNS. Verifique se digitou os números corretos ou ligue para a SMS: *(63) 99130-6916*`
+      } else if (resultado.includes('não possui nenhuma solicitação ativa')) {
+        resposta = `ℹ️ *Tudo em dia!*\n\n${resultado}`
+      } else {
+        resposta = `📋 *Resultado da sua busca:*\n\n${resultado}`
+      }
+      
       const comAjuda = `${resposta}\n\n❓ *Posso te ajudar em algo mais?*\n1️⃣ Sim\n2️⃣ Não`
       await setEstado(telefone, 'perguntar_mais_ajuda')
       await salvarMensagem(telefone, 'assistant', comAjuda)
