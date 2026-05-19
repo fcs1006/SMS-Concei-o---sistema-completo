@@ -29,6 +29,10 @@ export default function FranciscoTeste() {
     setEnviando(true)
 
     try {
+      const antes = await fetch(`/api/whatsapp/teste?telefone=${TELEFONE_TESTE}`)
+      const ultimaAntes = await antes.json()
+      const ultimaAntesId = ultimaAntes?.ultima?.id || null
+
       const res = await fetch('/api/whatsapp/webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,14 +46,30 @@ export default function FranciscoTeste() {
       })
       const json = await res.json()
 
-      // Busca a última resposta do Francisco no banco
-      await new Promise(r => setTimeout(r, 800))
-      const res2 = await fetch(`/api/whatsapp/teste?telefone=${TELEFONE_TESTE}`)
-      const json2 = await res2.json()
-      if (json2.ok && json2.ultima) {
-        setMensagens(prev => [...prev, { papel: json2.ultima.papel, mensagem: json2.ultima.mensagem, hora: new Date(json2.ultima.criado_em) }])
-      } else if (!json.ok) {
+      // Tenta buscar a resposta por até 5 segundos
+      let tentativasDb = 0
+      let encontrouNova = false
+
+      while (tentativasDb < 20 && !encontrouNova) {
+        await new Promise(r => setTimeout(r, 500))
+        const res2 = await fetch(`/api/whatsapp/teste?telefone=${TELEFONE_TESTE}&after_id=${ultimaAntesId || 0}`)
+        const json2 = await res2.json()
+        const novas = json2.mensagens || []
+        
+        if (json2.ok && novas.length > 0) {
+          setMensagens(prev => [
+            ...prev,
+            ...novas.map(m => ({ papel: m.papel, mensagem: m.mensagem, hora: new Date(m.criado_em) }))
+          ])
+          encontrouNova = true
+        }
+        tentativasDb++
+      }
+
+      if (!json.ok && !encontrouNova) {
         setMensagens(prev => [...prev, { papel: 'erro', mensagem: `Erro: ${json.error}`, hora: new Date() }])
+      } else if (!encontrouNova) {
+        setMensagens(prev => [...prev, { papel: 'erro', mensagem: 'Nenhuma resposta nova foi gravada pelo Francisco. Verifique o log do servidor.', hora: new Date() }])
       }
     } catch (e) {
       setMensagens(prev => [...prev, { papel: 'erro', mensagem: `Erro de conexão: ${e.message}`, hora: new Date() }])
