@@ -450,7 +450,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true })
       }
       if (inputNum === '2') {
-        const resp = `🔍 *Ver meus agendamentos (SMS)*\n\nInforme seu *nome completo* ou *CPF* para eu buscar seus agendamentos na Secretaria de Saúde.`
+        const resp = `🔍 *Ver meus agendamentos (SMS)*\n\nInforme seu *CPF* ou *CNS* para eu buscar seus agendamentos na Secretaria de Saúde.`
         await setEstado(telefone, 'buscar_agendamento')
         await salvarMensagem(telefone, 'assistant', resp)
         await enviarMensagem(telefone, resp)
@@ -464,7 +464,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true })
       }
       if (inputNum === '4') {
-        const resp = `🚗 *TFD — Minhas viagens*\n\nInforme seu *nome completo* ou *CPF* para eu buscar suas viagens agendadas.`
+        const resp = `🚗 *TFD — Minhas viagens*\n\nInforme seu *CPF* ou *CNS* para eu buscar suas viagens agendadas.`
         await setEstado(telefone, 'buscar_tfd')
         await salvarMensagem(telefone, 'assistant', resp)
         await enviarMensagem(telefone, resp)
@@ -679,14 +679,14 @@ export async function POST(request: NextRequest) {
 
     if (estado === 'menu_sisreg_tipo' && inputNum) {
       if (inputNum === '1') {
-        const resp = `👨‍⚕️ *Consulta Especializada*\n\nInforme seu *nome completo* ou *CPF* para eu verificar como está seu pedido de consulta no sistema estadual.`
+        const resp = `👨‍⚕️ *Consulta Especializada*\n\nInforme seu *CPF* ou *CNS* para eu verificar como está seu pedido de consulta no sistema estadual.`
         await setEstado(telefone, 'buscar_sisreg_consulta')
         await salvarMensagem(telefone, 'assistant', resp)
         await enviarMensagem(telefone, resp)
         return NextResponse.json({ ok: true })
       }
       if (inputNum === '2') {
-        const resp = `🔬 *Exames*\n\nInforme seu *nome completo* ou *CPF* para eu verificar como está seu pedido de exame no sistema estadual.`
+        const resp = `🔬 *Exames*\n\nInforme seu *CPF* ou *CNS* para eu verificar como está seu pedido de exame no sistema estadual.`
         await setEstado(telefone, 'buscar_sisreg_exame')
         await salvarMensagem(telefone, 'assistant', resp)
         await enviarMensagem(telefone, resp)
@@ -701,9 +701,17 @@ export async function POST(request: NextRequest) {
 
     // ── Busca direta de agendamentos (sem IA) ────────────────────────────────
     if (estado === 'buscar_agendamento') {
-      const resultado = await executarFerramenta('buscar_agendamentos', { busca: input }, telefone)
+      const soDigitos = input.replace(/\D/g, '')
+      if (soDigitos.length !== 11 && soDigitos.length !== 15) {
+        const respInvalido = `❌ *CPF ou CNS inválido.*\n\nPor favor, envie apenas os *11 números do seu CPF* ou os *15 números do seu CNS*. Para sua segurança, a busca por nome foi desativada.`
+        await salvarMensagem(telefone, 'assistant', respInvalido)
+        await enviarMensagem(telefone, respInvalido)
+        return NextResponse.json({ ok: true })
+      }
+
+      const resultado = await executarFerramenta('buscar_agendamentos', { busca: soDigitos }, telefone)
       const resposta = resultado === 'Nenhum agendamento encontrado para este paciente.'
-        ? `❌ Nenhum agendamento encontrado para *${input}*.\n\nVerifique se o nome ou CPF está correto e tente novamente, ou ligue para a SMS:\n📞 *(63) 99130-6916*`
+        ? `❌ Nenhum agendamento encontrado para o CPF/CNS *${soDigitos}*.\n\nVerifique se os dados estão corretos e tente novamente, ou ligue para a SMS:\n📞 *(63) 99130-6916*`
         : `📋 *Seus agendamentos:*\n\n${resultado}`
       const comAjuda = `${resposta}\n\n❓ *Posso te ajudar em algo mais?*\n1️⃣ Sim\n2️⃣ Não`
       await setEstado(telefone, 'perguntar_mais_ajuda')
@@ -714,9 +722,17 @@ export async function POST(request: NextRequest) {
 
     // ── Busca direta de viagens TFD (sem IA) ─────────────────────────────────
     if (estado === 'buscar_tfd') {
-      const resultado = await executarFerramenta('buscar_tfd', { busca: input }, telefone)
+      const soDigitos = input.replace(/\D/g, '')
+      if (soDigitos.length !== 11 && soDigitos.length !== 15) {
+        const respInvalido = `❌ *CPF ou CNS inválido.*\n\nPor favor, envie apenas os *11 números do seu CPF* ou os *15 números do seu CNS*. Para sua segurança, a busca por nome foi desativada.`
+        await salvarMensagem(telefone, 'assistant', respInvalido)
+        await enviarMensagem(telefone, respInvalido)
+        return NextResponse.json({ ok: true })
+      }
+
+      const resultado = await executarFerramenta('buscar_tfd', { busca: soDigitos }, telefone)
       const resposta = resultado === 'Nenhuma viagem TFD encontrada para este paciente.'
-        ? `❌ Nenhuma viagem encontrada para *${input}*.\n\nVerifique o nome ou CPF, ou entre em contato:\n📞 *(63) 99130-6916*`
+        ? `❌ Nenhuma viagem encontrada para o CPF/CNS *${soDigitos}*.\n\nVerifique se os dados estão corretos, ou entre em contato:\n📞 *(63) 99130-6916*`
         : `🚗 *Suas viagens TFD:*\n\n${resultado}`
       const comAjuda = `${resposta}\n\n❓ *Posso te ajudar em algo mais?*\n1️⃣ Sim\n2️⃣ Não`
       await setEstado(telefone, 'perguntar_mais_ajuda')
