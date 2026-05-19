@@ -136,12 +136,10 @@ export async function buscarSolicitacoesSisreg(busca: string, tipo: 'consulta' |
     // 2. Filtro inteligente de status e datas
     const statusUpper = (sol.status || '').toUpperCase()
 
-    // Ocultar cancelados/excluídos/devolvidos
+    // Ocultar cancelados/excluídos gerais (sem ser devolvidos/negados)
     if (
       statusUpper.includes('CANCELADO') || 
-      statusUpper.includes('EXCLUIDO') || 
-      statusUpper.includes('REJEITADO') || 
-      statusUpper.includes('DEVOLVIDO')
+      statusUpper.includes('EXCLUIDO')
     ) {
       return false
     }
@@ -154,6 +152,17 @@ export async function buscarSolicitacoesSisreg(busca: string, tipo: 'consulta' |
       statusUpper.includes('EXECUTANTE')
     ) {
       return false
+    }
+
+    // Se a solicitação estiver com status de Devolvido, Negado ou Rejeitado, NUNCA ocultamos
+    // Queremos mostrar ao paciente para que ele entre em contato com a secretaria.
+    const isProblema = 
+      statusUpper.includes('DEVOLVI') || 
+      statusUpper.includes('NEGA') || 
+      statusUpper.includes('REJEIT')
+
+    if (isProblema) {
+      return true
     }
 
     // Verifica se a solicitação está ativamente na fila de espera/regulação

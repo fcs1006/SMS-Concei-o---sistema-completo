@@ -215,7 +215,19 @@ async function executarFerramenta(nome: string, input: any, telefone: string): P
           return `Paciente identificado no SISREG, mas não possui nenhuma solicitação ativa ou pendente de *${input.tipo}* no momento.`
         }
 
-        const formatadas = solicitacoes.map((s: SisregSolicitacaoComFila) => {
+        // Separa as solicitações ativas normais das que possuem problemas (devolvido/negado)
+        const ativas = solicitacoes.filter(s => {
+          const status = (s.status || '').toUpperCase();
+          return !status.includes('DEVOLVI') && !status.includes('NEGA') && !status.includes('REJEIT') && s.codigo_procedimento !== 'NENHUM_ATIVO';
+        });
+
+        const problemas = solicitacoes.filter(s => {
+          const status = (s.status || '').toUpperCase();
+          return status.includes('DEVOLVI') || status.includes('NEGA') || status.includes('REJEIT');
+        });
+
+        // Constrói o texto das ativas
+        const formatadasAtivas = ativas.map((s: SisregSolicitacaoComFila) => {
           const procedimento = s.procedimento
           const dataSolicitacao = s.data_solicitacao ? s.data_solicitacao.split('T')[0].split('-').reverse().join('/') : '—'
           const dataMarcacao = s.data_marcacao ? s.data_marcacao.split('T')[0].split('-').reverse().join('/') : null
@@ -234,8 +246,26 @@ async function executarFerramenta(nome: string, input: any, telefone: string): P
           }
           return resposta
         })
-        
-        return formatadas.join('\n\n')
+
+        // Constrói o texto das com problemas (devolvidos/negados)
+        const formatadasProblemas = problemas.map((s: SisregSolicitacaoComFila) => {
+          const procedimento = s.procedimento
+          const dataSolicitacao = s.data_solicitacao ? s.data_solicitacao.split('T')[0].split('-').reverse().join('/') : '—'
+          return `• *${procedimento.toUpperCase()}*\n  Situação: ❌ *${s.status}*\n  Data de inserção: ${dataSolicitacao}`
+        })
+
+        const outputParts: string[] = []
+
+        if (formatadasAtivas.length > 0) {
+          outputParts.push(formatadasAtivas.join('\n\n'))
+        }
+
+        if (formatadasProblemas.length > 0) {
+          const avisoProblema = `⚠️ *Pendente de Correção / Recusado:*\n\n${formatadasProblemas.join('\n\n')}\n\n*Por favor, entre em contato imediatamente com a Secretaria de Saúde para regularizar seu pedido:* \n📞 Telefone/WhatsApp: *(63) 99130-6916*\n\nOu digite *#humano* para que eu te transfira para um atendente agora mesmo.`
+          outputParts.push(avisoProblema)
+        }
+
+        return outputParts.join('\n\n═══════════════════════\n\n')
       } catch (e: any) {
         return `Erro interno ao acessar a base local: ${e.message}`
       }
