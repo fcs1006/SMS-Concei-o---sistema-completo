@@ -394,7 +394,8 @@ export default function Agendamento() {
     } else {
       setUltimoAgendamento({ ...form })
       setStatus({ msg: 'Viagem agendada com sucesso!', tipo: 'ok' })
-      setForm(FORM_VAZIO)
+      const primeiroNome = (usuario?.nome || '').split(' ')[0].toUpperCase()
+      setForm({ ...FORM_VAZIO, agendadoPor: primeiroNome })
       setBusca('')
       setBuscaA1('')
       setBuscaA2('')

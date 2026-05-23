@@ -27,6 +27,93 @@ function dentroDoHorario(): boolean {
   // return (h >= 7 && h < 11) || (h >= 13 && h < 17)
 }
 
+// ── Funções de Mascaramento de Dados (LGPD) ──────────────────────────────────
+function mascararNome(nome: string): string {
+  if (!nome) return ''
+  const partes = nome.trim().split(/\s+/)
+  if (partes.length === 1) return partes[0][0] + '...'
+  return partes.map((p, idx) => {
+    if (idx === 0 || idx === partes.length - 1) return p
+    return p[0] + '.'
+  }).join(' ')
+}
+
+function mascararCPF(cpf: string | null): string {
+  if (!cpf) return 'Não informado'
+  const clean = cpf.replace(/\D/g, '')
+  if (clean.length !== 11) return cpf
+  return `${clean.substring(0, 3)}.***.***-${clean.substring(9)}`
+}
+
+function mascararCNS(cns: string | null): string {
+  if (!cns) return 'Não informado'
+  const clean = cns.replace(/\D/g, '')
+  if (clean.length !== 15) return cns
+  return `${clean.substring(0, 3)} **** **** ${clean.substring(11)}`
+}
+
+function mascararEndereco(end: string | null): string {
+  if (!end) return 'Não informado'
+  const partes = end.split(',')
+  return partes[0] + ', ***'
+}
+
+function mascararTelefone(tel: string | null): string {
+  if (!tel) return 'Não informado'
+  const clean = tel.replace(/\D/g, '')
+  if (clean.length < 8) return tel
+  return `(***) ****-${clean.substring(clean.length - 4)}`
+}
+
+// ── Validação de Acesso a Dados do Paciente (LGPD) ───────────────────────────
+async function validarAcessoPaciente(telefone: string, busca: string, dataNascimentoInput?: string): Promise<{ autorizado: boolean, erro?: string, pacienteId?: string, pacienteNome?: string, pacienteCpfCns?: string }> {
+  const soDigitos = busca.replace(/\D/g, '')
+  let query = supabase.from('pacientes').select('id, nome, cpf_cns, dt_nasc, telefone')
+  
+  if (soDigitos.length >= 6) {
+    query = query.ilike('cpf_cns', `%${soDigitos}%`)
+  } else {
+    query = query.ilike('nome', `%${busca.toUpperCase()}%`)
+  }
+  
+  const { data: pacienteData, error } = await query
+  if (error || !pacienteData || pacienteData.length === 0) {
+    return { autorizado: false, erro: 'Paciente não cadastrado na base da secretaria.' }
+  }
+
+  if (pacienteData.length > 1 && soDigitos.length < 6) {
+    return { autorizado: false, erro: 'Foram encontrados múltiplos pacientes com este nome. Por favor, realize a busca informando o CPF ou CNS completo.' }
+  }
+
+  const paciente = pacienteData[0]
+  const pacienteTelefoneClean = (paciente.telefone || '').replace(/\D/g, '')
+  const telefoneRemetenteClean = telefone.replace(/\D/g, '')
+
+  // Regra 1: Se o telefone cadastrado bater com o telefone do remetente, autoriza automaticamente
+  if (pacienteTelefoneClean && (pacienteTelefoneClean.includes(telefoneRemetenteClean) || telefoneRemetenteClean.includes(pacienteTelefoneClean))) {
+    return { autorizado: true, pacienteId: paciente.id, pacienteNome: paciente.nome, pacienteCpfCns: paciente.cpf_cns }
+  }
+
+  // Regra 2: Se foi fornecida a data de nascimento e ela bater com o cadastro, autoriza
+  if (dataNascimentoInput) {
+    const dataNascFmt = dataNascimentoInput.replace(/\D/g, '')
+    const dbNascFmt = paciente.dt_nasc ? paciente.dt_nasc.split('-').reverse().join('') : ''
+    const dbNascFmtUs = paciente.dt_nasc ? paciente.dt_nasc.replace(/\D/g, '') : ''
+    
+    if (dataNascFmt === dbNascFmt || dataNascFmt === dbNascFmtUs) {
+      return { autorizado: true, pacienteId: paciente.id, pacienteNome: paciente.nome, pacienteCpfCns: paciente.cpf_cns }
+    }
+    return { autorizado: false, erro: 'ERRO_AUTORIZACAO: A data de nascimento fornecida não confere com o cadastro do paciente.' }
+  }
+
+  // Regra 3: Caso contrário, exige a validação da data de nascimento
+  const nomeMascarado = mascararNome(paciente.nome)
+  return { 
+    autorizado: false, 
+    erro: `REQUER_VALIDACAO_NASCIMENTO: Para visualizar dados de ${nomeMascarado}, você precisa informar a data de nascimento do paciente (DD/MM/AAAA).` 
+  }
+}
+
 // ── Ferramentas do Francisco ─────────────────────────────────────────────────
 const tools: FunctionDeclaration[] = [
   {
@@ -42,34 +129,37 @@ const tools: FunctionDeclaration[] = [
   },
   {
     name: 'buscar_agendamentos',
-    description: 'Busca agendamentos de consultas e exames de especialidades do paciente pelo nome ou CPF/CNS. Retorna especialidade, tipo de exame, data, status e profissional.',
+    description: 'Busca agendamentos de consultas e exames de especialidades do paciente pelo nome ou CPF/CNS. Retorna especialidade, tipo de exame, data, status e profissional. IMPORTANTE: Para LGPD, se a busca for por CPF/CNS diferente do próprio usuário ou se o telefone não estiver vinculado, você DEVE solicitar e fornecer a data_nascimento (no formato DD/MM/AAAA) para autorizar a consulta.',
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        busca: { type: SchemaType.STRING, description: 'Nome do paciente ou CPF/CNS (com ou sem máscara)' }
+        busca: { type: SchemaType.STRING, description: 'Nome do paciente ou CPF/CNS (com ou sem máscara)' },
+        data_nascimento: { type: SchemaType.STRING, description: 'Data de nascimento do paciente (DD/MM/AAAA). Obrigatório se consultando dados de terceiros ou se o telefone não estiver cadastrado.' }
       },
       required: ['busca']
     }
   },
   {
     name: 'buscar_paciente',
-    description: 'Busca dados cadastrais do paciente (nome, CPF/CNS, data de nascimento, telefone, endereço) na base da secretaria.',
+    description: 'Busca dados cadastrais do paciente (nome, CPF/CNS, data de nascimento, telefone, endereço) na base da secretaria. Retorna dados mascarados por segurança. IMPORTANTE: Para LGPD, se a busca for por CPF/CNS diferente do próprio usuário ou se o telefone não estiver vinculado, você DEVE solicitar e fornecer a data_nascimento (no formato DD/MM/AAAA) para autorizar a consulta.',
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        busca: { type: SchemaType.STRING, description: 'Nome do paciente ou CPF/CNS' }
+        busca: { type: SchemaType.STRING, description: 'Nome do paciente ou CPF/CNS' },
+        data_nascimento: { type: SchemaType.STRING, description: 'Data de nascimento do paciente (DD/MM/AAAA). Obrigatório se consultando dados de terceiros ou se o telefone não estiver cadastrado.' }
       },
       required: ['busca']
     }
   },
   {
     name: 'buscar_tfd',
-    description: 'Busca viagens de TFD (Tratamento Fora do Domicílio) do paciente. Retorna destino, data e horário da viagem.',
+    description: 'Busca viagens de TFD (Tratamento Fora do Domicílio) do paciente. Retorna destino, data e horário da viagem. IMPORTANTE: Para LGPD, se a busca for por CPF/CNS diferente do próprio usuário ou se o telefone não estiver vinculado, você DEVE solicitar e fornecer a data_nascimento (no formato DD/MM/AAAA) para autorizar a consulta.',
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
         busca: { type: SchemaType.STRING, description: 'Nome do paciente ou CPF' },
-        data: { type: SchemaType.STRING, description: 'Data no formato YYYY-MM-DD (opcional, para filtrar por data)' }
+        data: { type: SchemaType.STRING, description: 'Data no formato YYYY-MM-DD (opcional, para filtrar por data)' },
+        data_nascimento: { type: SchemaType.STRING, description: 'Data de nascimento do paciente (DD/MM/AAAA). Obrigatório se consultando dados de terceiros ou se o telefone não estiver cadastrado.' }
       },
       required: ['busca']
     }
@@ -87,11 +177,13 @@ const tools: FunctionDeclaration[] = [
   },
   {
     name: 'buscar_sisreg',
-    description: 'Consulta o sistema estadual SISREG para verificar o status de solicitações de consultas e exames de média e alta complexidade.',
+    description: 'Consulta o sistema estadual SISREG para verificar o status de solicitações de consultas e exames de média e alta complexidade. IMPORTANTE: Para LGPD, se a busca for por CPF/CNS diferente do próprio usuário ou se o telefone não estiver vinculado, você DEVE solicitar e fornecer a data_nascimento (no formato DD/MM/AAAA) para autorizar a consulta.',
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        busca: { type: SchemaType.STRING, description: 'CPF ou Nome do paciente' }
+        busca: { type: SchemaType.STRING, description: 'CPF ou Nome do paciente' },
+        tipo: { type: SchemaType.STRING, description: 'Filtro por tipo: consulta | exame | ambos (opcional)' },
+        data_nascimento: { type: SchemaType.STRING, description: 'Data de nascimento do paciente (DD/MM/AAAA). Obrigatório se consultando dados de terceiros ou se o telefone não estiver cadastrado.' }
       },
       required: ['busca']
     }
@@ -115,6 +207,11 @@ async function executarFerramenta(nome: string, input: any, telefone: string): P
     }
 
     if (nome === 'buscar_agendamentos') {
+      const authCheck = await validarAcessoPaciente(telefone, input.busca, input.data_nascimento)
+      if (!authCheck.autorizado) {
+        return authCheck.erro || 'Não autorizado.'
+      }
+
       const soDigitos = input.busca.replace(/\D/g, '')
       let query = supabase
         .from('especialidades_agendamentos')
@@ -141,6 +238,11 @@ async function executarFerramenta(nome: string, input: any, telefone: string): P
     }
 
     if (nome === 'buscar_paciente') {
+      const authCheck = await validarAcessoPaciente(telefone, input.busca, input.data_nascimento)
+      if (!authCheck.autorizado) {
+        return authCheck.erro || 'Não autorizado.'
+      }
+
       const soDigitos = input.busca.replace(/\D/g, '')
       let query = supabase
         .from('pacientes')
@@ -159,11 +261,20 @@ async function executarFerramenta(nome: string, input: any, telefone: string): P
 
       return data.map(p => {
         const nasc = p.dt_nasc ? p.dt_nasc.split('-').reverse().join('/') : 'não informada'
-        return `• ${p.nome}\n  CPF/CNS: ${p.cpf_cns || '—'}\n  Nascimento: ${nasc}\n  Telefone: ${p.telefone || '—'}\n  Endereço: ${p.endereco || '—'}, ${p.bairro || '—'}`
+        const nomeMasc = mascararNome(p.nome)
+        const cpfMasc = mascararCPF(p.cpf_cns)
+        const telMasc = mascararTelefone(p.telefone)
+        const endMasc = mascararEndereco(p.endereco)
+        return `• ${nomeMasc}\n  CPF/CNS: ${cpfMasc}\n  Nascimento: ${nasc}\n  Telefone: ${telMasc}\n  Endereço: ${endMasc}, ${p.bairro || '—'}`
       }).join('\n\n')
     }
 
     if (nome === 'buscar_tfd') {
+      const authCheck = await validarAcessoPaciente(telefone, input.busca, input.data_nascimento)
+      if (!authCheck.autorizado) {
+        return authCheck.erro || 'Não autorizado.'
+      }
+
       const soDigitos = input.busca.replace(/\D/g, '')
       let query = supabase
         .from('viagens')
@@ -185,7 +296,8 @@ async function executarFerramenta(nome: string, input: any, telefone: string): P
 
       return data.map(v => {
         const data_fmt = v.data_viagem ? v.data_viagem.split('-').reverse().join('/') : '—'
-        return `• ${data_fmt} às ${v.hora || '—'}\n  Destino: ${v.destino || '—'}\n  Paciente: ${v.paciente_nome}`
+        const nomeMasc = mascararNome(v.paciente_nome)
+        return `• ${data_fmt} às ${v.hora || '—'}\n  Destino: ${v.destino || '—'}\n  Paciente: ${nomeMasc}`
       }).join('\n\n')
     }
 
@@ -208,11 +320,16 @@ async function executarFerramenta(nome: string, input: any, telefone: string): P
 
     if (nome === 'buscar_sisreg') {
       try {
-        const solicitacoes = await buscarSolicitacoesSisreg(input.busca, input.tipo)
+        const authCheck = await validarAcessoPaciente(telefone, input.busca, input.data_nascimento)
+        if (!authCheck.autorizado) {
+          return authCheck.erro || 'Não autorizado.'
+        }
+
+        const solicitacoes = await buscarSolicitacoesSisreg(input.busca, input.tipo || 'ambos')
         if (solicitacoes.length === 0) return `Nenhuma solicitação encontrada para este paciente.`
 
         if (solicitacoes.length === 1 && solicitacoes[0].codigo_procedimento === 'NENHUM_ATIVO') {
-          return `Paciente identificado no SISREG, mas não possui nenhuma solicitação ativa ou pendente de *${input.tipo}* no momento.`
+          return `Paciente identificado no SISREG, mas não possui nenhuma solicitação activa ou pendente de *${input.tipo || 'consultas/exames'}* no momento.`
         }
 
         // Separa as solicitações ativas normais das que possuem problemas (devolvido/negado)
@@ -282,7 +399,8 @@ async function enviarMensagem(numero: string, texto: string) {
   if (numero === TELEFONE_TESTE) return
 
   if (!EVOLUTION_URL || !EVOLUTION_KEY || !EVOLUTION_INSTANCE) {
-    throw new Error('Evolution API nao configurada. Configure EVOLUTION_API_URL, EVOLUTION_API_KEY e EVOLUTION_INSTANCE.')
+    console.warn(`[Evolution API MOCK] Enviar mensagem para ${numero}: ${texto}`)
+    return
   }
 
   await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
@@ -390,6 +508,21 @@ export async function POST(request: NextRequest) {
 
     const historico = await carregarHistorico(telefone)
     await salvarMensagem(telefone, 'user', texto)
+
+    // Busca automática do cadastro pelo telefone do remetente (LGPD)
+    const { data: pacienteAtual } = await supabase
+      .from('pacientes')
+      .select('nome, cpf_cns, dt_nasc')
+      .eq('telefone', telefone)
+      .maybeSingle()
+
+    let identificacaoUsuarioPrompt = ''
+    if (pacienteAtual) {
+      const dataNascFmt = pacienteAtual.dt_nasc ? pacienteAtual.dt_nasc.split('-').reverse().join('/') : 'Não cadastrada'
+      identificacaoUsuarioPrompt = `\n\n═══════════════════════════════════════\nUSUÁRIO AUTENTICADO DO WHATSAPP\n═══════════════════════════════════════\nO número de telefone de origem (+${telefone}) está cadastrado no sistema municipal para o seguinte paciente:\n- Nome: ${pacienteAtual.nome}\n- CPF/CNS: ${pacienteAtual.cpf_cns}\n- Data de Nascimento: ${dataNascFmt}\n\nVocê deve usar este CPF/CNS para consultas dele. Se ele pedir seus próprios agendamentos, viagens ou SISREG, use estes dados cadastrais automaticamente sem precisar perguntar.`
+    } else {
+      identificacaoUsuarioPrompt = `\n\n═══════════════════════════════════════\nUSUÁRIO NÃO AUTENTICADO DO WHATSAPP\n═══════════════════════════════════════\nO número de telefone de origem (+${telefone}) não está vinculado a nenhuma ficha cadastral de paciente no sistema municipal.\nSe ele pedir consultas de seus próprios dados, você DEVE solicitar o CPF ou CNS dele. Se ele tentar consultar dados de terceiros ou se o telefone não estiver vinculado, você DEVE solicitar e fornecer a data de nascimento do paciente na ferramenta para validação.`
+    }
 
     // Fora do horário de funcionamento
     if (!dentroDoHorario()) {
@@ -937,8 +1070,11 @@ CONTATOS DE EMERGÊNCIA:
 
     const model = genAI.getGenerativeModel({
       model: GEMINI_MODEL,
-      systemInstruction: systemPrompt,
+      systemInstruction: systemPrompt + identificacaoUsuarioPrompt,
       tools: [{ functionDeclarations: tools }],
+      generationConfig: {
+        temperature: 0.1,
+      }
     })
 
     const chat = model.startChat({

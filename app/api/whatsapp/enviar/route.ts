@@ -18,22 +18,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'numero e texto são obrigatórios' }, { status: 400 })
     }
 
-    if (!EVOLUTION_URL || !EVOLUTION_KEY || !EVOLUTION_INSTANCE) {
-      return NextResponse.json(
-        { ok: false, error: 'Evolution API nao configurada. Configure EVOLUTION_API_URL, EVOLUTION_API_KEY e EVOLUTION_INSTANCE.' },
-        { status: 500 }
-      )
-    }
+    const isEvolutionConfigured = EVOLUTION_URL && EVOLUTION_KEY && EVOLUTION_INSTANCE;
 
-    const resp = await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_KEY },
-      body: JSON.stringify({ number: numero, text: texto })
-    })
+    if (isEvolutionConfigured) {
+      const resp = await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_KEY },
+        body: JSON.stringify({ number: numero, text: texto })
+      })
 
-    if (!resp.ok) {
-      const err = await resp.text()
-      return NextResponse.json({ ok: false, error: err }, { status: 500 })
+      if (!resp.ok) {
+        const err = await resp.text()
+        return NextResponse.json({ ok: false, error: err }, { status: 500 })
+      }
+    } else {
+      console.warn(`[Evolution API MOCK] Enviar mensagem para ${numero}: ${texto}`)
     }
 
     // Ao enviar uma mensagem manual do atendente, silencia o robô definindo o estado como 'aguardando_humano'.
@@ -46,6 +45,13 @@ export async function POST(request: NextRequest) {
       { telefone: numero, estado: novoEstado, atualizado_em: new Date().toISOString() },
       { onConflict: 'telefone' }
     )
+
+    // Salvar no histórico de conversas do banco de dados como papel 'assistant'
+    await supabase.from('whatsapp_conversas').insert([{
+      telefone: numero,
+      papel: 'assistant',
+      mensagem: `[ATENDENTE] ${texto.trim()}`
+    }])
 
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {

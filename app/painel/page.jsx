@@ -70,13 +70,22 @@ export default function PainelGeral() {
       const { count: vMes } = await supabase.from('viagens').select('*', { count: 'exact', head: true }).gte('data_viagem', inicioMes)
       const { count: pTot } = await supabase.from('pacientes').select('*', { count: 'exact', head: true })
       
-      // Corrigido: a tabela de login é 'usuarios'
-      const { count: sAtv } = await supabase.from('usuarios').select('*', { count: 'exact', head: true }).eq('ativo', true)
+      // Corrigido: a tabela de login é 'usuarios', buscada via API segura para contornar RLS
+      let sAtv = 0
+      try {
+        const res = await fetch('/api/usuarios/ativos')
+        const data = await res.json()
+        if (data.ok) {
+          sAtv = data.count
+        }
+      } catch (err) {
+        console.error("Erro ao buscar servidores ativos:", err)
+      }
       
       const { data: vDest } = await supabase.from('viagens').select('destino').gte('data_viagem', inicioMes)
       const { data: vUlt } = await supabase.from('viagens')
-        .select('data_viagem, hora, paciente_nome, destino, created_at')
-        .order('created_at', { ascending: false })
+        .select('data_viagem, hora, paciente_nome, destino, criado_em')
+        .order('criado_em', { ascending: false })
         .limit(5)
 
       // Processar destinos

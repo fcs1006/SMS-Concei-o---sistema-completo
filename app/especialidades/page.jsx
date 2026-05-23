@@ -571,6 +571,7 @@ export default function Especialidades() {
   const [abaConfig, setAbaConfig] = useState('especialidades')
   // form nova especialidade
   const [formEsp, setFormEsp] = useState({ label: '', icon: '', cota: '30' })
+  const [editandoEsp, setEditandoEsp] = useState(null) // slug da especialidade em edição, ou null
   const [salvandoEsp, setSalvandoEsp] = useState(false)
   // form novo preparo
   const [formPreparo, setFormPreparo] = useState({ especialidade_slug: 'usg', tipo_exame: '', instrucoes: '' })
@@ -857,15 +858,30 @@ export default function Especialidades() {
     if (!formEsp.label.trim()) { mostrarMsg('Informe o nome da especialidade', false); return }
     setSalvandoEsp(true)
     try {
-      const res = await fetch('/api/config/especialidades', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: formEsp.label, label: formEsp.label.trim(), icon: formEsp.icon, cota: Number(formEsp.cota) || 30 })
-      })
-      const json = await res.json()
-      if (json.error) throw new Error(json.error)
-      setFormEsp({ label: '', icon: '', cota: '30' })
-      mostrarMsg('Especialidade cadastrada')
+      if (editandoEsp) {
+        // Modo Edição
+        const res = await fetch('/api/config/especialidades', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: editandoEsp, label: formEsp.label.trim(), icon: formEsp.icon, cota: Number(formEsp.cota) || 30 })
+        })
+        const json = await res.json()
+        if (json.error) throw new Error(json.error)
+        setFormEsp({ label: '', icon: '', cota: '30' })
+        setEditandoEsp(null)
+        mostrarMsg('Especialidade atualizada')
+      } else {
+        // Modo Criação
+        const res = await fetch('/api/config/especialidades', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: formEsp.label, label: formEsp.label.trim(), icon: formEsp.icon, cota: Number(formEsp.cota) || 30 })
+        })
+        const json = await res.json()
+        if (json.error) throw new Error(json.error)
+        setFormEsp({ label: '', icon: '', cota: '30' })
+        mostrarMsg('Especialidade cadastrada')
+      }
       await carregarConfig()
     } catch (e) { mostrarMsg('' + e.message, false) }
     setSalvandoEsp(false)
@@ -1070,7 +1086,7 @@ export default function Especialidades() {
         {/* Modal Configurações */}
         <AnimatePresence>
         {modalConfig && (
-          <Modal titulo="Configurações de Especialidades" onClose={() => setModalConfig(false)} largura="640px">
+          <Modal titulo="Configurações de Especialidades" onClose={() => { setModalConfig(false); setEditandoEsp(null); setFormEsp({ label: '', icon: '', cota: '30' }) }} largura="640px">
             {/* Abas */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
               {[['especialidades', <><Stethoscope size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Especialidades</>], ['preparos', <><FlaskConical size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Preparos</>], ['periodos', <><Clock size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Períodos</>]].map(([id, lbl]) => (
@@ -1095,6 +1111,18 @@ export default function Especialidades() {
                         <span style={{ fontSize: '18px' }}>{e.icon}</span>
                         <span style={{ flex: 1, fontWeight: '600', fontSize: '13px', color: e.ativo ? '#166534' : '#94a3b8' }}>{e.label}</span>
                         <span style={{ fontSize: '11px', color: '#94a3b8' }}>cota {e.cota}</span>
+                        
+                        <button onClick={() => {
+                          setEditandoEsp(e.slug)
+                          setFormEsp({ label: e.label, icon: e.icon, cota: String(e.cota) })
+                        }} style={{
+                          background: '#eff6ff', border: 'none', borderRadius: '6px',
+                          padding: '4px 8px', fontSize: '11px', cursor: 'pointer',
+                          color: '#1d4ed8', display: 'inline-flex', alignItems: 'center', gap: '4px'
+                        }} title="Editar">
+                          <Pencil size={11} />
+                        </button>
+
                         <button onClick={() => toggleEspecialidade(e.slug, e.ativo)} style={{
                           background: e.ativo ? '#fee2e2' : '#dcfce7', border: 'none', borderRadius: '6px',
                           padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
@@ -1104,16 +1132,28 @@ export default function Especialidades() {
                     ))}
                   </div>
                 </div>
-                {/* Nova especialidade */}
+                {/* Nova especialidade / Editar especialidade */}
                 <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nova especialidade</p>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {editandoEsp ? 'Editar especialidade' : 'Nova especialidade'}
+                  </p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px auto', gap: '8px', alignItems: 'end' }}>
                     <div><label className="label-modern">Nome</label><input className="input-modern" placeholder="Ex.: Cardiologia" value={formEsp.label} onChange={e => setFormEsp(f => ({ ...f, label: e.target.value }))} /></div>
                     <div><label className="label-modern">Ícone</label><input className="input-modern" value={formEsp.icon || ''} onChange={e => setFormEsp(f => ({ ...f, icon: e.target.value }))} style={{ textAlign: 'center' }} /></div>
                     <div><label className="label-modern">Cota/mês</label><input className="input-modern" type="number" min="1" value={formEsp.cota} onChange={e => setFormEsp(f => ({ ...f, cota: e.target.value }))} /></div>
-                    <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={salvarEspecialidade} disabled={salvandoEsp}>
-                      {salvandoEsp ? '...' : '+ Adicionar'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {editandoEsp && (
+                        <button className="btn-secondary" style={{ padding: '9px 14px' }} onClick={() => {
+                          setEditandoEsp(null)
+                          setFormEsp({ label: '', icon: '', cota: '30' })
+                        }}>
+                          Cancelar
+                        </button>
+                      )}
+                      <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={salvarEspecialidade} disabled={salvandoEsp}>
+                        {salvandoEsp ? '...' : editandoEsp ? 'Salvar' : '+ Adicionar'}
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
