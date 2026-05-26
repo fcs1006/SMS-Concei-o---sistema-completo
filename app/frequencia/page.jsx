@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
+import { clientConfig } from '@/lib/config'
 import { abrirJanelaImpressaoComTitulo } from '@/lib/printHeader'
 import { Settings, ClipboardList, Users, Printer, CalendarDays, Calendar } from 'lucide-react'
 
@@ -401,8 +402,8 @@ export default function Frequencia() {
         <p><strong>MATRÍCULA:</strong> ${servidor.matricula || ''}</p>
       </div>
       <div class="info-right">
-        <p><strong>FUNDO MUN. SAÚDE DE CONCEIÇÃO DO TO</strong></p>
-        <p><strong>CNPJ:</strong> 11.419.212/0001-24</p>
+        <p><strong>FUNDO MUN. SAÚDE DE ${clientConfig.municipalityName.toUpperCase()}</strong></p>
+        <p><strong>CNPJ:</strong> ${clientConfig.cnpj}</p>
         <p><strong>MÊS REF:</strong> ${mesRefLabel}</p>
       </div>
     </div>
@@ -671,15 +672,15 @@ export default function Frequencia() {
       <div class="cabecalho">
         <img src="${logoUrl}" onerror="this.style.display='none'" />
         <div class="cabecalho-texto">
-          Avenida Sebastião de Brito, Centro, 181<br>
-          Conceição do Tocantins – Tocantins &nbsp; CEP: 77.305-000<br>
-          Tel.: +55 63 3381-1309<br>
-          conceicaodotocantins170560@gmail.com
+          ${clientConfig.address}<br>
+          ${clientConfig.municipalityName} – ${clientConfig.municipalityUF} &nbsp; CEP: ${clientConfig.cep}<br>
+          Tel.: ${clientConfig.phone}<br>
+          ${clientConfig.email}
         </div>
       </div>
 
       <div style="text-align:center;font-weight:bold;font-size:9px;margin:2px 0;">FUNDO MUNICIPAL DE SAÚDE</div>
-      <div style="text-align:center;font-weight:bold;font-size:9px;margin:2px 0;">PREFEITURA MUNICIPAL DE CONCEIÇÃO DO TOCANTINS</div>
+      <div style="text-align:center;font-weight:bold;font-size:9px;margin:2px 0;">PREFEITURA MUNICIPAL DE ${clientConfig.municipalityName.toUpperCase()}</div>
       <div style="text-align:center;font-weight:bold;font-size:9px;margin:2px 0;">SECRETARIA MUNICIPAL DE SAÚDE</div>
 
       <div style="text-align:center;background:#d0d0d0;padding:5px;font-weight:bold;font-size:11px;margin:6px 0;border:1px solid #000;">
@@ -694,7 +695,7 @@ export default function Frequencia() {
         </tr>
         <tr>
           <td style="border:1px solid #000;padding:3px 6px;font-weight:bold;white-space:nowrap;">LOTAÇÃO:</td>
-          <td style="border:1px solid #000;padding:3px 6px;font-weight:bold;">FUNDO MUN. DE SAÚDE DE CONCEIÇÃO DO TO</td>
+          <td style="border:1px solid #000;padding:3px 6px;font-weight:bold;">FUNDO MUN. DE SAÚDE DE ${clientConfig.municipalityName.toUpperCase()}</td>
         </tr>
         <tr>
           <td style="border:1px solid #000;padding:3px 6px;font-weight:bold;white-space:nowrap;">CARGO:</td>

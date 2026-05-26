@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { clientConfig } from '@/lib/config'
 
 type Tela = 'login' | 'cadastro' | 'esqueci'
 
@@ -12,6 +13,18 @@ const GRADIENTES = [
 ]
 
 export default function Login() {
+  const [municipalityName, setMunicipalityName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('sms_client_config')
+      if (cached) {
+        try {
+          const cc = JSON.parse(cached)
+          if (cc.municipalityName) return cc.municipalityName
+        } catch (e) {}
+      }
+    }
+    return clientConfig.municipalityName
+  })
   const [tela, setTela] = useState<Tela>('login')
   const [fundoId, setFundoId]   = useState('foto')
   const [customUrl, setCustomUrl] = useState<string>('')
@@ -43,6 +56,24 @@ export default function Login() {
   }
 
   useEffect(() => {
+    if (clientConfig.theme) {
+      document.documentElement.style.setProperty('--primary', clientConfig.theme.primaryColor)
+      document.documentElement.style.setProperty('--primary-dark', clientConfig.theme.secondaryColor)
+      document.documentElement.style.setProperty('--accent', clientConfig.theme.primaryColor)
+    }
+
+    // Carrega identidade do município
+    fetch('/api/config/geral')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok && data.configs?.client_config) {
+          const cc = data.configs.client_config
+          if (cc.municipalityName) setMunicipalityName(cc.municipalityName)
+          localStorage.setItem('sms_client_config', JSON.stringify(cc))
+        }
+      })
+      .catch(() => {})
+
     fetch('/api/config/fundo')
       .then(r => r.json())
       .then(({ cfg }) => {
@@ -301,9 +332,9 @@ export default function Login() {
       >
         <div style={{ textAlign: 'center', marginBottom: '20px' }} onClick={clicarLogo}>
           <h1 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '18px', fontWeight: '700', color: '#f1f5f9', margin: '0 0 2px' }}>
-            SMS Conceição
+            SMS {municipalityName}
           </h1>
-          <p style={{ color: '#cbd5e1', fontSize: '12px', margin: 0 }}>Secretaria Municipal de Saúde</p>
+          <p style={{ color: '#cbd5e1', fontSize: '12px', margin: 0 }}>Secretaria Municipal de Saúde de {municipalityName}</p>
         </div>
 
         <AnimatePresence mode="wait">

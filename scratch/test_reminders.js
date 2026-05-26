@@ -6,12 +6,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Obter a data de amanhã no fuso de America/Araguaina
+// Obter datas no fuso de America/Araguaina
 const timezone = 'America/Araguaina';
 const nowInTz = new Date(new Date().toLocaleString('en-US', { timeZone: timezone }));
 const tomorrowInTz = new Date(nowInTz);
 tomorrowInTz.setDate(tomorrowInTz.getDate() + 1);
 const tomorrowStr = tomorrowInTz.toLocaleDateString('sv-SE', { timeZone: timezone });
+
+const fiveDaysAheadInTz = new Date(nowInTz);
+fiveDaysAheadInTz.setDate(fiveDaysAheadInTz.getDate() + 5);
+const fiveDaysAheadStr = fiveDaysAheadInTz.toLocaleDateString('sv-SE', { timeZone: timezone });
 
 const TEST_CPF = '99999999999';
 const TEST_TEL = '63999999999';
@@ -103,6 +107,50 @@ async function setupTestData() {
   } catch (e) {
     console.log('⚠️ Tabela monitoramento_sisreg não disponível no banco de dados.');
   }
+
+  // 5. Criar agendamento de especialidade local para daqui a 5 dias
+  const { error: espErr5d } = await supabase.from('especialidades_agendamentos').insert({
+    especialidade: 'urologia',
+    paciente_nome: TEST_NAME,
+    paciente_cns: TEST_CPF,
+    data_consulta: fiveDaysAheadStr,
+    data_atendimento: fiveDaysAheadStr,
+    status: 'autorizado',
+    telefone: TEST_TEL,
+    tipo_exame: 'Retorno',
+    profissional_nome: 'DR. TESTE DE UROLOGIA (5 DIAS)',
+    periodo: 'Vespertino',
+    mes: fiveDaysAheadStr.substring(5, 7),
+    ano: fiveDaysAheadStr.substring(0, 4)
+  });
+
+  if (espErr5d) console.error('Erro ao criar agendamento especialidade 5d:', espErr5d.message);
+  else console.log('✅ Agendamento de especialidade para daqui a 5 dias criado.');
+
+  // 6. Criar registro SISREG para daqui a 5 dias (se tabela existir)
+  try {
+    const { error: sisErr5d } = await supabase.from('monitoramento_sisreg').insert({
+      codigo_solicitacao: 88888888888,
+      data_solicitacao: new Date().toISOString(),
+      data_marcacao: `${fiveDaysAheadStr}T14:30:00`,
+      no_usuario: TEST_NAME,
+      cns_usuario: TEST_CPF,
+      cpf_usuario: TEST_CPF,
+      telefone: TEST_TEL,
+      codigo_interno_procedimento: '0301010072',
+      descricao_interna_procedimento: 'CONSULTA TESTE DE UROLOGIA (5 DIAS)',
+      nome_unidade_solicitante: 'HOSPITAL MODELO SISREG (5 DIAS)',
+      status_solicitacao: 'AGENDADO / CONFIRMADO'
+    });
+    
+    if (sisErr5d) {
+      console.warn('⚠️ Tabela monitoramento_sisreg (5d) pode não existir ou deu erro:', sisErr5d.message);
+    } else {
+      console.log('✅ Registro SISREG (5d) criado.');
+    }
+  } catch (e) {
+    console.log('⚠️ Tabela monitoramento_sisreg (5d) não disponível no banco de dados.');
+  }
 }
 
 async function verifyRemindersSent() {
@@ -156,13 +204,26 @@ async function run() {
   try {
     await setupTestData();
 
-    console.log('\n--- Chamando a API de Lembretes localmente ---');
-    const response = await fetch('http://localhost:3000/api/whatsapp/lembretes?token=sms-conceicao-cron-secret-12345', {
+    console.log('\n--- Chamando a API de Lembretes localmente para AUTORIZAÇÕES ---');
+    const responseAuth = await fetch('http://localhost:3000/api/whatsapp/lembretes?tipo=autorizacoes&token=sms-conceicao-cron-secret-12345', {
       method: 'GET'
     });
+    const dataAuth = await responseAuth.json();
+    console.log('API (Autorizações) Response:', JSON.stringify(dataAuth, null, 2));
 
-    const data = await response.json();
-    console.log('API Response:', JSON.stringify(data, null, 2));
+    console.log('\n--- Chamando a API de Lembretes localmente para LEMBRETES DE 5 DIAS ---');
+    const response5d = await fetch('http://localhost:3000/api/whatsapp/lembretes?tipo=5dias&token=sms-conceicao-cron-secret-12345', {
+      method: 'GET'
+    });
+    const data5d = await response5d.json();
+    console.log('API (5 Dias) Response:', JSON.stringify(data5d, null, 2));
+
+    console.log('\n--- Chamando a API de Lembretes localmente para LEMBRETES DE VÉSPERA ---');
+    const responseLemb = await fetch('http://localhost:3000/api/whatsapp/lembretes?token=sms-conceicao-cron-secret-12345', {
+      method: 'GET'
+    });
+    const dataLemb = await responseLemb.json();
+    console.log('API (Lembretes) Response:', JSON.stringify(dataLemb, null, 2));
 
     await verifyRemindersSent();
   } catch (error) {

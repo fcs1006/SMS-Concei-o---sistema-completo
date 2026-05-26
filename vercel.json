@@ -1,7 +1,23 @@
 {
   "crons": [
     {
-      "path": "/api/whatsapp/lembretes",
+      "path": "/api/whatsapp/lembretes?tipo=tfd",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/whatsapp/lembretes?tipo=autorizacoes",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/whatsapp/lembretes?tipo=5dias",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/whatsapp/lembretes?tipo=autorizacoes",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/whatsapp/lembretes?tipo=consultas",
       "schedule": "0 22 * * *"
     }
   ]

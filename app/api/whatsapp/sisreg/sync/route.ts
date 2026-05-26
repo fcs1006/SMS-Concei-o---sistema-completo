@@ -1,37 +1,43 @@
-import { createClient } from '@supabase/supabase-js'
-import dotenv from 'dotenv'
-
-// Carrega as variáveis de ambiente
-dotenv.config({ path: '.env.local' })
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseServer } from '@/lib/supabaseServer'
 
 const DEFAULT_SISREG_URL = 'https://sisreg-es.saude.gov.br'
 const DEFAULT_SISREG_INDEX = 'marcacao-ambulatorial-to-conceicao-do-tocantins'
 
-async function syncSisreg() {
-  console.log('Iniciando sincronização com SISREG...')
-  const user = process.env.SISREG_USER
-  const password = process.env.SISREG_PASSWORD
-  const url = process.env.SISREG_URL || DEFAULT_SISREG_URL
-  const index = process.env.SISREG_INDEX || DEFAULT_SISREG_INDEX
-
-  if (!user || !password) {
-    console.error('ERRO: Configure SISREG_USER e SISREG_PASSWORD no .env.local.')
-    process.exit(1)
-  }
-
-  const auth = Buffer.from(`${user}:${password}`).toString('base64')
-  
-  // Fazer paginação com a API do ElasticSearch (scroll ou pagination simples se < 10000)
-  // Vamos buscar até 10000 registros para garantir que traz a fila completa do município.
-  let todasSolicitacoes: any[] = []
-  
+export async function POST(request: NextRequest) {
   try {
-    console.log(`Buscando dados no ElasticSearch (${url}/${index})...`)
+    const supabase = getSupabaseServer()
+    const { searchParams } = new URL(request.url)
+    const userCpf = searchParams.get('userCpf')
+
+    if (!userCpf) {
+      return NextResponse.json({ ok: false, error: 'Parâmetro userCpf é obrigatório.' }, { status: 401 })
+    }
+
+    // Valida permissão do usuário
+    const { data: user, error: userErr } = await supabase
+      .from('usuarios')
+      .select('ativo')
+      .eq('usuario', userCpf)
+      .eq('ativo', true)
+      .maybeSingle()
+
+    if (userErr || !user) {
+      return NextResponse.json({ ok: false, error: 'Acesso negado. Usuário inválido ou inativo.' }, { status: 403 })
+    }
+
+    // Executa a sincronização do SISREG
+    const sisregUser = process.env.SISREG_USER
+    const sisregPassword = process.env.SISREG_PASSWORD
+    const url = process.env.SISREG_URL || DEFAULT_SISREG_URL
+    const index = process.env.SISREG_INDEX || DEFAULT_SISREG_INDEX
+
+    if (!sisregUser || !sisregPassword) {
+      return NextResponse.json({ ok: false, error: 'Credenciais do SISREG não configuradas no servidor.' }, { status: 500 })
+    }
+
+    const auth = Buffer.from(`${sisregUser}:${sisregPassword}`).toString('base64')
+
     const response = await fetch(`${url.replace(/\/$/, '')}/${index}/_search`, {
       method: 'POST',
       headers: {
@@ -46,20 +52,15 @@ async function syncSisreg() {
     })
 
     if (!response.ok) {
-      console.error(`Erro na requisição SISREG: Status ${response.status}`)
-      console.error(await response.text())
-      process.exit(1)
+      const errText = await response.text()
+      return NextResponse.json({ ok: false, error: `Erro na API do SISREG: ${response.status}`, details: errText }, { status: 502 })
     }
 
     const data = await response.json()
     const hits = data.hits?.hits || []
-    
-    console.log(`Encontrados ${hits.length} registros no SISREG.`)
 
-    // Mapear os campos para o formato do banco de dados local
-    todasSolicitacoes = hits.map((hit: any) => {
+    const todasSolicitacoes = hits.map((hit: any) => {
       const s = hit._source || {}
-      
       return {
         codigo_solicitacao: s.codigo_solicitacao || s.co_solicitacao || null,
         data_solicitacao: s.data_solicitacao || null,
@@ -87,7 +88,7 @@ async function syncSisreg() {
         telefone_unidade_executante: s.telefone_unidade_executante || null,
         atualizado_em: new Date().toISOString()
       }
-    }).filter((s: any) => s.codigo_solicitacao !== null) // Garantir que tem ID
+    }).filter((s: any) => s.codigo_solicitacao !== null)
 
     // Dedup por codigo_solicitacao (evita conflito de chaves duplicadas no mesmo lote no Postgres)
     const map = new Map<number, any>()
@@ -107,56 +108,36 @@ async function syncSisreg() {
     const solicitacoesDeduplicadas = Array.from(map.values())
 
     if (solicitacoesDeduplicadas.length === 0) {
-      console.log('Nenhum dado válido para sincronizar.')
-      process.exit(0)
+      return NextResponse.json({ ok: true, total: 0, mensagem: 'Nenhum registro encontrado para sincronizar.' })
     }
 
-    console.log(`Iniciando envio para o Supabase (tabela: monitoramento_sisreg) - ${solicitacoesDeduplicadas.length} registros pós-deduplicados...`)
-    
-    // Inserção em lotes de 1000 para não estourar payload
+    // Inserção em lotes de 1000 no banco de dados local
     const batchSize = 1000
     for (let i = 0; i < solicitacoesDeduplicadas.length; i += batchSize) {
       const batch = solicitacoesDeduplicadas.slice(i, i + batchSize)
       const { error } = await supabase
         .from('monitoramento_sisreg')
         .upsert(batch, { onConflict: 'codigo_solicitacao' })
-      
+
       if (error) {
-        console.error(`Erro ao inserir lote ${i / batchSize + 1}:`, error.message)
-      } else {
-        console.log(`Lote ${i / batchSize + 1} (registros ${i + 1} a ${Math.min(i + batchSize, solicitacoesDeduplicadas.length)}) sincronizado com sucesso.`)
-      }
-    }
-
-    console.log('✅ Sincronização finalizada com sucesso!')
-
-    // Disparar a varredura de novas autorizações imediatamente após a sincronização
-    try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      const cronSecret = process.env.CRON_SECRET || 'sms-conceicao-cron-secret-12345'
-      console.log(`Disparando varredura de autorizações em: ${appUrl}/api/whatsapp/lembretes?tipo=autorizacoes...`)
-      
-      const resp = await fetch(`${appUrl.replace(/\/$/, '')}/api/whatsapp/lembretes?tipo=autorizacoes`, {
-        headers: {
-          Authorization: `Bearer ${cronSecret}`
+        console.error(`Erro ao inserir lote no Supabase:`, error.message)
+        if (error.code === '42P01' || error.message.includes('relation "monitoramento_sisreg" does not exist')) {
+          return NextResponse.json({ 
+            ok: false, 
+            error: 'Tabela monitoramento_sisreg não encontrada no banco. Por favor, execute a migração SQL no seu Supabase.' 
+          }, { status: 404 })
         }
-      })
-      
-      if (resp.ok) {
-        console.log('✅ Varredura de autorizações disparada com sucesso.')
-      } else {
-        const errTxt = await resp.text()
-        console.warn(`⚠️ Varredura de autorizações retornou status ${resp.status}: ${errTxt}`)
+        throw error
       }
-    } catch (e: any) {
-      console.warn('⚠️ Não foi possível disparar a varredura de autorizações automaticamente:', e.message)
     }
 
-    process.exit(0)
-  } catch (err: any) {
-    console.error('Erro geral durante a sincronização:', err.message)
-    process.exit(1)
+    return NextResponse.json({ ok: true, total: solicitacoesDeduplicadas.length, mensagem: 'Sincronização com o SISREG realizada com sucesso.' })
+  } catch (error: any) {
+    console.error('[SISREG Sync POST] Erro geral:', error.message)
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
   }
 }
 
-syncSisreg()
+export async function GET(request: NextRequest) {
+  return POST(request)
+}

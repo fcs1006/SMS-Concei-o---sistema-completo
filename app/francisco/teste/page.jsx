@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { clientConfig } from '@/lib/config'
 
 const TELEFONE_TESTE = '5500000000000'
 
@@ -10,21 +11,48 @@ export default function FranciscoTeste() {
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [limpar, setLimpar] = useState(false)
+  const [assistantName, setAssistantName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('sms_client_config')
+      if (cached) {
+        try {
+          const cc = JSON.parse(cached)
+          if (cc.assistantName) return cc.assistantName
+        } catch (e) {}
+      }
+    }
+    return clientConfig.assistantName
+  })
   const msgEndRef = useRef(null)
 
   useEffect(() => {
     const u = JSON.parse(localStorage.getItem('sms_user') || 'null')
     if (!u || u.perfil !== 'admin') { router.push('/'); return }
+
+    // Carrega identidade da IA
+    fetch('/api/config/geral')
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok && data.configs?.client_config) {
+          const cc = data.configs.client_config
+          if (cc.assistantName) setAssistantName(cc.assistantName)
+          localStorage.setItem('sms_client_config', JSON.stringify(cc))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
     msgEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [mensagens])
 
-  async function enviar() {
-    if (!texto.trim() || enviando) return
-    const msg = texto.trim()
-    setTexto('')
+  async function enviar(textoOverride) {
+    const msgVal = typeof textoOverride === 'string' ? textoOverride : texto
+    const msg = (msgVal || '').trim()
+    if (!msg || enviando) return
+    if (typeof textoOverride !== 'string') {
+      setTexto('')
+    }
     setMensagens(prev => [...prev, { papel: 'user', mensagem: msg, hora: new Date() }])
     setEnviando(true)
 
@@ -69,7 +97,7 @@ export default function FranciscoTeste() {
       if (!json.ok && !encontrouNova) {
         setMensagens(prev => [...prev, { papel: 'erro', mensagem: `Erro: ${json.error}`, hora: new Date() }])
       } else if (!encontrouNova) {
-        setMensagens(prev => [...prev, { papel: 'erro', mensagem: 'Nenhuma resposta nova foi gravada pelo Francisco. Verifique o log do servidor.', hora: new Date() }])
+        setMensagens(prev => [...prev, { papel: 'erro', mensagem: `Nenhuma resposta nova foi gravada pelo ${assistantName}. Verifique o log do servidor.`, hora: new Date() }])
       }
     } catch (e) {
       setMensagens(prev => [...prev, { papel: 'erro', mensagem: `Erro de conexão: ${e.message}`, hora: new Date() }])
@@ -94,7 +122,7 @@ export default function FranciscoTeste() {
         <button onClick={() => router.push('/francisco')} style={{ background: 'none', border: 'none', color: 'white', fontSize: '18px', cursor: 'pointer', padding: '0 4px' }}>←</button>
         <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#25d366', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🤖</div>
         <div>
-          <p style={{ margin: 0, color: 'white', fontWeight: '700', fontSize: '15px' }}>Francisco</p>
+          <p style={{ margin: 0, color: 'white', fontWeight: '700', fontSize: '15px' }}>{assistantName}</p>
           <p style={{ margin: 0, color: '#b2dfdb', fontSize: '11px' }}>Teste de simulação — não usa WhatsApp real</p>
         </div>
         <button onClick={limparConversa} style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '11px', padding: '6px 12px', cursor: 'pointer' }}>
@@ -112,7 +140,7 @@ export default function FranciscoTeste() {
         {mensagens.length === 0 && (
           <div style={{ textAlign: 'center', color: '#666', fontSize: '13px', marginTop: '40px' }}>
             <p style={{ fontSize: '40px', marginBottom: '8px' }}>🤖</p>
-            <p>Envie uma mensagem para testar o Francisco</p>
+            <p>Envie uma mensagem para testar o {assistantName}</p>
             <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
               {['Olá', 'Quais são os serviços?', 'Qual o horário?', 'Preciso de ajuda com meu agendamento'].map(s => (
                 <button key={s} onClick={() => setTexto(s)}
@@ -124,25 +152,105 @@ export default function FranciscoTeste() {
           </div>
         )}
 
-        {mensagens.map((m, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: m.papel === 'user' ? 'flex-end' : m.papel === 'erro' ? 'center' : 'flex-start' }}>
-            {m.papel === 'erro' ? (
-              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '8px 14px', fontSize: '12px', color: '#dc2626' }}>
-                {m.mensagem}
+        {mensagens.map((m, i) => {
+          if (m.papel === 'erro') {
+            return (
+              <div key={i} style={{ display: 'flex', justifyContent: 'center' }}>
+                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '8px 14px', fontSize: '12px', color: '#dc2626' }}>
+                  {m.mensagem}
+                </div>
               </div>
-            ) : (
+            )
+          }
+
+          // Analisa se a mensagem do assistente tem botões/opções estruturadas no padrão de fallback
+          let cleanText = m.mensagem
+          const options = []
+          
+          if (m.papel === 'assistant') {
+            const lines = m.mensagem.split('\n')
+            const cleanLines = []
+            
+            lines.forEach(line => {
+              const match = line.match(/^(\d+)(?:️⃣|️⃣)?\s*\*([^*]+)\*(?:\s*-\s*(.+))?$/)
+              if (match) {
+                options.push({
+                  id: match[1],
+                  label: match[2].trim(),
+                  description: match[3] ? match[3].trim() : ''
+                })
+              } else {
+                cleanLines.push(line)
+              }
+            })
+            cleanText = cleanLines.join('\n').trim()
+          }
+
+          return (
+            <div key={i} style={{ display: 'flex', justifyContent: m.papel === 'user' ? 'flex-end' : 'flex-start' }}>
               <div style={{
                 maxWidth: '75%', padding: '8px 12px',
                 borderRadius: m.papel === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
                 background: m.papel === 'user' ? '#dcf8c6' : 'white',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                display: 'flex',
+                flexDirection: 'column'
               }}>
-                <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#111', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{m.mensagem}</p>
-                <p style={{ margin: 0, fontSize: '10px', color: '#999', textAlign: 'right' }}>{hora(m.hora)}</p>
+                {cleanText && (
+                  <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#111', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                    {cleanText}
+                  </p>
+                )}
+
+                {options.length > 0 && (
+                  <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '180px' }}>
+                    {options.map(opt => (
+                      <button
+                        key={opt.id}
+                        onClick={() => enviar(opt.id)}
+                        disabled={enviando}
+                        style={{
+                          background: '#f0fdf4',
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '8px',
+                          padding: '8px 10px',
+                          fontSize: '12.5px',
+                          color: '#166534',
+                          fontWeight: '600',
+                          cursor: enviando ? 'default' : 'pointer',
+                          textAlign: 'left',
+                          width: '100%',
+                          transition: 'background 0.2s',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px',
+                          boxShadow: '0 1px 1px rgba(0,0,0,0.05)',
+                          outline: 'none'
+                        }}
+                        onMouseOver={e => { if (!enviando) e.currentTarget.style.background = '#dcfce7' }}
+                        onMouseOut={e => { if (!enviando) e.currentTarget.style.background = '#f0fdf4' }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '10px' }}>🟢</span>
+                          <span>{opt.label}</span>
+                        </span>
+                        {opt.description && (
+                          <span style={{ fontSize: '10.5px', color: '#15803d', fontWeight: 'normal', paddingLeft: '16px' }}>
+                            {opt.description}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <p style={{ margin: '4px 0 0', fontSize: '10px', color: '#999', textAlign: 'right' }}>
+                  {hora(m.hora)}
+                </p>
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          )
+        })}
 
         {enviando && (
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>

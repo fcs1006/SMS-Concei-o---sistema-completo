@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Script from "next/script";
+import { clientConfig } from "@/lib/config";
 
 export const metadata: Metadata = {
-  title: "SMS Conceição",
-  description: "Secretaria Municipal de Saúde de Conceição do Tocantins",
+  title: `SMS ${clientConfig.municipalityName}`,
+  description: `Secretaria Municipal de Saúde de ${clientConfig.municipalityName} - ${clientConfig.municipalityUF}`,
 };
 
 import LGPDConsent from "@/components/LGPDConsent";
@@ -22,7 +23,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="SMS Conceição" />
+        <meta name="apple-mobile-web-app-title" content={`SMS ${clientConfig.municipalityName}`} />
         <link rel="apple-touch-icon" href="/logo.jpg" />
       </head>
       <body>

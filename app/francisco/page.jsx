@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
 import { Send, RefreshCw, FlaskConical, Phone, User, Bot, Play, Pause, Trash2, XCircle } from 'lucide-react'
+import { clientConfig } from '@/lib/config'
 
 function mascaraTel(v) {
   const d = String(v || '').replace(/\D/g, '')
@@ -29,6 +30,30 @@ export default function Francisco() {
   const [enviando, setEnviando] = useState(false)
   const [statusEnvio, setStatusEnvio] = useState('')
   const [vistos, setVistos] = useState({}) // { telefone: timestamp do ultimo visto }
+  const [assistantName, setAssistantName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('sms_client_config')
+      if (cached) {
+        try {
+          const cc = JSON.parse(cached)
+          if (cc.assistantName) return cc.assistantName
+        } catch (e) {}
+      }
+    }
+    return clientConfig.assistantName
+  })
+  const [municipalityName, setMunicipalityName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('sms_client_config')
+      if (cached) {
+        try {
+          const cc = JSON.parse(cached)
+          if (cc.municipalityName) return cc.municipalityName
+        } catch (e) {}
+      }
+    }
+    return clientConfig.municipalityName
+  })
   
   const msgEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -46,6 +71,19 @@ export default function Francisco() {
     
     // Carregar dados inicialmente
     carregarConversas()
+
+    // Carregar identidade da IA
+    fetch('/api/config/geral')
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok && data.configs?.client_config) {
+          const cc = data.configs.client_config
+          if (cc.assistantName) setAssistantName(cc.assistantName)
+          if (cc.municipalityName) setMunicipalityName(cc.municipalityName)
+          localStorage.setItem('sms_client_config', JSON.stringify(cc))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -226,7 +264,7 @@ export default function Francisco() {
   }
 
   async function finalizarAtendimento(telefone) {
-    if (!confirm('Deseja finalizar o atendimento humano? Isso enviará o comando "#fim" para encerrar a sessão e reativar o robô Francisco.')) return
+    if (!confirm(`Deseja finalizar o atendimento humano? Isso enviará o comando "#fim" para encerrar a sessão e reativar o robô ${assistantName}.`)) return
     setEnviando(true)
     setStatusEnvio('')
     try {
@@ -261,7 +299,7 @@ export default function Francisco() {
         <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
           <div>
             <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '10px', letterSpacing: '-0.5px' }}>
-              🤖 Agente Francisco
+              🤖 Agente {assistantName}
               {totalNaoLidas > 0 && (
                 <span style={{ 
                   background: 'linear-gradient(135deg, #ef4444, #dc2626)', 
@@ -278,7 +316,7 @@ export default function Francisco() {
               )}
             </h1>
             <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
-              Gerenciamento e controle de atendimento em tempo real · SMS Conceição do Tocantins
+              Gerenciamento e controle de atendimento em tempo real · SMS {municipalityName}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -572,7 +610,7 @@ export default function Francisco() {
                           boxShadow: '0 1px 2px rgba(16, 185, 129, 0.05)'
                         }}>
                           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
-                          Bot Francisco Ativo
+                          Bot {assistantName} Ativo
                         </span>
                       )}
                     </div>
@@ -710,7 +748,7 @@ export default function Francisco() {
                           <p style={{ margin: 0, fontSize: '9.5px', color: '#94a3b8', textAlign: 'right', fontWeight: '500' }}>
                             {!isUser && (
                               <span style={{ fontWeight: '600', color: isManual ? '#2563eb' : '#059669' }}>
-                                {isManual ? '👤 Atendente · ' : '🤖 Bot Francisco · '}
+                                {isManual ? '👤 Atendente · ' : `🤖 Bot ${assistantName} · `}
                               </span>
                             )}
                             {formatarHora(m.criado_em)}
@@ -796,7 +834,7 @@ export default function Francisco() {
                   <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
                     {conv?.estado === 'aguardando_humano' 
                       ? "O bot está silenciado para este contato. Suas mensagens serão enviadas diretamente pelo WhatsApp."
-                      : "Atenção: enviar uma mensagem silenciará automaticamente o bot Francisco para este contato."
+                      : `Atenção: enviar uma mensagem silenciará automaticamente o bot ${assistantName} para este contato.`
                     }
                   </p>
                 </div>

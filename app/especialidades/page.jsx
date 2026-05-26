@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
+import { clientConfig } from '@/lib/config'
 import { Printer, Calendar, Settings, Pencil, Save, RefreshCw, BarChart2, CalendarDays, Trash2, Stethoscope, FlaskConical, UserCog, Check, X, Clock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -91,7 +92,7 @@ function fmtData(v) {
 }
 
 // ── Comprovante de Autorização ────────────────────────────────────────────────
-function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins/TO', preparos = PREPARO_USG, dtNasc = null) {
+function imprimirComprovante(ag, espLabel, municipio = `${clientConfig.municipalityName}/${clientConfig.municipalityUF}`, preparos = PREPARO_USG, dtNasc = null) {
   const hoje = new Date()
   const dataEmissao = hoje.toLocaleDateString('pt-BR')
   const horaEmissao = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -140,7 +141,7 @@ function imprimirComprovante(ag, espLabel, municipio = 'Conceição do Tocantins
       <div class="cab-topo">
         <img class="cab-logo" src="/logo.jpg" alt="Logo" />
         <div class="cab-texto">
-          <p>Prefeitura Municipal de Conceição do Tocantins</p>
+          <p>Prefeitura Municipal de ${clientConfig.municipalityName}</p>
           <p>Fundo Municipal de Saúde</p>
           <p>Secretaria Municipal de Saúde</p>
         </div>
@@ -286,10 +287,12 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
       const cab = periodo
         ? `<tr><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#1a7a3c;border-top:2px solid #1a7a3c;background:#f0fdf4;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${periodo} — ${grupo.length} paciente${grupo.length !== 1 ? 's' : ''}${infoPeriodo ? `<span style="font-weight:400;font-size:10px;margin-left:10px;color:#166534;">${infoPeriodo}</span>` : ''}</td></tr>`
         : `<tr><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;border-top:2px solid #e2e8f0;">Sem período — ${grupo.length} paciente${grupo.length !== 1 ? 's' : ''}${infoPeriodo ? `<span style="font-weight:400;font-size:10px;margin-left:10px;">${infoPeriodo}</span>` : ''}</td></tr>`
+      
+      let numPeriodo = 0
       const linhas = grupo.map(r => {
-        numGlobal++
+        numPeriodo++
         return `<tr>
-          <td>${numGlobal}</td>
+          <td>${numPeriodo}</td>
           <td style="font-weight:700">${r.paciente_nome || '—'}</td>
           <td>${r.paciente_cns || '—'}</td>
           <td>${r.telefone || '—'}</td>
@@ -353,7 +356,7 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
     <div class="cab-topo">
       <img class="cab-logo" src="/logo.jpg" alt="Logo" />
       <div class="cab-texto">
-        <p>Prefeitura Municipal de Conceição do Tocantins</p>
+        <p>Prefeitura Municipal de ${clientConfig.municipalityName}</p>
         <p>Fundo Municipal de Saúde</p>
         <p>Secretaria Municipal de Saúde</p>
       </div>
@@ -1504,7 +1507,7 @@ export default function Especialidades() {
               {/* Cabeçalho de impressão — oculto na tela */}
               <div className="print-header-esp" style={{ display: 'none', marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
                 <p style={{ fontFamily: 'Arial, sans-serif', fontSize: '13px', fontWeight: '700', margin: '0 0 2px', textTransform: 'uppercase' }}>
-                  SECRETARIA MUNICIPAL DE SAÚDE — CONCEIÇÃO DO TOCANTINS/TO
+                  SECRETARIA MUNICIPAL DE SAÚDE — {clientConfig.municipalityName.toUpperCase()}/{clientConfig.municipalityUF.toUpperCase()}
                 </p>
                 <p style={{ fontFamily: 'Arial, sans-serif', fontSize: '15px', fontWeight: '800', margin: '6px 0 2px', textTransform: 'uppercase' }}>
                   LISTA DE {esp === 'usg' ? 'EXAMES' : 'CONSULTAS'} — {espAtiva.label.toUpperCase()}
@@ -1740,7 +1743,7 @@ export default function Especialidades() {
               <div className="card print-area" style={{ padding: '20px', marginBottom: '16px' }}>
                 {/* Cabeçalho impressão */}
                 <div className="print-title" style={{ display: 'none', marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
-                  <p style={{ fontFamily: 'Arial', fontSize: '13px', fontWeight: '700', margin: '0 0 2px', textTransform: 'uppercase' }}>SECRETARIA MUNICIPAL DE SAÚDE — CONCEIÇÃO DO TOCANTINS/TO</p>
+                  <p style={{ fontFamily: 'Arial', fontSize: '13px', fontWeight: '700', margin: '0 0 2px', textTransform: 'uppercase' }}>SECRETARIA MUNICIPAL DE SAÚDE — {clientConfig.municipalityName.toUpperCase()}/{clientConfig.municipalityUF.toUpperCase()}</p>
                   <p style={{ fontFamily: 'Arial', fontSize: '15px', fontWeight: '800', margin: '6px 0 2px' }}>RELATÓRIO DE ESPECIALIDADES</p>
                   <p style={{ fontFamily: 'Arial', fontSize: '12px', margin: 0, color: '#333' }}>
                     {relModoFiltro === 'periodo' ? `Período: ${relDataInicio} a ${relDataFim}` : `Competência: ${MESES[Number(relMes) - 1]}/${relAno}`}

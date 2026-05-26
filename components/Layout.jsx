@@ -5,10 +5,11 @@ import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Users, CalendarDays, BarChart2, Bus,
   CalendarCheck, FileText, Package, FlaskConical, Stethoscope,
-  Bot, Settings, LogOut, ChevronLeft, ChevronRight
+  Bot, Settings, LogOut, ChevronLeft, ChevronRight, Bell
 } from 'lucide-react'
 
 import Link from 'next/link'
+import { clientConfig } from '@/lib/config'
 
 export default function Layout({ children }) {
   const router = useRouter()
@@ -16,12 +17,49 @@ export default function Layout({ children }) {
   const [recolhido, setRecolhido] = useState(false)
   const [anoAtual, setAnoAtual] = useState('')
   const [usuario, setUsuario] = useState(null)
+  const [municipalityName, setMunicipalityName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('sms_client_config')
+      if (cached) {
+        try {
+          const cc = JSON.parse(cached)
+          if (cc.municipalityName) return cc.municipalityName
+        } catch (e) {}
+      }
+    }
+    return clientConfig.municipalityName
+  })
+  const [assistantName, setAssistantName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('sms_client_config')
+      if (cached) {
+        try {
+          const cc = JSON.parse(cached)
+          if (cc.assistantName) return cc.assistantName
+        } catch (e) {}
+      }
+    }
+    return clientConfig.assistantName
+  })
 
   useEffect(() => { 
     setAnoAtual(String(new Date().getFullYear()))
     // Carrega o usuário localmente no Layout para ser independente
     const u = localStorage.getItem('sms_user')
     if (u) setUsuario(JSON.parse(u))
+
+    // Carrega identidade do município dinamicamente
+    fetch('/api/config/geral')
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok && data.configs?.client_config) {
+          const cc = data.configs.client_config
+          if (cc.municipalityName) setMunicipalityName(cc.municipalityName)
+          if (cc.assistantName) setAssistantName(cc.assistantName)
+          localStorage.setItem('sms_client_config', JSON.stringify(cc))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -47,7 +85,9 @@ export default function Layout({ children }) {
     { label: 'Almoxarifado',   Icon: Package,          path: '/almoxarifado', acento: '#818cf8' },
     { label: 'SIGTAP',         Icon: FlaskConical,     path: '/sigtap',       acento: '#34d399' },
     { label: 'Especialidades', Icon: Stethoscope,      path: '/especialidades', acento: '#fbbf24' },
-    { label: 'Francisco IA',   Icon: Bot,              path: '/francisco',    acento: '#34d399', adminOnly: true },
+    { label: 'Fila de Lembretes', Icon: Bell,          path: '/painel/lembretes', acento: '#f43f5e' },
+    { label: `${assistantName} IA`,   Icon: Bot,              path: '/francisco',    acento: '#34d399', adminOnly: true },
+    { label: 'Configurações',  Icon: Settings,         path: '/painel/configuracoes', acento: '#06b6d4', adminOnly: true },
   ]
 
   const aliasMap = { '/resumo': '/tfd', '/bpa/config': '/bpa' }
@@ -82,10 +122,10 @@ export default function Layout({ children }) {
           {!recolhido && (
             <div style={{ overflow: 'hidden' }}>
               <p style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '12px', color: 'white', margin: '0 0 1px', whiteSpace: 'nowrap' }}>
-                SMS Conceição
+                SMS {municipalityName}
               </p>
               <p style={{ color: '#64748b', fontSize: '10px', margin: 0, whiteSpace: 'nowrap' }}>
-                Secretaria de Saúde
+                Secretaria de Saúde de {municipalityName}
               </p>
             </div>
           )}

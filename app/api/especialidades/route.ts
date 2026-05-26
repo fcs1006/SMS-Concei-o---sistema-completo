@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getActiveClientConfig } from '@/lib/config'
+import { formatarNumeroWhatsapp, enviarMensagemLembrete, substituirVariaveis } from '@/lib/whatsapp'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -74,6 +76,82 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Helper para enviar notificação de autorização imediata ao paciente
+async function notificarAutorizacaoImediata(appt: any) {
+  try {
+    const activeConfig = await getActiveClientConfig()
+    const defaultDDD = activeConfig.defaultDDD || '63'
+    const phoneFormatted = formatarNumeroWhatsapp(appt.telefone, defaultDDD)
+
+    if (!phoneFormatted) {
+      console.warn(`[Notificação Imediata] Agendamento ${appt.id} sem telefone válido.`)
+      return
+    }
+
+    const eventDate = appt.data_atendimento || appt.data_consulta
+    if (!eventDate) return
+
+    const esp = appt.especialidade || 'Consulta'
+    const tipoExame = appt.tipo_exame || 'consulta'
+    const profissional = appt.profissional_nome || 'A definir'
+    const periodo = appt.periodo ? `Período: ${appt.periodo}` : 'Horário comercial'
+    const eventDateFmt = eventDate.split('-').reverse().join('/')
+
+    const defaultMsg = `Olá, *${appt.paciente_nome}*! 🎉\n\n` +
+      `Temos uma boa notícia! O seu agendamento de *${esp.toUpperCase()}* (${tipoExame}) foi *AUTORIZADO* e agendado para:\n\n` +
+      `📅 Data: *${eventDateFmt}*\n` +
+      `👨‍⚕️ Profissional: ${profissional}\n` +
+      `⏰ ${periodo}\n\n` +
+      `🏢 Local: Secretaria Municipal de Saúde de ${activeConfig.municipalityName} (ou local indicado)\n\n` +
+      `⚠️ *Importante:* Compareça à Secretaria Municipal de Saúde de ${activeConfig.municipalityName} para obter mais informações, realizar a retirada da sua autorização e agendar a viagem (caso vá utilizar o transporte sanitário do município).`
+
+    const variables = {
+      paciente_nome: appt.paciente_nome,
+      especialidade: esp,
+      tipo_exame: tipoExame,
+      data_evento: eventDateFmt,
+      profissional: profissional,
+      periodo: periodo,
+      municipio: activeConfig.municipalityName,
+      assistente_nome: activeConfig.assistantName
+    }
+
+    const mensagem = activeConfig.template_esp_auto
+      ? substituirVariaveis(activeConfig.template_esp_auto, variables)
+      : defaultMsg
+
+
+    const modoManual = activeConfig.modoLembrete === 'manual'
+
+    if (modoManual) {
+      const { error } = await supabase.from('lembretes_pendentes').upsert([{
+        tipo: 'esp_auto',
+        referencia_id: String(appt.id),
+        data_evento: eventDate,
+        paciente_nome: appt.paciente_nome,
+        telefone: phoneFormatted,
+        mensagem
+      }], { onConflict: 'tipo,referencia_id,data_evento' })
+      if (error) throw error
+      console.log(`[Notificação Imediata] Lembrete pendente salvo para ${phoneFormatted}.`)
+    } else {
+      await enviarMensagemLembrete(phoneFormatted, mensagem)
+      
+      // Salva log de envio
+      const { error } = await supabase.from('lembretes_enviados').insert([{
+        tipo: 'esp_auto',
+        referencia_id: String(appt.id),
+        data_evento: eventDate,
+        telefone: phoneFormatted,
+        mensagem
+      }])
+      if (error) throw error
+    }
+  } catch (e: any) {
+    console.error(`[Notificação Imediata] Erro ao notificar autorização imediata para agendamento ${appt.id}:`, e.message)
+  }
+}
+
 // PATCH /api/especialidades
 // Body: { id, status, motivo_cancelamento?, motivo_exclusao? }  — atualiza status
 // Body: { id, campos: { paciente_nome, ... } }                  — atualiza campos
@@ -143,6 +221,13 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error) throw error
+
+    // Se mudou para autorizado, envia notificação (imediata ou para fila de disparo manual)
+    if (status === 'autorizado' && data) {
+      notificarAutorizacaoImediata(data).catch(err => {
+        console.error('Erro ao disparar notificarAutorizacaoImediata:', err)
+      })
+    }
 
     return NextResponse.json({ ok: true, data })
   } catch (error: any) {

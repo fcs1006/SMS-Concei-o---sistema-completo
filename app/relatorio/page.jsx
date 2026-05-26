@@ -38,7 +38,7 @@ export default function Relatorio() {
   }
   const { data } = await supabase
     .from('pacientes')
-    .select('nome')
+    .select('nome, cpf_cns')
     .ilike('nome', `%${texto}%`)
     .limit(8)
   numero === 1 ? setSugestoesAcomp1(data || []) : setSugestoesAcomp2(data || [])
@@ -165,6 +165,12 @@ async function abrirEditar(v) {
       return
     }
     setSalvandoEdicao(true)
+    const a1_nome = (viagemEditando.acomp1_nome || '').trim()
+    const a2_nome = (viagemEditando.acomp2_nome || '').trim()
+    const a1_cpf = a1_nome ? (viagemEditando.acomp1_cpf || '') : ''
+    const a2_cpf = a2_nome ? (viagemEditando.acomp2_cpf || '') : ''
+    const tem_acomp = (a1_nome || a2_nome) ? 'SIM' : 'NÃO'
+
     const { error } = await supabase.from('viagens').update({
       data_viagem:   viagemEditando.data_viagem,
       hora:          viagemEditando.hora,
@@ -173,8 +179,11 @@ async function abrirEditar(v) {
       motivo:        viagemEditando.motivo,
       tipo_viagem:   viagemEditando.tipo_viagem,
       agendado_por:  viagemEditando.agendado_por,
-      acomp1_nome:   viagemEditando.acomp1_nome,
-      acomp2_nome:   viagemEditando.acomp2_nome,
+      acomp1_nome:   a1_nome,
+      acomp1_cpf:    a1_cpf,
+      acomp2_nome:   a2_nome,
+      acomp2_cpf:    a2_cpf,
+      tem_acomp:     tem_acomp,
       competencia:   viagemEditando.data_viagem
         ? viagemEditando.data_viagem.substring(5,7) + '/' + viagemEditando.data_viagem.substring(0,4) : ''
     }).eq('id', viagemEditando.id)
@@ -563,7 +572,7 @@ async function abrirEditar(v) {
       {sugestoesAcomp1.map((p, i) => (
         <div key={i} className="search-item"
           onMouseDown={() => {
-            setViagemEditando(prev => ({ ...prev, acomp1_nome: p.nome }))
+            setViagemEditando(prev => ({ ...prev, acomp1_nome: p.nome, acomp1_cpf: p.cpf_cns }))
             setSugestoesAcomp1([])
             setAcomp1Sel(true)
           }}>
@@ -595,7 +604,7 @@ async function abrirEditar(v) {
       {sugestoesAcomp2.map((p, i) => (
         <div key={i} className="search-item"
           onMouseDown={() => {
-            setViagemEditando(prev => ({ ...prev, acomp2_nome: p.nome }))
+            setViagemEditando(prev => ({ ...prev, acomp2_nome: p.nome, acomp2_cpf: p.cpf_cns }))
             setSugestoesAcomp2([])
             setAcomp2Sel(true)
           }}>
