@@ -170,6 +170,9 @@ export default function Agendamento() {
   const [buscaA2, setBuscaA2] = useState('')
   const [sugestoesA2, setSugestoesA2] = useState([])
 
+  // Destinos dinâmicos
+  const [destinos, setDestinos] = useState([])
+
   // Reimprimir
   const [modalReimprimir, setModalReimprimir] = useState(false)
   const [buscaRe, setBuscaRe] = useState('')
@@ -184,6 +187,40 @@ export default function Agendamento() {
     setUsuario(parsed)
     const primeiroNome = (parsed.nome || '').split(' ')[0].toUpperCase()
     if (primeiroNome) setForm(f => ({ ...f, agendadoPor: primeiroNome }))
+
+    async function carregarDestinos() {
+      try {
+        const { data, error } = await supabase
+          .from('configuracoes')
+          .select('valor')
+          .eq('chave', 'tfd_destinos')
+          .maybeSingle()
+        
+        if (data?.valor && Array.isArray(data.valor)) {
+          setDestinos(data.valor)
+        } else {
+          setDestinos([
+            "CONCEIÇÃO/PALMAS",
+            "CONCEIÇÃO/PALMAS - CARRO",
+            "PALMAS/CONCEIÇÃO",
+            "PALMAS/CONCEIÇÃO - CARRO",
+            "CONCEIÇÃO/PORTO NACIONAL",
+            "CONCEIÇÃO/PORTO NACIONAL - CARRO",
+            "PORTO NACIONAL/CONCEIÇÃO",
+            "PORTO NACIONAL/CONCEIÇÃO - CARRO",
+            "CONCEIÇÃO/ARRAIAS",
+            "ARRAIAS/CONCEIÇÃO",
+            "CONCEIÇÃO/DIANÓPOLIS",
+            "DIANÓPOLIS/CONCEIÇÃO",
+            "CONCEIÇÃO/CAMPOS BELOS",
+            "CONCEIÇÃO/GURUPI"
+          ])
+        }
+      } catch (err) {
+        console.error('Erro ao carregar destinos:', err)
+      }
+    }
+    carregarDestinos()
   }, [])
 
   useEffect(() => {
@@ -673,11 +710,7 @@ export default function Agendamento() {
               <div><label className={lbl}>Destino *</label>
                 <select className={inp} value={form.destino} onChange={e => setField('destino', e.target.value)}>
                   <option value="">-- Selecione --</option>
-                  {['CONCEIÇÃO/PALMAS', 'CONCEIÇÃO/PALMAS - CARRO', 'PALMAS/CONCEIÇÃO', 'PALMAS/CONCEIÇÃO - CARRO',
-                    'CONCEIÇÃO/PORTO NACIONAL', 'CONCEIÇÃO/PORTO NACIONAL - CARRO', 'PORTO NACIONAL/CONCEIÇÃO',
-                    'PORTO NACIONAL/CONCEIÇÃO - CARRO', 'CONCEIÇÃO/ARRAIAS', 'ARRAIAS/CONCEIÇÃO',
-                    'CONCEIÇÃO/DIANÓPOLIS', 'DIANÓPOLIS/CONCEIÇÃO', 'CONCEIÇÃO/CAMPOS BELOS', 'CONCEIÇÃO/GURUPI']
-                    .map(o => <option key={o} value={o}>{o}</option>)}
+                  {destinos.map(o => <option key={o} value={o}>{o}</option>)}
                 </select></div>
               <div><label className={lbl}>Local *</label>
                 <input className={inp} value={form.local}

@@ -768,6 +768,43 @@ export async function POST(request: NextRequest) {
 
     if (!texto.trim()) return NextResponse.json({ ok: true })
 
+    // Intercepta confirmações de viagem TFD (sem IA)
+    if (texto.startsWith('TFD_CONFIRMAR_') || texto.startsWith('TFD_DESISTIR_')) {
+      const isConfirm = texto.startsWith('TFD_CONFIRMAR_')
+      const travelId = texto.split('_').slice(2).join('_')
+      
+      try {
+        const { data: updated, error: dbErr } = await supabase
+          .from('viagens')
+          .update({ confirmacao: isConfirm ? 'CONFIRMADO' : 'DESISTIU' })
+          .eq('id', travelId)
+          .select('paciente_nome, data_viagem, destino')
+          .maybeSingle()
+
+        if (dbErr) {
+          console.error('[Webhook TFD] Erro ao atualizar confirmacao:', dbErr.message)
+        }
+
+        const dataFmt = updated?.data_viagem 
+          ? (() => { const [a,m,d] = updated.data_viagem.split('-'); return `${d}/${m}/${a}` })()
+          : ''
+
+        const respTexto = isConfirm
+          ? `Obrigado! Confirmamos que você vai viajar no transporte agendado para o dia ${dataFmt}. Tenha uma boa viagem! 🚗`
+          : `Entendido. Registramos que você não vai viajar e liberamos a sua vaga no transporte. Obrigado por nos avisar! 👍`
+
+        // Grava no histórico a ação do usuário (como texto legível)
+        await salvarMensagem(telefone, 'user', isConfirm ? '[Botão] Sim, vou viajar' : '[Botão] Não vou viajar')
+        await salvarMensagem(telefone, 'assistant', respTexto)
+        
+        // Envia mensagem pelo whatsapp
+        await enviarMensagem(telefone, respTexto)
+        return NextResponse.json({ ok: true })
+      } catch (err: any) {
+        console.error('[Webhook TFD] Erro inesperado:', err.message)
+      }
+    }
+
     const historico = await carregarHistorico(telefone)
     await salvarMensagem(telefone, 'user', texto)
 

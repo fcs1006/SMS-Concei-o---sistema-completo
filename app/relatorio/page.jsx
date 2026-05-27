@@ -30,6 +30,20 @@ export default function Relatorio() {
   const [sugestoesAcomp2, setSugestoesAcomp2] = useState([])
   const [acomp1Sel, setAcomp1Sel] = useState(true)  // true = veio do banco ou foi selecionado
   const [acomp2Sel, setAcomp2Sel] = useState(true)
+  const [destinosConfig, setDestinosConfig] = useState([])
+
+  function extrairCidadeDestino(destino) {
+    if (!destino) return ''
+    const limpo = Math.max(destino.indexOf(' - '), 0) > 0 ? destino.split(' - ')[0].trim().toUpperCase() : destino.trim().toUpperCase()
+    const partes = limpo.split('/')
+    if (partes.length === 2) {
+      if (partes[0].includes('CONCEIÇÃO') || partes[0].includes('CONCEICAO')) {
+        return partes[1].trim()
+      }
+      return partes[0].trim()
+    }
+    return limpo
+  }
 
   async function buscarAcomp(texto, numero) {
   if (texto.length < 3) {
@@ -49,6 +63,40 @@ export default function Relatorio() {
     if (!u) { router.push('/'); return }
     setUsuario(JSON.parse(u))
     carregarViagens()
+
+    async function carregarDestinos() {
+      try {
+        const { data, error } = await supabase
+          .from('configuracoes')
+          .select('valor')
+          .eq('chave', 'tfd_destinos')
+          .maybeSingle()
+        
+        if (data?.valor && Array.isArray(data.valor)) {
+          setDestinosConfig(data.valor)
+        } else {
+          setDestinosConfig([
+            "CONCEIÇÃO/PALMAS",
+            "CONCEIÇÃO/PALMAS - CARRO",
+            "PALMAS/CONCEIÇÃO",
+            "PALMAS/CONCEIÇÃO - CARRO",
+            "CONCEIÇÃO/PORTO NACIONAL",
+            "CONCEIÇÃO/PORTO NACIONAL - CARRO",
+            "PORTO NACIONAL/CONCEIÇÃO",
+            "PORTO NACIONAL/CONCEIÇÃO - CARRO",
+            "CONCEIÇÃO/ARRAIAS",
+            "ARRAIAS/CONCEIÇÃO",
+            "CONCEIÇÃO/DIANÓPOLIS",
+            "DIANÓPOLIS/CONCEIÇÃO",
+            "CONCEIÇÃO/CAMPOS BELOS",
+            "CONCEIÇÃO/GURUPI"
+          ])
+        }
+      } catch (err) {
+        console.error('Erro ao carregar destinos:', err)
+      }
+    }
+    carregarDestinos()
   }, [])
 
   useEffect(() => { aplicarFiltros() }, [filtros, viagens])
@@ -122,6 +170,7 @@ export default function Relatorio() {
   }
 
   const destinos = [...new Set(viagens.map(v => v.destino).filter(Boolean))].sort()
+  const cidadesDisponiveis = [...new Set(destinosConfig.map(d => extrairCidadeDestino(d)).filter(Boolean))].sort()
   const totalPacientes = filtradas.length
   const totalAcompanhantes = filtradas.reduce((acc, v) => {
     let q = 0
@@ -212,20 +261,9 @@ async function abrirEditar(v) {
       ? (() => { const [a,m,d] = imprimirData.split('-'); return `${d}/${m}/${a}` })()
       : ''
 
-    const MAPA_CIDADE = {
-      'CONCEIÇÃO/PALMAS - CARRO': 'PALMAS',
-      'PALMAS/CONCEIÇÃO - CARRO': 'PALMAS',
-      'CONCEIÇÃO/PORTO NACIONAL - CARRO': 'PORTO NACIONAL',
-      'PORTO NACIONAL/CONCEIÇÃO - CARRO': 'PORTO NACIONAL',
-      'CONCEIÇÃO/ARRAIAS': 'ARRAIAS', 'ARRAIAS/CONCEIÇÃO': 'ARRAIAS',
-      'CONCEIÇÃO/DIANÓPOLIS': 'DIANÓPOLIS', 'DIANÓPOLIS/CONCEIÇÃO': 'DIANÓPOLIS',
-      'CONCEIÇÃO/CAMPOS BELOS': 'CAMPOS BELOS',
-      'CONCEIÇÃO/GURUPI': 'GURUPI'
-    }
-
     const lista = filtradas.filter(v => {
       const dataOk = !imprimirData || v.data_viagem === imprimirData
-      const cidadeOk = !imprimirCidade || MAPA_CIDADE[v.destino] === imprimirCidade
+      const cidadeOk = !imprimirCidade || extrairCidadeDestino(v.destino) === imprimirCidade
       return dataOk && cidadeOk
     })
 
@@ -426,7 +464,7 @@ async function abrirEditar(v) {
               <table className="table-modern">
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #7c3aed, #c084fc)' }}>
-                    {['Data','Hora','Paciente','Telefone','Destino','Local','Motivo','Tipo','Acomp. 1','Acomp. 2','Agendado'].map(h => (
+                    {['Data','Hora','Paciente','Telefone','Confirmação','Destino','Local','Motivo','Tipo','Acomp. 1','Acomp. 2','Agendado'].map(h => (
                       <th key={h} style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif' }}>{h}</th>))}
                   </tr>
                 </thead>
@@ -439,6 +477,15 @@ async function abrirEditar(v) {
                       <td style={{ whiteSpace: 'nowrap', color: '#64748b', fontSize: '11px' }}>{v.hora || '-'}</td>
                       <td style={{ fontWeight: '600', color: '#0f172a', minWidth: '130px', fontSize: '11px' }}>{v.paciente_nome || '-'}</td>
                       <td style={{ color: '#64748b', whiteSpace: 'nowrap', fontSize: '11px' }}>{formatarTelefone(v.telefone)}</td>
+                      <td style={{ whiteSpace: 'nowrap', fontSize: '11px' }}>
+                        {v.confirmacao === 'CONFIRMADO' ? (
+                          <span style={{ padding: '3px 8px', borderRadius: '12px', background: '#dcfce7', color: '#15803d', fontWeight: '600' }}>Confirmado</span>
+                        ) : v.confirmacao === 'DESISTIU' ? (
+                          <span style={{ padding: '3px 8px', borderRadius: '12px', background: '#fee2e2', color: '#b91c1c', fontWeight: '600' }}>Desistiu</span>
+                        ) : (
+                          <span style={{ padding: '3px 8px', borderRadius: '12px', background: '#f1f5f9', color: '#64748b', fontWeight: '600' }}>Sem resposta</span>
+                        )}
+                      </td>
                       <td style={{ fontSize: '11px', whiteSpace: 'pre-line', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }} title={v.destino || '-'}>{v.destino || '-'}</td>
                       <td style={{ color: '#64748b', fontSize: '11px' }}>{v.local_destino || '-'}</td>
                       <td style={{ fontSize: '11px' }}>{v.motivo || '-'}</td>
@@ -477,8 +524,7 @@ async function abrirEditar(v) {
                 <select className="input-modern" value={imprimirCidade}
                   onChange={e => setImprimirCidade(e.target.value)}>
                   <option value="">Todas as cidades</option>
-                  {['ARRAIAS','DIANÓPOLIS','CAMPOS BELOS','GURUPI','PALMAS','PORTO NACIONAL']
-                    .map(c => <option key={c} value={c}>{c}</option>)}
+                  {cidadesDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
             </div>
@@ -521,10 +567,7 @@ async function abrirEditar(v) {
                 <select className={inp} value={viagemEditando.destino || ''}
                   onChange={e => setViagemEditando(v => ({ ...v, destino: e.target.value }))}>
                   <option value="">--</option>
-                  {selectOpts(['CONCEIÇÃO/PALMAS','CONCEIÇÃO/PALMAS - CARRO','PALMAS/CONCEIÇÃO','PALMAS/CONCEIÇÃO - CARRO',
-                    'CONCEIÇÃO/PORTO NACIONAL','CONCEIÇÃO/PORTO NACIONAL - CARRO','PORTO NACIONAL/CONCEIÇÃO',
-                    'PORTO NACIONAL/CONCEIÇÃO - CARRO','CONCEIÇÃO/ARRAIAS','ARRAIAS/CONCEIÇÃO',
-                    'CONCEIÇÃO/DIANÓPOLIS','DIANÓPOLIS/CONCEIÇÃO','CONCEIÇÃO/CAMPOS BELOS','CONCEIÇÃO/GURUPI'])}
+                  {selectOpts(destinosConfig)}
                 </select>
               </div>
               <div>

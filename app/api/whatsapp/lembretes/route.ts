@@ -517,6 +517,10 @@ async function processarLembretes(request: NextRequest) {
               paciente_nome: travel.paciente_nome,
               telefone: phoneFormatted,
               mensagem,
+              botoes: [
+                { id: `TFD_CONFIRMAR_${travel.id}`, label: 'Sim, vou viajar' },
+                { id: `TFD_DESISTIR_${travel.id}`, label: 'Não vou viajar' }
+              ],
               assistantName: clientConfig.assistantName
             })
 

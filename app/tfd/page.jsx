@@ -10,10 +10,23 @@ export default function TFD() {
   const router = useRouter()
   const [usuario, setUsuario] = useState(null)
   const [data, setData] = useState('')
-  const [palmas, setPalmas] = useState([])
-  const [porto, setPorto] = useState([])
+  const [viagensPorCidade, setViagensPorCidade] = useState({})
+  const [destinosConfig, setDestinosConfig] = useState([])
   const [carregando, setCarregando] = useState(false)
   const [gerado, setGerado] = useState(false)
+
+  function extrairCidadeDestino(destino) {
+    if (!destino) return ''
+    const limpo = Math.max(destino.indexOf(' - '), 0) > 0 ? destino.split(' - ')[0].trim().toUpperCase() : destino.trim().toUpperCase()
+    const partes = limpo.split('/')
+    if (partes.length === 2) {
+      if (partes[0].includes('CONCEIÇÃO') || partes[0].includes('CONCEICAO')) {
+        return partes[1].trim()
+      }
+      return partes[0].trim()
+    }
+    return limpo
+  }
 
   useEffect(() => {
     const u = localStorage.getItem('sms_user')
@@ -21,6 +34,39 @@ export default function TFD() {
     setUsuario(JSON.parse(u))
     const hoje = new Date().toISOString().split('T')[0]
     setData(hoje)
+
+    async function carregarDestinos() {
+      try {
+        const { data: cfgData } = await supabase
+          .from('configuracoes')
+          .select('valor')
+          .eq('chave', 'tfd_destinos')
+          .maybeSingle()
+        if (cfgData?.valor && Array.isArray(cfgData.valor)) {
+          setDestinosConfig(cfgData.valor)
+        } else {
+          setDestinosConfig([
+            "CONCEIÇÃO/PALMAS",
+            "CONCEIÇÃO/PALMAS - CARRO",
+            "PALMAS/CONCEIÇÃO",
+            "PALMAS/CONCEIÇÃO - CARRO",
+            "CONCEIÇÃO/PORTO NACIONAL",
+            "CONCEIÇÃO/PORTO NACIONAL - CARRO",
+            "PORTO NACIONAL/CONCEIÇÃO",
+            "PORTO NACIONAL/CONCEIÇÃO - CARRO",
+            "CONCEIÇÃO/ARRAIAS",
+            "ARRAIAS/CONCEIÇÃO",
+            "CONCEIÇÃO/DIANÓPOLIS",
+            "DIANÓPOLIS/CONCEIÇÃO",
+            "CONCEIÇÃO/CAMPOS BELOS",
+            "CONCEIÇÃO/GURUPI"
+          ])
+        }
+      } catch (err) {
+        console.error('Erro ao carregar destinos:', err)
+      }
+    }
+    carregarDestinos()
   }, [])
 
   async function gerar() {
@@ -45,11 +91,14 @@ export default function TFD() {
 
     const comFone = registros.map(v => ({ ...v, telefone: mapaFone[v.paciente_cpf] || '' }))
 
-    const ehPalmas = (d) => d && d.includes('PALMAS') && !d.includes('PORTO') && !d.includes('CARRO')
-    const ehPorto  = (d) => d && d.includes('PORTO NACIONAL') && !d.includes('CARRO')
+    const grupos = {}
+    comFone.forEach(v => {
+      const cidade = extrairCidadeDestino(v.destino) || 'OUTROS'
+      if (!grupos[cidade]) grupos[cidade] = []
+      grupos[cidade].push(v)
+    })
 
-    setPalmas(comFone.filter(v => ehPalmas(v.destino)))
-    setPorto(comFone.filter(v => ehPorto(v.destino)))
+    setViagensPorCidade(grupos)
     setCarregando(false)
     setGerado(true)
   }
@@ -113,7 +162,7 @@ export default function TFD() {
 
   function imprimirTFD() {
     const dataFmt = formatarData(data)
-    const todos = [...porto, ...palmas]
+    const todos = Object.values(viagensPorCidade).flat()
     const resumo = construirResumoTFD(todos)
 
     const montarTabela = (titulo, lista) => {
@@ -181,9 +230,12 @@ export default function TFD() {
     const somaP   = resumo.reduce((a, r) => a + r.pacientes + r.acompanhantes, 0)
     const somaT   = resumo.reduce((a, r) => a + r.total, 0)
 
+    const tabelasHtml = Object.keys(viagensPorCidade).sort().map(cidade => {
+      return montarTabela(cidade, viagensPorCidade[cidade])
+    }).join('')
+
     const conteudo = `
-      ${montarTabela('PORTO NACIONAL', porto)}
-      ${montarTabela('PALMAS', palmas)}
+      ${tabelasHtml}
       <p style="font-size:12px;margin:4px 0 12px;">
         <strong>TOTAL DE PESSOAS NO TFD:</strong> ${contarPessoas(todos)}
       </p>
@@ -242,14 +294,15 @@ export default function TFD() {
           <div style={{ border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
             <table className="table-modern" style={{ fontSize: '12px', tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '13%' }} />
                 <col style={{ width: '17%' }} />
-                <col style={{ width: '13%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '7%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '11%' }} />
                 <col style={{ width: '12%' }} />
-                <col style={{ width: '8%' }} />
+                <col style={{ width: '9%' }} />
+                <col style={{ width: '6%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '9%' }} />
               </colgroup>
               <thead>
                 <tr>
@@ -257,6 +310,7 @@ export default function TFD() {
                   <th>CPF/CNS</th>
                   <th>Acompanhante</th>
                   <th>Telefone</th>
+                  <th>Confirmação</th>
                   <th>Motivo</th>
                   <th>Hora</th>
                   <th>Local</th>
@@ -272,6 +326,15 @@ export default function TFD() {
                       <td style={{ fontSize: '11px', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatarCpf(v.paciente_cpf)}</td>
                       <td style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={acomps}>{acomps}</td>
                       <td style={{ color: '#475569', whiteSpace: 'nowrap' }}>{formatarTelefone(v.telefone)}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {v.confirmacao === 'CONFIRMADO' ? (
+                          <span style={{ padding: '2px 6px', borderRadius: '10px', background: '#dcfce7', color: '#15803d', fontWeight: '600', fontSize: '10px' }}>Confirmado</span>
+                        ) : v.confirmacao === 'DESISTIU' ? (
+                          <span style={{ padding: '2px 6px', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', fontWeight: '600', fontSize: '10px' }}>Desistiu</span>
+                        ) : (
+                          <span style={{ padding: '2px 6px', borderRadius: '10px', background: '#f1f5f9', color: '#64748b', fontWeight: '600', fontSize: '10px' }}>Sem resp.</span>
+                        )}
+                      </td>
                       <td style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.motivo || '-'}</td>
                       <td style={{ textAlign: 'center', fontWeight: '600', color: '#991b1b' }}>{v.hora || '-'}</td>
                       <td style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.local_destino || '-'}</td>
@@ -348,15 +411,13 @@ export default function TFD() {
         {/* Conteúdo */}
         {gerado && (
           <>
-            <TabelaTFD
-              titulo="PORTO NACIONAL"
-              lista={porto}
-              cor="linear-gradient(135deg, #dc2626, #f87171)" />
-
-            <TabelaTFD
-              titulo="PALMAS"
-              lista={palmas}
-              cor="linear-gradient(135deg, #dc2626, #f87171)" />
+            {Object.keys(viagensPorCidade).sort().map(cidade => (
+              <TabelaTFD
+                key={cidade}
+                titulo={cidade}
+                lista={viagensPorCidade[cidade]}
+                cor="linear-gradient(135deg, #dc2626, #f87171)" />
+            ))}
 
             <div style={{
               background: 'linear-gradient(135deg, #dc2626, #f87171)',
@@ -367,7 +428,7 @@ export default function TFD() {
                 Total Geral
               </span>
               <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: '700', fontSize: '18px', color: '#f0c030' }}>
-                {contarPessoas([...porto, ...palmas])} pessoas
+                {contarPessoas(Object.values(viagensPorCidade).flat())} pessoas
               </span>
             </div>
           </>
