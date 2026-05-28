@@ -52,8 +52,16 @@ export default function Resumo() {
 
     const comFone = registros.map(v => ({ ...v, telefone: mapaFone[v.paciente_cpf] || '' }))
 
-    const ehPalmas = (d) => d && d.includes('PALMAS') && !d.includes('PORTO') && !d.includes('CARRO')
-    const ehPorto  = (d) => d && d.includes('PORTO NACIONAL') && !d.includes('CARRO')
+    const ehPalmas = (d) => {
+      if (!d) return false
+      const normalized = d.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      return normalized.includes('PALMAS') && !normalized.includes('PORTO') && !normalized.includes('CARRO') && !normalized.includes('ONIBUS')
+    }
+    const ehPorto = (d) => {
+      if (!d) return false
+      const normalized = d.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      return normalized.includes('PORTO') && !normalized.includes('CARRO') && !normalized.includes('ONIBUS')
+    }
 
     setPalmas(comFone.filter(v => ehPalmas(v.destino)))
     setPorto(comFone.filter(v => ehPorto(v.destino)))

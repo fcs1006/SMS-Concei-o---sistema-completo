@@ -89,7 +89,13 @@ export default function TFD() {
       if (pacs) pacs.forEach(p => { mapaFone[p.cpf_cns] = p.telefone })
     }
 
-    const comFone = registros.map(v => ({ ...v, telefone: mapaFone[v.paciente_cpf] || '' }))
+    const comFone = registros
+      .map(v => ({ ...v, telefone: mapaFone[v.paciente_cpf] || '' }))
+      .filter(v => {
+        if (!v.destino) return false
+        const normalized = v.destino.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        return !normalized.includes('CARRO') && !normalized.includes('ONIBUS')
+      })
 
     const grupos = {}
     comFone.forEach(v => {
