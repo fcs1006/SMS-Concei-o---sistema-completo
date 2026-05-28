@@ -50,6 +50,8 @@ export default function Resumo() {
       if (pacs) pacs.forEach(p => { mapaFone[p.cpf_cns] = p.telefone })
     }
 
+    const comFone = registros.map(v => ({ ...v, telefone: mapaFone[v.paciente_cpf] || '' }))
+
     const ehRotaValidaTFD = (destino) => {
       if (!destino) return false
       const normalized = destino.toUpperCase().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
