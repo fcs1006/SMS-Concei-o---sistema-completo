@@ -6,6 +6,31 @@ import { formatarNumeroWhatsapp, enviarMensagemLembrete, enviarBotoesLembrete, o
 
 const CRON_SECRET = process.env.CRON_SECRET || 'sms-conceicao-cron-secret-12345'
 
+// Função auxiliar para analisar carimbos de data/hora (timestamps) no fuso horário America/Araguaina (UTC-3)
+// se não houver um sufixo de fuso horário, para evitar distorções em servidores (como Vercel) rodando em UTC.
+function parseTimestampToTz(timestampStr: string | null | undefined): Date | null {
+  if (!timestampStr) return null
+  
+  // Substitui espaço por T
+  let normalized = timestampStr.trim().replace(' ', 'T')
+  
+  // Se não contiver T, trata como data pura sem hora
+  if (!normalized.includes('T')) {
+    return new Date(`${normalized}T00:00:00-03:00`)
+  }
+  
+  // Verifica se já tem indicador de fuso horário (Z ou +/- offset)
+  const parts = normalized.split('T')
+  const timePart = parts[1] || ''
+  const hasTz = /Z|[+-]\d{2}(:?\d{2})?$/.test(timePart)
+  
+  if (hasTz) {
+    return new Date(normalized)
+  }
+  
+  return new Date(`${normalized}-03:00`)
+}
+
 // Despacha o lembrete de acordo com a configuração de modo (manual ou automático)
 async function despacharLembrete({
   modoManual,
@@ -357,7 +382,8 @@ async function processarLembretes(request: NextRequest) {
             }
 
             try {
-              const dataObj = new Date(sol.data_marcacao)
+              const dataObj = parseTimestampToTz(sol.data_marcacao)
+              if (!dataObj) continue
               const hora = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: timezone })
               const procedimento = sol.descricao_interna_procedimento || 'Procedimento regulado'
               const local = sol.nome_unidade_executante || sol.nome_unidade_solicitante || 'Local regulado'
@@ -681,7 +707,8 @@ async function processarLembretes(request: NextRequest) {
             }
 
             try {
-              const dataObj = new Date(sol.data_marcacao)
+              const dataObj = parseTimestampToTz(sol.data_marcacao)
+              if (!dataObj) continue
               const hora = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: timezone })
               const procedimento = sol.descricao_interna_procedimento || 'Procedimento regulado'
               const local = sol.nome_unidade_executante || sol.nome_unidade_solicitante || 'Local regulado'
@@ -934,7 +961,8 @@ async function processarLembretes(request: NextRequest) {
             }
 
             try {
-              const dataObj = new Date(sol.data_marcacao)
+              const dataObj = parseTimestampToTz(sol.data_marcacao)
+              if (!dataObj) continue
               const hora = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: timezone })
               const procedimento = sol.descricao_interna_procedimento || 'Procedimento regulado'
               const local = sol.nome_unidade_executante || sol.nome_unidade_solicitante || 'Local regulado'
