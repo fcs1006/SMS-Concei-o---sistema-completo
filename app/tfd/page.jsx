@@ -89,13 +89,21 @@ export default function TFD() {
       if (pacs) pacs.forEach(p => { mapaFone[p.cpf_cns] = p.telefone })
     }
 
+    const ehRotaValidaTFD = (destino) => {
+      if (!destino) return false
+      const normalized = destino.toUpperCase().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const rotasValidas = [
+        'CONCEICAO/PALMAS',
+        'PALMAS/CONCEICAO',
+        'CONCEICAO/PORTONACIONAL',
+        'PORTONACIONAL/CONCEICAO'
+      ]
+      return rotasValidas.includes(normalized)
+    }
+
     const comFone = registros
       .map(v => ({ ...v, telefone: mapaFone[v.paciente_cpf] || '' }))
-      .filter(v => {
-        if (!v.destino) return false
-        const normalized = v.destino.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        return !normalized.includes('CARRO') && !normalized.includes('ONIBUS')
-      })
+      .filter(v => ehRotaValidaTFD(v.destino))
 
     const grupos = {}
     comFone.forEach(v => {

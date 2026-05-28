@@ -50,21 +50,33 @@ export default function Resumo() {
       if (pacs) pacs.forEach(p => { mapaFone[p.cpf_cns] = p.telefone })
     }
 
-    const comFone = registros.map(v => ({ ...v, telefone: mapaFone[v.paciente_cpf] || '' }))
+    const ehRotaValidaTFD = (destino) => {
+      if (!destino) return false
+      const normalized = destino.toUpperCase().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const rotasValidas = [
+        'CONCEICAO/PALMAS',
+        'PALMAS/CONCEICAO',
+        'CONCEICAO/PORTONACIONAL',
+        'PORTONACIONAL/CONCEICAO'
+      ]
+      return rotasValidas.includes(normalized)
+    }
+
+    const comFoneFiltrado = comFone.filter(v => ehRotaValidaTFD(v.destino))
 
     const ehPalmas = (d) => {
       if (!d) return false
       const normalized = d.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      return normalized.includes('PALMAS') && !normalized.includes('PORTO') && !normalized.includes('CARRO') && !normalized.includes('ONIBUS')
+      return normalized.includes('PALMAS') && !normalized.includes('PORTO')
     }
     const ehPorto = (d) => {
       if (!d) return false
       const normalized = d.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      return normalized.includes('PORTO') && !normalized.includes('CARRO') && !normalized.includes('ONIBUS')
+      return normalized.includes('PORTO')
     }
 
-    setPalmas(comFone.filter(v => ehPalmas(v.destino)))
-    setPorto(comFone.filter(v => ehPorto(v.destino)))
+    setPalmas(comFoneFiltrado.filter(v => ehPalmas(v.destino)))
+    setPorto(comFoneFiltrado.filter(v => ehPorto(v.destino)))
     setCarregando(false)
     setGerado(true)
   }
