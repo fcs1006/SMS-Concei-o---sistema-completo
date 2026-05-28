@@ -58,45 +58,45 @@ export default function Relatorio() {
   numero === 1 ? setSugestoesAcomp1(data || []) : setSugestoesAcomp2(data || [])
 }
 
+  async function carregarDestinosConfig() {
+    try {
+      const { data, error } = await supabase
+        .from('configuracoes')
+        .select('valor')
+        .eq('chave', 'tfd_destinos')
+        .maybeSingle()
+      
+      if (data?.valor && Array.isArray(data.valor)) {
+        setDestinosConfig(data.valor)
+      } else {
+        setDestinosConfig([
+          "CONCEIÇÃO/PALMAS",
+          "CONCEIÇÃO/PALMAS - CARRO",
+          "PALMAS/CONCEIÇÃO",
+          "PALMAS/CONCEIÇÃO - CARRO",
+          "CONCEIÇÃO/PORTO NACIONAL",
+          "CONCEIÇÃO/PORTO NACIONAL - CARRO",
+          "PORTO NACIONAL/CONCEIÇÃO",
+          "PORTO NACIONAL/CONCEIÇÃO - CARRO",
+          "CONCEIÇÃO/ARRAIAS",
+          "ARRAIAS/CONCEIÇÃO",
+          "CONCEIÇÃO/DIANÓPOLIS",
+          "DIANÓPOLIS/CONCEIÇÃO",
+          "CONCEIÇÃO/CAMPOS BELOS",
+          "CONCEIÇÃO/GURUPI"
+        ])
+      }
+    } catch (err) {
+      console.error('Erro ao carregar destinos:', err)
+    }
+  }
+
   useEffect(() => {
     const u = localStorage.getItem('sms_user')
     if (!u) { router.push('/'); return }
     setUsuario(JSON.parse(u))
     carregarViagens()
-
-    async function carregarDestinos() {
-      try {
-        const { data, error } = await supabase
-          .from('configuracoes')
-          .select('valor')
-          .eq('chave', 'tfd_destinos')
-          .maybeSingle()
-        
-        if (data?.valor && Array.isArray(data.valor)) {
-          setDestinosConfig(data.valor)
-        } else {
-          setDestinosConfig([
-            "CONCEIÇÃO/PALMAS",
-            "CONCEIÇÃO/PALMAS - CARRO",
-            "PALMAS/CONCEIÇÃO",
-            "PALMAS/CONCEIÇÃO - CARRO",
-            "CONCEIÇÃO/PORTO NACIONAL",
-            "CONCEIÇÃO/PORTO NACIONAL - CARRO",
-            "PORTO NACIONAL/CONCEIÇÃO",
-            "PORTO NACIONAL/CONCEIÇÃO - CARRO",
-            "CONCEIÇÃO/ARRAIAS",
-            "ARRAIAS/CONCEIÇÃO",
-            "CONCEIÇÃO/DIANÓPOLIS",
-            "DIANÓPOLIS/CONCEIÇÃO",
-            "CONCEIÇÃO/CAMPOS BELOS",
-            "CONCEIÇÃO/GURUPI"
-          ])
-        }
-      } catch (err) {
-        console.error('Erro ao carregar destinos:', err)
-      }
-    }
-    carregarDestinos()
+    carregarDestinosConfig()
   }, [])
 
   useEffect(() => { aplicarFiltros() }, [filtros, viagens])
@@ -180,6 +180,9 @@ export default function Relatorio() {
   }, 0)
 
 async function abrirEditar(v) {
+  // Carrega destinos frescos do banco de dados antes de abrir o modal
+  await carregarDestinosConfig()
+
   const { data: fresco } = await supabase
     .from('viagens')
     .select('*')
