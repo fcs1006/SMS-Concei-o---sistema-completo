@@ -65,6 +65,39 @@ export async function POST(req: Request) {
     const entries = Object.entries(configs).filter(([k]) => CHAVES_CONFIG.includes(k))
 
     for (const [chave, valor] of entries) {
+      if (chave === 'tfd_destinos') {
+        try {
+          const { data: oldConfig } = await supabase
+            .from('configuracoes')
+            .select('valor')
+            .eq('chave', 'tfd_destinos')
+            .maybeSingle()
+
+          if (oldConfig?.valor && Array.isArray(oldConfig.valor) && Array.isArray(valor)) {
+            const oldArray = oldConfig.valor as string[]
+            const newArray = valor as string[]
+            const removed = oldArray.filter(x => !newArray.includes(x))
+            const added = newArray.filter(x => !oldArray.includes(x))
+
+            if (removed.length === 1 && added.length === 1) {
+              const oldName = removed[0]
+              const newName = added[0]
+
+              const { error: updateError } = await supabase
+                .from('viagens')
+                .update({ destino: newName })
+                .eq('destino', oldName)
+
+              if (updateError) {
+                console.error('[Config Geral API POST] Erro ao atualizar viagens para nova rota:', updateError.message)
+              }
+            }
+          }
+        } catch (configErr: any) {
+          console.error('[Config Geral API POST] Erro ao verificar rotas renomeadas:', configErr.message)
+        }
+      }
+
       const { error } = await supabase
         .from('configuracoes')
         .upsert({

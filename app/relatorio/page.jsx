@@ -567,7 +567,11 @@ async function abrirEditar(v) {
                 <select className={inp} value={viagemEditando.destino || ''}
                   onChange={e => setViagemEditando(v => ({ ...v, destino: e.target.value }))}>
                   <option value="">--</option>
-                  {selectOpts(destinosConfig)}
+                  {selectOpts(
+                    destinosConfig.includes(viagemEditando.destino)
+                      ? destinosConfig
+                      : [...destinosConfig, viagemEditando.destino].filter(Boolean)
+                  )}
                 </select>
               </div>
               <div>
