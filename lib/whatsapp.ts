@@ -9,22 +9,55 @@ const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE!
 // Normaliza e formata o telefone para o formato internacional do WhatsApp (ex: 5563991234567)
 export function formatarNumeroWhatsapp(tel: string | null, defaultDDD: string = '63'): string | null {
   if (!tel) return null
-  const clean = tel.replace(/\D/g, '')
-  if (clean.length === 0) return null
   
-  if (clean.startsWith('55') && (clean.length === 12 || clean.length === 13)) {
-    return clean
+  // Divide a string por delimitadores comuns de telefone (vírgula, ponto e vírgula, barra, barra vertical ou " e ")
+  const parts = tel.split(/[,;\/|]|\s+e\s+/i)
+  
+  let fallbackNumber: string | null = null
+  
+  for (const part of parts) {
+    const clean = part.replace(/\D/g, '')
+    if (clean.length === 0) continue
+    
+    let isMobile = false
+    let formatted: string | null = null
+    
+    if (clean.startsWith('55') && (clean.length === 12 || clean.length === 13)) {
+      // 55 + DDD (2 dígitos) + número (8 ou 9 dígitos)
+      const numWithoutCC = clean.substring(2)
+      isMobile = numWithoutCC.length === 9 && numWithoutCC[0] === '9'
+      formatted = clean
+    } else if (clean.length === 11) {
+      // DDD (2 dígitos) + número (9 dígitos)
+      isMobile = clean[2] === '9'
+      formatted = `55${clean}`
+    } else if (clean.length === 10) {
+      // DDD (2 dígitos) + número (8 dígitos - geralmente fixo)
+      isMobile = false
+      formatted = `55${clean}`
+    } else if (clean.length === 9) {
+      // Número sem DDD (9 dígitos)
+      isMobile = clean[0] === '9'
+      formatted = `55${defaultDDD}${clean}`
+    } else if (clean.length === 8) {
+      // Número sem DDD (8 dígitos)
+      isMobile = false
+      formatted = `55${defaultDDD}${clean}`
+    }
+    
+    if (formatted) {
+      if (isMobile) {
+        // Se for número móvel, retorna imediatamente como melhor opção
+        return formatted
+      }
+      if (!fallbackNumber) {
+        fallbackNumber = formatted
+      }
+    }
   }
   
-  if (clean.length === 10 || clean.length === 11) {
-    return `55${clean}`
-  }
-  
-  if (clean.length === 8 || clean.length === 9) {
-    return `55${defaultDDD}${clean}`
-  }
-  
-  return clean
+  // Retorna o fallback (primeiro número válido encontrado) se nenhum celular foi detectado
+  return fallbackNumber
 }
 
 // Envia mensagem de texto via Evolution API e registra na conversa do WhatsApp do sistema
