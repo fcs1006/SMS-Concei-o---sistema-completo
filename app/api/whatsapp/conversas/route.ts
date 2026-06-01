@@ -26,7 +26,14 @@ export async function GET(request: NextRequest) {
 
     // Parse do mapa de vistos do cliente para calcular naoLidas no servidor
     const vistosParam = searchParams.get('vistos')
-    const vistosMap: Record<string, string> = vistosParam ? JSON.parse(vistosParam) : {}
+    let vistosMap: Record<string, string> = {}
+    if (vistosParam) {
+      try {
+        vistosMap = JSON.parse(vistosParam)
+      } catch (err) {
+        console.error('Erro ao fazer parse de vistos:', err)
+      }
+    }
 
     // Busca todas as conversas recentes de whatsapp_conversas
     const { data: mensagensDb, error: errConv } = await supabase

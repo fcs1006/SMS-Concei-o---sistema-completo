@@ -66,7 +66,13 @@ export default function Francisco() {
     setUsuario(u)
     
     // Carregar vistos do localStorage
-    const v = JSON.parse(localStorage.getItem('francisco_vistos') || '{}')
+    let v = {}
+    try {
+      v = JSON.parse(localStorage.getItem('francisco_vistos') || '{}')
+    } catch (e) {
+      console.error('Erro ao ler vistos do localStorage:', e)
+      localStorage.setItem('francisco_vistos', '{}')
+    }
     setVistos(v)
     
     // Carregar dados inicialmente
@@ -133,7 +139,14 @@ export default function Francisco() {
 
   async function carregarConversas() {
     try {
-      const vistosSalvos = localStorage.getItem('francisco_vistos') || '{}'
+      let vistosSalvos = localStorage.getItem('francisco_vistos') || '{}'
+      try {
+        JSON.parse(vistosSalvos)
+      } catch (e) {
+        console.error('Erro ao processar vistosSalvos do localStorage, resetando:', e)
+        vistosSalvos = '{}'
+        localStorage.setItem('francisco_vistos', '{}')
+      }
       const resp = await fetch(`/api/whatsapp/conversas?vistos=${encodeURIComponent(vistosSalvos)}`)
       if (!resp.ok) throw new Error('Falha ao obter dados')
       const json = await resp.json()
