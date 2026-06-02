@@ -138,9 +138,23 @@ async function processarLembretes(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Não autorizado' }, { status: 401 })
   }
 
-  // 1. Obter a data de amanhã no fuso horário local (America/Araguaina)
   const timezone = 'America/Araguaina'
   const nowInTz = new Date(new Date().toLocaleString('en-US', { timeZone: timezone }))
+
+  // Bloqueio de disparos automáticos fora da janela de horário de atendimento permitida (08:00 às 21:00)
+  // Somente aplica se for disparado automaticamente (quando NÃO for passado o CPF de um administrador)
+  if (!userCpf) {
+    const horaLocal = nowInTz.getHours()
+    if (horaLocal < 8 || horaLocal >= 21) {
+      console.warn(`[Lembretes] Bloqueado disparo automático fora de horário. Hora local: ${horaLocal}h`)
+      return NextResponse.json({ 
+        ok: true, 
+        mensagem: `Execução ignorada: fora do horário de atendimento permitido (08:00 às 21:00). Hora local em Brasília: ${horaLocal}h` 
+      })
+    }
+  }
+
+  // 1. Obter a data de amanhã no fuso horário local (America/Araguaina)
   const tomorrowInTz = new Date(nowInTz)
   tomorrowInTz.setDate(tomorrowInTz.getDate() + 1)
   

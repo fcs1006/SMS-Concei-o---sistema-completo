@@ -2,15 +2,15 @@
   "crons": [
     {
       "path": "/api/whatsapp/lembretes?tipo=tfd",
-      "schedule": "0 10 * * *"
+      "schedule": "30 11 * * *"
     },
     {
       "path": "/api/whatsapp/lembretes?tipo=autorizacoes",
-      "schedule": "0 10 * * *"
+      "schedule": "30 11 * * *"
     },
     {
       "path": "/api/whatsapp/lembretes?tipo=5dias",
-      "schedule": "0 10 * * *"
+      "schedule": "30 11 * * *"
     },
     {
       "path": "/api/whatsapp/lembretes?tipo=autorizacoes",
