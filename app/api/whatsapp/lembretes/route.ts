@@ -102,6 +102,20 @@ async function processarLembretes(request: NextRequest) {
   const targetTipo = searchParams.get('tipo')?.toLowerCase() // 'tfd', 'consultas', ou null/vazio para todos
   
   const token = authHeader ? authHeader.replace('Bearer ', '').trim() : queryToken
+
+  const userAgent = request.headers.get('user-agent') || 'Não identificado'
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'IP não identificado'
+
+  // Grava log de diagnóstico para sabermos quem chamou a API e em qual horário
+  try {
+    await supabase.from('whatsapp_conversas').insert([{
+      telefone: 'sistema',
+      papel: 'sistema',
+      mensagem: `[CRON DIAGNOSTICO] Chamada. Tipo: ${targetTipo || 'todos'}, Token: ${token ? 'Sim' : 'Não'}, CPF: ${userCpf || 'Não'}, User-Agent: ${userAgent}, IP: ${ip}`
+    }])
+  } catch (err) {
+    console.error('Erro ao gravar log de diagnóstico de cron:', err)
+  }
   
   let isAuthorized = false
   if (token === CRON_SECRET) {
