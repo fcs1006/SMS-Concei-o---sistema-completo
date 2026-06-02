@@ -109,8 +109,8 @@ async function processarLembretes(request: NextRequest) {
   // Grava log de diagnóstico para sabermos quem chamou a API e em qual horário
   try {
     await supabase.from('whatsapp_conversas').insert([{
-      telefone: 'sistema',
-      papel: 'sistema',
+      telefone: '5500000000000',
+      papel: 'assistant',
       mensagem: `[CRON DIAGNOSTICO] Chamada. Tipo: ${targetTipo || 'todos'}, Token: ${token ? 'Sim' : 'Não'}, CPF: ${userCpf || 'Não'}, User-Agent: ${userAgent}, IP: ${ip}`
     }])
   } catch (err) {
