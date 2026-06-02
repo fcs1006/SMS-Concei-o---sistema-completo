@@ -1381,15 +1381,13 @@ export default function Especialidades() {
                         onChange={e => setForm(f => ({ ...f, telefone: fmtTelefone(e.target.value) }))}
                         style={{ width: '100%', borderColor: !form.telefone ? '#fca5a5' : undefined }} />
                     </div>
-                    {escala.length === 0 && (
-                      <div>
-                        <label className="label-modern">{'Data de Solicitação *'}</label>
-                        <input className="input-modern" type="date"
-                          value={form.data_consulta}
-                          onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value }))}
-                          style={{ width: '100%' }} />
-                      </div>
-                    )}
+                    <div>
+                      <label className="label-modern">Data de Solicitação *</label>
+                      <input className="input-modern" type="date"
+                        value={form.data_consulta}
+                        onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value }))}
+                        style={{ width: '100%' }} />
+                    </div>
                     <div>
                       <label className="label-modern">{esp === 'usg' ? 'Tipo de Exame *' : 'Tipo de Consulta'}</label>
                       <select className="input-modern" value={form.tipo_exame}
@@ -1411,50 +1409,25 @@ export default function Especialidades() {
                     {escala.length > 0 && (() => {
                       // Nomes únicos na escala
                       const profEscalaUnicos = [...new Map(escala.map(e => [e.profissional_nome, e])).values()]
-                      // Datas disponíveis para o profissional selecionado
-                      const datasDoProf = escala.filter(e => e.profissional_nome === form.profissional_nome)
                       return (
-                        <>
-                          <div>
-                            <label className="label-modern">Profissional</label>
-                            <select className="input-modern"
-                              value={form.profissional_nome}
-                              onChange={e => {
-                                const nome = e.target.value
-                                const entradas = escala.filter(x => x.profissional_nome === nome)
-                                // auto-fill: se só tiver uma data, preenche; senão limpa para o usuário escolher
-                                const dataAuto = entradas.length === 1 ? (entradas[0].data_atendimento || '') : ''
-                                setForm(f => ({ ...f, profissional_nome: nome, data_consulta: dataAuto, data_atendimento: dataAuto }))
-                              }}
-                              style={{ width: '100%' }}>
-                              <option value="">— Selecione —</option>
-                              {profEscalaUnicos.map(e => (
-                                <option key={e.profissional_nome} value={e.profissional_nome}>{e.profissional_nome}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="label-modern">{'Data de Solicitação *'}</label>
-                            {datasDoProf.length > 1 ? (
-                              // Profissional tem mais de uma data → select
-                              <select className="input-modern"
-                                value={form.data_consulta}
-                                onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value, data_atendimento: e.target.value }))}
-                                style={{ width: '100%' }}>
-                                <option value="">— Selecione a data —</option>
-                                {datasDoProf.map(e => (
-                                  <option key={e.id} value={e.data_atendimento}>{fmtData(e.data_atendimento)}</option>
-                                ))}
-                              </select>
-                            ) : (
-                              // Nenhum ou um profissional → input (preenchido automaticamente ou livre)
-                              <input className="input-modern" type="date"
-                                value={form.data_consulta}
-                                onChange={e => setForm(f => ({ ...f, data_consulta: e.target.value }))}
-                                style={{ width: '100%' }} />
-                            )}
-                          </div>
-                        </>
+                        <div>
+                          <label className="label-modern">Profissional</label>
+                          <select className="input-modern"
+                            value={form.profissional_nome}
+                            onChange={e => {
+                              const nome = e.target.value
+                              const entradas = escala.filter(x => x.profissional_nome === nome)
+                              // auto-fill: se só tiver uma data, preenche; senão limpa
+                              const dataAuto = entradas.length === 1 ? (entradas[0].data_atendimento || '') : ''
+                              setForm(f => ({ ...f, profissional_nome: nome, data_atendimento: dataAuto }))
+                            }}
+                            style={{ width: '100%' }}>
+                            <option value="">— Selecione —</option>
+                            {profEscalaUnicos.map(e => (
+                              <option key={e.profissional_nome} value={e.profissional_nome}>{e.profissional_nome}</option>
+                            ))}
+                          </select>
+                        </div>
                       )
                     })()}
                     <div style={{ gridColumn: '1 / -1' }}>
