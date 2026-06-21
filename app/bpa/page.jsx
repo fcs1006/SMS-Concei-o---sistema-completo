@@ -1,8 +1,9 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Layout from '@/components/Layout'
-import { Settings, BarChart2, Upload, ClipboardList, RefreshCw, Download, Search, Printer, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Settings, BarChart2, Upload, ClipboardList, RefreshCw, Download, Search, Printer, CheckCircle, AlertTriangle, FileText } from 'lucide-react'
+import APACForm from '@/components/APACForm'
 
 const FIXOS_PADRAO = {
   urgencia: {
@@ -32,7 +33,20 @@ const FIXOS_PADRAO = {
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 export default function BPA() {
+  return (
+    <Suspense fallback={
+      <div style={{ padding: '28px', maxWidth: '900px', margin: '0 auto', fontFamily: 'Sora, sans-serif', color: '#64748b' }}>
+        Carregando módulo BPA...
+      </div>
+    }>
+      <BPAContent />
+    </Suspense>
+  )
+}
+
+function BPAContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [usuario, setUsuario] = useState(null)
   const [perfil, setPerfil] = useState('urgencia')
   const [mes, setMes] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'))
@@ -65,6 +79,17 @@ export default function BPA() {
       try { setConfig(JSON.parse(cfgSalva)) } catch { }
     }
   }, [])
+
+  useEffect(() => {
+    const tab = searchParams.get('tab') || searchParams.get('aba')
+    if (tab === 'apac') {
+      setAba('apac')
+    } else if (tab === 'historico') {
+      setAba('historico')
+    } else {
+      setAba('importacao')
+    }
+  }, [searchParams])
 
   function mostrarMsg(txt, ok = true) {
     setMsg({ txt, ok })
@@ -293,38 +318,57 @@ export default function BPA() {
 
   return (
     <Layout usuario={usuario}>
-      <div style={{ padding: '28px', maxWidth: '900px', margin: '0 auto' }}>
+      <div style={{ padding: '28px', maxWidth: aba === 'apac' ? '1200px' : '900px', margin: '0 auto', transition: 'max-width 0.2s' }}>
 
         {/* Header */}
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
-              BPA — Boletim de Produção Ambulatorial
-            </h1>
-            <p style={{ color: '#000000', fontSize: '13px', margin: 0 }}>
-              Consolidação e geração do arquivo TXT para o DATASUS
-            </p>
-          </div>
-          <button
-            onClick={() => setMostrarConfig(v => !v)}
-            style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #475569, #64748b)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '13px', cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Settings size={14} /> Configurar
-          </button>
+          {aba === 'apac' ? (
+            <div>
+              <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
+                Emissão de Laudo APAC
+              </h1>
+              <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
+                Consulte e preencha automaticamente o Laudo para Procedimentos de Alta Complexidade. O PDF gerado estará no modelo oficial de 55 campos.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
+                  BPA — Boletim de Produção Ambulatorial
+                </h1>
+                <p style={{ color: '#000000', fontSize: '13px', margin: 0 }}>
+                  Consolidação e geração do arquivo TXT para o DATASUS
+                </p>
+              </div>
+              <button
+                onClick={() => setMostrarConfig(v => !v)}
+                style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #475569, #64748b)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '13px', cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Settings size={14} /> Configurar
+              </button>
+            </>
+          )}
         </div>
 
         {/* Abas */}
         <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>
           <button 
             style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'importacao' ? corPerfil : '#64748b', borderBottom: aba === 'importacao' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif' }}
-            onClick={() => setAba('importacao')}
+            onClick={() => router.replace('/bpa', { scroll: false })}
           >
             <Upload size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Nova Importação
           </button>
           <button
             style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'historico' ? corPerfil : '#64748b', borderBottom: aba === 'historico' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}
-            onClick={() => setAba('historico')}
+            onClick={() => router.replace('/bpa?tab=historico', { scroll: false })}
           >
             <BarChart2 size={14} /> Relatório Histórico
+          </button>
+          <button
+            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'apac' ? '#10b981' : '#64748b', borderBottom: aba === 'apac' ? `3px solid #10b981` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => router.replace('/bpa?tab=apac', { scroll: false })}
+          >
+            <FileText size={14} /> Laudo APAC
           </button>
         </div>
 
@@ -665,6 +709,10 @@ export default function BPA() {
               </div>
             )}
           </div>
+        )}
+
+        {aba === 'apac' && (
+          <APACForm />
         )}
 
       </div>

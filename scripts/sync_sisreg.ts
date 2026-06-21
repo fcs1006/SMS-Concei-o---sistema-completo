@@ -60,6 +60,17 @@ async function syncSisreg() {
     todasSolicitacoes = hits.map((hit: any) => {
       const s = hit._source || {}
       
+      let observacaoSolicitante = null
+      if (Array.isArray(s.laudo)) {
+        const entry = s.laudo.find((l: any) => 
+          l.tipo_perfil?.toLowerCase() === 'solicitante' || 
+          l.tipo_descricao?.toLowerCase()?.includes('observac')
+        )
+        if (entry) {
+          observacaoSolicitante = entry.observacao
+        }
+      }
+
       return {
         codigo_solicitacao: s.codigo_solicitacao || s.co_solicitacao || null,
         data_solicitacao: s.data_solicitacao || null,
@@ -77,14 +88,19 @@ async function syncSisreg() {
         codigo_unidade_solicitante: s.codigo_unidade_solicitante || s.co_unidade_solicitante || null,
         nome_unidade_solicitante: s.nome_unidade_solicitante || s.no_unidade_solicitante || null,
         nome_medico_solicitante: s.nome_medico_solicitante || s.no_profissional_solicitante || null,
-        codigo_interno_procedimento: s.procedimentos?.[0]?.codigo_sigtap || s.codigo_interno_procedimento || s.co_procedimento || null,
-        descricao_interna_procedimento: s.procedimentos?.[0]?.descricao_interna?.trim() || s.procedimentos?.[0]?.descricao_sigtap?.trim() || s.descricao_interna_procedimento || s.no_procedimento || null,
+        numero_crm: s.numero_crm || null,
+        codigo_interno_procedimento: s.codigo_interno_procedimento || s.co_procedimento_interno || s.co_procedimento || null,
+        codigo_sigtap_procedimento: s.codigo_sigtap_procedimento || s.codigo_sigtap || (s.procedimentos?.[0]?.codigo_sigtap) || null,
+        codigo_cid: s.codigo_cid_solicitado || s.codigo_cid_agendado || s.co_cid || null,
+        descricao_cid: s.descricao_cid_solicitado || s.descricao_cid_agendado || s.no_cid || null,
+        descricao_interna_procedimento: s.descricao_interna_procedimento || s.no_procedimento || null,
         codigo_classificacao_risco: s.codigo_classificacao_risco || s.classificacao_risco || null,
         codigo_tipo_regulacao: s.codigo_tipo_regulacao || s.tipo_regulacao || null,
         status_solicitacao: s.status_solicitacao || s.no_situacao_solicitacao || null,
         nome_unidade_executante: s.nome_unidade_executante || null,
         logradouro_unidade_executante: s.logradouro_unidade_executante || null,
         telefone_unidade_executante: s.telefone_unidade_executante || null,
+        justificativa_clinica: observacaoSolicitante || null,
         atualizado_em: new Date().toISOString()
       }
     }).filter((s: any) => s.codigo_solicitacao !== null) // Garantir que tem ID
@@ -117,10 +133,20 @@ async function syncSisreg() {
     const batchSize = 1000
     for (let i = 0; i < solicitacoesDeduplicadas.length; i += batchSize) {
       const batch = solicitacoesDeduplicadas.slice(i, i + batchSize)
-      const { error } = await supabase
+      let { error } = await supabase
         .from('monitoramento_sisreg')
         .upsert(batch, { onConflict: 'codigo_solicitacao' })
       
+      if (error && error.message.includes('column')) {
+        console.warn(`Lote ${i / batchSize + 1}: Falha ao salvar com novas colunas (migração pendente). Salvando apenas colunas padrão.`)
+        // Fallback: remove colunas adicionais e salva apenas o padrão
+        const standardBatch = batch.map(({ codigo_cid, descricao_cid, codigo_sigtap_procedimento, justificativa_clinica, numero_crm, ...rest }: any) => rest)
+        const { error: fallbackErr } = await supabase
+          .from('monitoramento_sisreg')
+          .upsert(standardBatch, { onConflict: 'codigo_solicitacao' })
+        error = fallbackErr
+      }
+
       if (error) {
         console.error(`Erro ao inserir lote ${i / batchSize + 1}:`, error.message)
       } else {
