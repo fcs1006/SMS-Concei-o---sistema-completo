@@ -90,120 +90,115 @@ function generateAPACPDF(data: any): Promise<Buffer> {
       drawField('1 - NOME DO ESTABELECIMENTO DE SAÚDE SOLICITANTE', data.estabelecimentoSolicitante, 20, 72, 455, 23)
       drawField('2 - CNES', data.cnesSolicitante, 475, 72, 100, 23, 'center')
 
-      // ─── IDENTIFICAÇÃO DO PACIENTE (y: 100 a 255) ───
+      // ─── IDENTIFICAÇÃO DO PACIENTE (y: 100 a 227) ───
       drawSectionTitle('IDENTIFICAÇÃO DO PACIENTE', 100)
       // Linha 1
       drawField('3 - NOME DO PACIENTE', data.nomePaciente, 20, 112, 455, 23)
       drawField('4 - Nº DO PRONTUÁRIO', data.numeroProntuario || '', 475, 112, 100, 23, 'center')
       // Linha 2
       const formattedDate = data.dataNascimento ? new Date(data.dataNascimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : ''
-      drawField('5 - CARTÃO NACIONAL DE SAÚDE (CNS)', data.cnsPaciente, 20, 135, 220, 23, 'center')
-      drawField('6 - DATA DE NASCIMENTO', formattedDate, 240, 135, 100, 23, 'center')
+      drawField('5 - CARTÃO NACIONAL DE SAÚDE (CNS)', data.cnsPaciente, 20, 135, 255, 23, 'center')
+      drawField('6 - DATA DE NASCIMENTO', formattedDate, 275, 135, 130, 23, 'center')
       
       const sexoFmt = data.sexo === 'M' ? 'MASC. [X]   FEM. [ ]' : data.sexo === 'F' ? 'MASC. [ ]   FEM. [X]' : 'MASC. [ ]   FEM. [ ]'
-      drawField('7 - SEXO', sexoFmt, 340, 135, 135, 23, 'center')
-      drawField('8 - RAÇA/COR', data.racaCor || '', 475, 135, 100, 23, 'center')
+      drawField('7 - SEXO', sexoFmt, 405, 135, 170, 23, 'center')
       
       // Linha 3
-      drawField('9 - NOME DA MÃE', data.nomeMae, 20, 158, 385, 23)
-      drawField('10 - TELEFONE DE CONTATO', data.telefone, 405, 158, 170, 23, 'center')
-      
+      drawField('8 - NOME DA MÃE OU RESPONSÁVEL', data.nomeMae, 20, 158, 385, 23)
+      drawField('9 - TELEFONE DE CONTATO', data.telefone, 405, 158, 170, 23, 'center')
+
       // Linha 4
-      drawField('11 - NOME DO RESPONSÁVEL', data.nomeResponsavel || '', 20, 181, 385, 23)
-      drawField('12 - TELEFONE DE CONTATO', data.telefoneResponsavel || '', 405, 181, 170, 23, 'center')
+      drawField('10 - ENDEREÇO (RUA, Nº, BAIRRO)', data.enderecoPaciente || '', 20, 181, 555, 23)
 
       // Linha 5
-      drawField('13 - ENDEREÇO (RUA, Nº, BAIRRO)', data.enderecoPaciente || '', 20, 204, 555, 23)
+      drawField('11 - MUNICÍPIO DE RESIDÊNCIA', data.municipioPaciente || 'CONCEIÇÃO DO TOCANTINS', 20, 204, 220, 23)
+      drawField('12 - CÓD. IBGE MUNICÍPIO', data.codigoIbge || '1705607', 240, 204, 120, 23, 'center')
+      drawField('13 - UF', data.ufPaciente || 'TO', 360, 204, 45, 23, 'center')
+      drawField('14 - CEP', data.cep || '', 405, 204, 170, 23, 'center')
 
-      // Linha 6
-      drawField('14 - MUNICÍPIO DE RESIDÊNCIA', data.municipioPaciente || 'CONCEIÇÃO DO TOCANTINS', 20, 227, 220, 23)
-      drawField('15 - CÓD. IBGE MUNICÍPIO', data.codigoIbge || '1705607', 240, 227, 120, 23, 'center')
-      drawField('16 - UF', data.ufPaciente || 'TO', 360, 227, 45, 23, 'center')
-      drawField('17 - CEP', data.cep || '', 405, 227, 170, 23, 'center')
+      // ─── PROCEDIMENTO SOLICITADO (y: 232 a 267) ───
+      drawSectionTitle('PROCEDIMENTO SOLICITADO', 232)
+      drawField('15 - CÓDIGO DO PROCEDIMENTO PRINCIPAL', data.codigoSigtap, 20, 244, 180, 23, 'center')
+      drawField('16 - NOME DO PROCEDIMENTO PRINCIPAL', data.descricaoProcedimento, 200, 244, 320, 23)
+      drawField('17 - QTDE.', data.quantidade || '1', 520, 244, 55, 23, 'center')
 
-      // ─── PROCEDIMENTO SOLICITADO (y: 255 a 290) ───
-      drawSectionTitle('PROCEDIMENTO SOLICITADO', 255)
-      drawField('18 - CÓDIGO DO PROCEDIMENTO PRINCIPAL', data.codigoSigtap, 20, 267, 180, 23, 'center')
-      drawField('19 - NOME DO PROCEDIMENTO PRINCIPAL', data.descricaoProcedimento, 200, 267, 320, 23)
-      drawField('20 - QTDE.', data.quantidade || '1', 520, 267, 55, 23, 'center')
-
-      // ─── PROCEDIMENTO(S) SECUNDÁRIO(S) (y: 295 a 425) ───
-      drawSectionTitle('PROCEDIMENTO(S) SECUNDÁRIO(S)', 295)
+      // ─── PROCEDIMENTO(S) SECUNDÁRIO(S) (y: 272 a 399) ───
+      drawSectionTitle('PROCEDIMENTO(S) SECUNDÁRIO(S)', 272)
       
       const secList = data.procedimentosSecundarios || []
       const rowsSec = [
+        [18, 19, 20],
         [21, 22, 23],
         [24, 25, 26],
         [27, 28, 29],
-        [30, 31, 32],
-        [33, 34, 35]
+        [30, 31, 32]
       ]
 
       rowsSec.forEach((row, idx) => {
-        const yRow = 307 + (idx * 23)
+        const yRow = 284 + (idx * 23)
         const item = secList[idx] || {}
         drawField(`${row[0]} - CÓDIGO DO PROCEDIMENTO SECUNDÁRIO`, item.codigo || '', 20, yRow, 180, 23, 'center')
         drawField(`${row[1]} - NOME DO PROCEDIMENTO SECUNDÁRIO`, item.nome || '', 200, yRow, 320, 23)
         drawField(`${row[2]} - QTDE.`, item.quantidade || '', 520, yRow, 55, 23, 'center')
       })
 
-      // ─── JUSTIFICATIVA DO(S) PROCEDIMENTO(S) SOLICITADO(S) (y: 425 a 545) ───
-      drawSectionTitle('JUSTIFICATIVA DO(S) PROCEDIMENTO(S) SOLICITADO(S)', 427)
-      drawField('36 - DESCRIÇÃO DO DIAGNÓSTICO', data.diagnosticoDescricao || '', 20, 439, 280, 23)
-      drawField('37 - CID10 PRINCIPAL', data.cid10 || '', 300, 439, 90, 23, 'center')
-      drawField('38 - CID10 SECUNDÁRIO', data.cidSecundario || '', 390, 439, 90, 23, 'center')
-      drawField('39 - CID10 CAUSAS ASSOCIADAS', data.cidCausasAssociadas || '', 480, 439, 95, 23, 'center')
+      // ─── JUSTIFICATIVA DO(S) PROCEDIMENTO(S) SOLICITADO(S) (y: 404 a 499) ───
+      drawSectionTitle('JUSTIFICATIVA DO(S) PROCEDIMENTO(S) SOLICITADO(S)', 404)
+      drawField('33 - DESCRIÇÃO DO DIAGNÓSTICO', data.diagnosticoDescricao || '', 20, 416, 280, 23)
+      drawField('34 - CID10 PRINCIPAL', data.cid10 || '', 300, 416, 90, 23, 'center')
+      drawField('35 - CID10 SECUNDÁRIO', data.cidSecundario || '', 390, 416, 90, 23, 'center')
+      drawField('36 - CID10 CAUSAS ASSOCIADAS', data.cidCausasAssociadas || '', 480, 416, 95, 23, 'center')
       
       drawTextArea(
-        '40 - OBSERVAÇÕES / JUSTIFICATIVA CLÍNICA',
+        '37 - OBSERVAÇÕES / JUSTIFICATIVA CLÍNICA',
         data.justificativaClinica || 'Procedimento solicitado via central de regulação do município.',
-        20, 462, 555, 60
+        20, 439, 555, 60
       )
 
-      // ─── SOLICITAÇÃO (y: 530 a 590) ───
-      drawSectionTitle('SOLICITAÇÃO', 527)
-      drawField('41 - NOME DO PROFISSIONAL SOLICITANTE', data.nomeMedico, 20, 539, 280, 23)
+      // ─── SOLICITAÇÃO (y: 504 a 562) ───
+      drawSectionTitle('SOLICITAÇÃO', 504)
+      drawField('38 - NOME DO PROFISSIONAL SOLICITANTE', data.nomeMedico, 20, 516, 280, 23)
       
       const formattedSolDate = data.dataSolicitacao ? new Date(data.dataSolicitacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : ''
-      drawField('42 - DATA DA SOLICITAÇÃO', formattedSolDate, 300, 539, 100, 23, 'center')
-      drawField('45 - ASSINATURA E CARIMBO (Nº REGISTRO DO CONSELHO)', data.crmMedico || '', 400, 539, 175, 23)
+      drawField('39 - DATA DA SOLICITAÇÃO', formattedSolDate, 300, 516, 100, 23, 'center')
+      drawField('42 - ASSINATURA E CARIMBO (Nº REGISTRO DO CONSELHO)', data.crmMedico || '', 400, 516, 175, 23)
 
       const docSolFmt = data.documentoSolicitanteTipo === 'CPF' ? 'CNS ( )  CPF (X)' : data.documentoSolicitanteTipo === 'CNS' ? 'CNS (X)  CPF ( )' : 'CNS ( )  CPF ( )'
-      drawField('43 - DOCUMENTO', docSolFmt, 20, 562, 120, 23, 'center')
-      drawField('44 - Nº DOCUMENTO (CNS/CPF) DO PROFISSIONAL SOLICITANTE', data.documentoSolicitanteNumero || '', 140, 562, 435, 23, 'center')
+      drawField('40 - DOCUMENTO', docSolFmt, 20, 539, 120, 23, 'center')
+      drawField('41 - Nº DOCUMENTO (CNS/CPF) DO PROFISSIONAL SOLICITANTE', data.documentoSolicitanteNumero || '', 140, 539, 435, 23, 'center')
 
-      // ─── AUTORIZAÇÃO (y: 590 a 735) ───
-      drawSectionTitle('AUTORIZAÇÃO', 590)
+      // ─── AUTORIZAÇÃO (y: 567 a 671) ───
+      drawSectionTitle('AUTORIZAÇÃO', 567)
       
       // Linha 1
-      drawField('46 - NOME DO PROFISSIONAL AUTORIZADOR', '', 20, 602, 230, 23)
-      drawField('47 - CÓD. ÓRGÃO EMISSOR', '', 250, 602, 145, 23, 'center')
+      drawField('43 - NOME DO PROFISSIONAL AUTORIZADOR', '', 20, 579, 230, 23)
+      drawField('44 - CÓD. ÓRGÃO EMISSOR', '', 250, 579, 145, 23, 'center')
       
-      // Caixa do Número da APAC (52)
-      doc.rect(395, 602, 180, 69).stroke(gridColor)
-      doc.fillColor(labelColor).fontSize(5.5).font('Helvetica-Bold').text('52 - Nº DA AUTORIZAÇÃO (APAC)', 398, 605)
+      // Caixa do Número da APAC (49)
+      doc.rect(395, 579, 180, 69).stroke(gridColor)
+      doc.fillColor(labelColor).fontSize(5.5).font('Helvetica-Bold').text('49 - Nº DA AUTORIZAÇÃO (APAC)', 398, 582)
 
       // Linha 2
       const docAutFmt = 'CNS ( )  CPF ( )'
-      drawField('48 - DOCUMENTO', docAutFmt, 20, 625, 120, 23, 'center')
-      drawField('49 - Nº DOCUMENTO (CNS/CPF) DO PROFISSIONAL AUTORIZADOR', '', 140, 625, 255, 23, 'center')
+      drawField('45 - DOCUMENTO', docAutFmt, 20, 602, 120, 23, 'center')
+      drawField('46 - Nº DOCUMENTO (CNS/CPF) DO PROFISSIONAL AUTORIZADOR', '', 140, 602, 255, 23, 'center')
 
       // Linha 3
-      drawField('50 - DATA DA AUTORIZAÇÃO', '', 20, 648, 120, 23, 'center')
-      drawField('51 - ASSINATURA E CARIMBO (Nº DO REGISTRO DO CONSELHO)', '', 140, 648, 255, 23)
+      drawField('47 - DATA DA AUTORIZAÇÃO', '', 20, 625, 120, 23, 'center')
+      drawField('48 - ASSINATURA E CARIMBO (Nº DO REGISTRO DO CONSELHO)', '', 140, 625, 255, 23)
 
       // Linha 4
-      drawField('53 - PERÍODO DE VALIDADE DA APAC', '', 20, 671, 375, 23, 'center')
+      drawField('50 - PERÍODO DE VALIDADE DA APAC', '', 20, 648, 375, 23, 'center')
 
-      // ─── IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE EXECUTANTE (y: 700 a 735) ───
-      drawSectionTitle('IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE (EXECUTANTE)', 700)
-      drawField('54 - NOME FANTASIA DO ESTABELECIMENTO DE SAÚDE EXECUTANTE', '', 20, 712, 455, 23)
-      drawField('55 - CNES', '', 475, 712, 100, 23, 'center')
+      // ─── IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE EXECUTANTE (y: 677 a 712) ───
+      drawSectionTitle('IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE (EXECUTANTE)', 677)
+      drawField('51 - NOME FANTASIA DO ESTABELECIMENTO DE SAÚDE EXECUTANTE', '', 20, 689, 455, 23)
+      drawField('52 - CNES', '', 475, 689, 100, 23, 'center')
 
       // Rodapé institucional
       doc.fillColor('#64748b').fontSize(6).font('Helvetica-Oblique')
-         .text('Formulário em conformidade com o modelo nacional do SUS e as regras de regulação local.', 20, 750, { width: 555, align: 'center' })
-         .text('Sistema de Saúde Integrado - Secretaria Municipal de Saúde de Conceição do Tocantins.', 20, 760, { width: 555, align: 'center' })
+         .text('Formulário em conformidade com o modelo nacional do SUS e as regras de regulação local.', 20, 727, { width: 555, align: 'center' })
+         .text('Sistema de Saúde Integrado - Secretaria Municipal de Saúde de Conceição do Tocantins.', 20, 737, { width: 555, align: 'center' })
 
       doc.end()
     } catch (err) {

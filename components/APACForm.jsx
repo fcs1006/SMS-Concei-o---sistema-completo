@@ -278,11 +278,8 @@ export default function APACForm() {
     cnsPaciente: '',
     dataNascimento: '',
     sexo: 'M',
-    racaCor: 'BRANCA',
     nomeMae: '',
     telefone: '',
-    nomeResponsavel: '',
-    telefoneResponsavel: '',
     enderecoPaciente: '',
     municipioPaciente: '',
     codigoIbge: '1705607', // Conceição do Tocantins
@@ -450,7 +447,6 @@ export default function APACForm() {
         cpfPaciente: s.cpf_usuario || '',
         dataNascimento: s.dt_nascimento_usuario ? s.dt_nascimento_usuario.split('T')[0] : '',
         sexo: s.sexo_usuario === 'F' || s.sexo_usuario === 'FEMININO' ? 'F' : 'M',
-        racaCor: s.raca_usuario ? s.raca_usuario.toUpperCase() : prev.racaCor,
         nomeMae: s.no_mae_usuario || '',
         telefone: s.telefone || '',
         enderecoPaciente: s.endereco_paciente || '',
@@ -848,7 +844,7 @@ export default function APACForm() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.2fr', gap: '16px' }}>
               <div>
                 <label className="label-modern">5 - Cartão Nacional de Saúde (CNS)</label>
                 <input
@@ -884,38 +880,22 @@ export default function APACForm() {
                   <option value="F">Feminino</option>
                 </select>
               </div>
-              <div>
-                <label className="label-modern">8 - Raça/Cor</label>
-                <select
-                  name="racaCor"
-                  value={formData.racaCor}
-                  onChange={handleChange}
-                  className="input-modern"
-                  style={{ cursor: 'pointer' }}
-                >
-                  <option value="BRANCA">Branca</option>
-                  <option value="PRETA">Preta</option>
-                  <option value="PARDA">Parda</option>
-                  <option value="AMARELA">Amarela</option>
-                  <option value="INDIGENA">Indígena</option>
-                  <option value="SEM INFORMACAO">Sem Informação</option>
-                </select>
-              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '16px' }}>
               <div>
-                <label className="label-modern">9 - Nome da Mãe</label>
+                <label className="label-modern">8 - Nome da Mãe ou Responsável</label>
                 <input
                   type="text"
                   name="nomeMae"
                   value={formData.nomeMae}
                   onChange={handleChange}
                   className="input-modern"
+                  placeholder="Nome completo da mãe ou do responsável legal"
                 />
               </div>
               <div>
-                <label className="label-modern">10 - Telefone de Contato</label>
+                <label className="label-modern">9 - Telefone de Contato</label>
                 <input
                   type="text"
                   name="telefone"
@@ -927,32 +907,8 @@ export default function APACForm() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '16px' }}>
-              <div>
-                <label className="label-modern">11 - Nome do Responsável</label>
-                <input
-                  type="text"
-                  name="nomeResponsavel"
-                  value={formData.nomeResponsavel}
-                  onChange={handleChange}
-                  className="input-modern"
-                />
-              </div>
-              <div>
-                <label className="label-modern">12 - Telefone Responsável</label>
-                <input
-                  type="text"
-                  name="telefoneResponsavel"
-                  value={formData.telefoneResponsavel}
-                  onChange={handleChange}
-                  placeholder="(00) 00000-0000"
-                  className="input-modern"
-                />
-              </div>
-            </div>
-
             <div>
-              <label className="label-modern">13 - Endereço (Rua, Nº, Bairro)</label>
+              <label className="label-modern">10 - Endereço (Rua, Nº, Bairro)</label>
               <input
                 type="text"
                 name="enderecoPaciente"
@@ -964,7 +920,7 @@ export default function APACForm() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 0.5fr 1.5fr', gap: '16px' }}>
               <div>
-                <label className="label-modern">14 - Município de Residência</label>
+                <label className="label-modern">11 - Município de Residência</label>
                 <input
                   type="text"
                   name="municipioPaciente"
@@ -974,7 +930,7 @@ export default function APACForm() {
                 />
               </div>
               <div>
-                <label className="label-modern">15 - Cód. IBGE Município</label>
+                <label className="label-modern">12 - Cód. IBGE Município</label>
                 <input
                   type="text"
                   name="codigoIbge"
@@ -985,7 +941,7 @@ export default function APACForm() {
                 />
               </div>
               <div>
-                <label className="label-modern">16 - UF</label>
+                <label className="label-modern">13 - UF</label>
                 <input
                   type="text"
                   name="ufPaciente"
@@ -996,7 +952,7 @@ export default function APACForm() {
                 />
               </div>
               <div>
-                <label className="label-modern">17 - CEP</label>
+                <label className="label-modern">14 - CEP</label>
                 <input
                   type="text"
                   name="cep"
@@ -1019,7 +975,7 @@ export default function APACForm() {
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 3.2fr 0.6fr', gap: '16px' }}>
             <div>
-              <label className="label-modern">18 - Código Procedimento Principal</label>
+              <label className="label-modern">15 - Código do Procedimento Principal</label>
               <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
                 <input
                   type="text"
@@ -1075,7 +1031,7 @@ export default function APACForm() {
               </div>
             </div>
             <div>
-              <label className="label-modern">19 - Nome do Procedimento Principal</label>
+              <label className="label-modern">16 - Nome do Procedimento Principal</label>
               <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
                 <input
                   type="text"
@@ -1130,7 +1086,7 @@ export default function APACForm() {
               </div>
             </div>
             <div>
-              <label className="label-modern" style={{ textAlign: 'center' }}>20 - Qtde.</label>
+              <label className="label-modern" style={{ textAlign: 'center' }}>17 - Qtde.</label>
               <input
                 type="number"
                 name="quantidade"
@@ -1179,7 +1135,7 @@ export default function APACForm() {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {procedimentosSecundarios.map((proc, index) => {
-              const startNum = 21 + (index * 3)
+              const startNum = 18 + (index * 3)
               return (
                 <div key={index} style={{ display: 'grid', gridTemplateColumns: '1.8fr 3.2fr 0.6fr', gap: '16px', borderBottom: index < 4 ? '1px solid #f1f5f9' : 'none', paddingBottom: index < 4 ? '16px' : 0 }}>
                   <div>
@@ -1315,7 +1271,7 @@ export default function APACForm() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr', gap: '16px' }}>
               <div>
-                <label className="label-modern">36 - Descrição do Diagnóstico</label>
+                <label className="label-modern">33 - Descrição do Diagnóstico</label>
                 <input
                   type="text"
                   name="diagnosticoDescricao"
@@ -1325,7 +1281,7 @@ export default function APACForm() {
                 />
               </div>
               <div>
-                <label className="label-modern">37 - CID-10 Principal</label>
+                <label className="label-modern">34 - CID-10 Principal</label>
                 <input
                   type="text"
                   name="cid10"
@@ -1338,7 +1294,7 @@ export default function APACForm() {
                 />
               </div>
               <div>
-                <label className="label-modern">38 - CID Sec.</label>
+                <label className="label-modern">35 - CID Sec.</label>
                 <input
                   type="text"
                   name="cidSecundario"
@@ -1349,7 +1305,7 @@ export default function APACForm() {
                 />
               </div>
               <div>
-                <label className="label-modern">39 - CID Assoc.</label>
+                <label className="label-modern">36 - CID Assoc.</label>
                 <input
                   type="text"
                   name="cidCausasAssociadas"
@@ -1362,7 +1318,7 @@ export default function APACForm() {
             </div>
             
             <div>
-              <label className="label-modern">40 - Observações / Justificativa Clínica</label>
+              <label className="label-modern">37 - Observações / Justificativa Clínica</label>
               <textarea
                 name="justificativaClinica"
                 value={formData.justificativaClinica}
@@ -1385,7 +1341,7 @@ export default function APACForm() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '16px' }}>
               <div>
-                <label className="label-modern">41 - Nome do Profissional Solicitante</label>
+                <label className="label-modern">38 - Nome do Profissional Solicitante</label>
                 <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
                   <input
                     type="text"
@@ -1457,7 +1413,7 @@ export default function APACForm() {
                 />
               </div>
               <div>
-                <label className="label-modern">42 - Data da Solicitação</label>
+                <label className="label-modern">39 - Data da Solicitação</label>
                 <input
                   type="date"
                   name="dataSolicitacao"
@@ -1468,7 +1424,7 @@ export default function APACForm() {
                 />
               </div>
               <div>
-                <label className="label-modern">43 - Tipo de Documento</label>
+                <label className="label-modern">40 - Tipo de Documento</label>
                 <select
                   name="documentoSolicitanteTipo"
                   value={formData.documentoSolicitanteTipo}
@@ -1483,7 +1439,7 @@ export default function APACForm() {
             </div>
 
             <div>
-              <label className="label-modern">44 - Número do Documento do Solicitante (CNS ou CPF)</label>
+              <label className="label-modern">41 - Número do Documento do Solicitante (CNS ou CPF)</label>
               <input
                 type="text"
                 name="documentoSolicitanteNumero"
@@ -1530,11 +1486,8 @@ export default function APACForm() {
                   cnsPaciente: '',
                   dataNascimento: '',
                   sexo: 'M',
-                  racaCor: 'BRANCA',
                   nomeMae: '',
                   telefone: '',
-                  nomeResponsavel: '',
-                  telefoneResponsavel: '',
                   enderecoPaciente: '',
                   municipioPaciente: munPaciente,
                   codigoIbge: '1705607',
