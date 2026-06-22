@@ -167,38 +167,40 @@ function generateAPACPDF(data: any): Promise<Buffer> {
       drawField('40 - DOCUMENTO', docSolFmt, 20, 539, 120, 23, 'center')
       drawField('41 - Nº DOCUMENTO (CNS/CPF) DO PROFISSIONAL SOLICITANTE', data.documentoSolicitanteNumero || '', 140, 539, 435, 23, 'center')
 
-      // ─── AUTORIZAÇÃO (y: 567 a 671) ───
+      // ─── AUTORIZAÇÃO (y: 567 a 648) ───
       drawSectionTitle('AUTORIZAÇÃO', 567)
       
-      // Linha 1
+      // Linha 1 (Esquerda)
       drawField('43 - NOME DO PROFISSIONAL AUTORIZADOR', '', 20, 579, 230, 23)
       drawField('44 - CÓD. ÓRGÃO EMISSOR', '', 250, 579, 145, 23, 'center')
       
-      // Caixa do Número da APAC (49)
-      doc.rect(395, 579, 180, 69).stroke(gridColor)
+      // Caixa do Número da APAC (49) - Direita (Linhas 1 e 2)
+      doc.rect(395, 579, 180, 46).stroke(gridColor)
       doc.fillColor(labelColor).fontSize(5.5).font('Helvetica-Bold').text('49 - Nº DA AUTORIZAÇÃO (APAC)', 398, 582)
 
-      // Linha 2
+      // Linha 2 (Esquerda)
       const docAutFmt = 'CNS ( )  CPF ( )'
       drawField('45 - DOCUMENTO', docAutFmt, 20, 602, 120, 23, 'center')
       drawField('46 - Nº DOCUMENTO (CNS/CPF) DO PROFISSIONAL AUTORIZADOR', '', 140, 602, 255, 23, 'center')
 
-      // Linha 3
+      // Linha 3 (Esquerda)
       drawField('47 - DATA DA AUTORIZAÇÃO', '', 20, 625, 120, 23, 'center')
       drawField('48 - ASSINATURA E CARIMBO (Nº DO REGISTRO DO CONSELHO)', '', 140, 625, 255, 23)
 
-      // Linha 4
-      drawField('50 - PERÍODO DE VALIDADE DA APAC', '', 20, 648, 375, 23, 'center')
+      // Linha 3 (Direita) - Período de validade da APAC (50)
+      doc.rect(395, 625, 180, 23).stroke(gridColor)
+      doc.fillColor(labelColor).fontSize(5.5).font('Helvetica-Bold').text('50 - PERÍODO DE VALIDADE DA APAC', 398, 628)
+      doc.fillColor(valueColor).fontSize(7).font('Helvetica').text('      /      /      a      /      /      ', 398, 636, { width: 174, align: 'center' })
 
-      // ─── IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE EXECUTANTE (y: 677 a 712) ───
-      drawSectionTitle('IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE (EXECUTANTE)', 677)
-      drawField('51 - NOME FANTASIA DO ESTABELECIMENTO DE SAÚDE EXECUTANTE', '', 20, 689, 455, 23)
-      drawField('52 - CNES', '', 475, 689, 100, 23, 'center')
+      // ─── IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE EXECUTANTE (y: 654 a 689) ───
+      drawSectionTitle('IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE (EXECUTANTE)', 654)
+      drawField('51 - NOME FANTASIA DO ESTABELECIMENTO DE SAÚDE EXECUTANTE', '', 20, 666, 455, 23)
+      drawField('52 - CNES', '', 475, 666, 100, 23, 'center')
 
       // Rodapé institucional
       doc.fillColor('#64748b').fontSize(6).font('Helvetica-Oblique')
-         .text('Formulário em conformidade com o modelo nacional do SUS e as regras de regulação local.', 20, 727, { width: 555, align: 'center' })
-         .text('Sistema de Saúde Integrado - Secretaria Municipal de Saúde de Conceição do Tocantins.', 20, 737, { width: 555, align: 'center' })
+         .text('Formulário em conformidade com o modelo nacional do SUS e as regras de regulação local.', 20, 704, { width: 555, align: 'center' })
+         .text('Sistema de Saúde Integrado - Secretaria Municipal de Saúde de Conceição do Tocantins.', 20, 714, { width: 555, align: 'center' })
 
       doc.end()
     } catch (err) {
