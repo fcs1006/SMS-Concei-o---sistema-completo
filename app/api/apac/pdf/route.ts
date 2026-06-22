@@ -161,7 +161,7 @@ function generateAPACPDF(data: any): Promise<Buffer> {
       
       const formattedSolDate = data.dataSolicitacao ? new Date(data.dataSolicitacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : ''
       drawField('39 - DATA DA SOLICITAÇÃO', formattedSolDate, 300, 516, 100, 23, 'center')
-      drawField('42 - ASSINATURA E CARIMBO (Nº REGISTRO DO CONSELHO)', data.crmMedico || '', 400, 516, 175, 23)
+      drawField('42 - ASSINATURA E CARIMBO (Nº REGISTRO DO CONSELHO)', data.crmMedico || '', 400, 516, 175, 23, 'right')
 
       const docSolFmt = data.documentoSolicitanteTipo === 'CPF' ? 'CNS ( )  CPF (X)' : data.documentoSolicitanteTipo === 'CNS' ? 'CNS (X)  CPF ( )' : 'CNS ( )  CPF ( )'
       drawField('40 - DOCUMENTO', docSolFmt, 20, 539, 120, 23, 'center')
