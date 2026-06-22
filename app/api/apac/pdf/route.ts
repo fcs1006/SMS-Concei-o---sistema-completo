@@ -21,9 +21,9 @@ function generateAPACPDF(data: any): Promise<Buffer> {
       const drawSectionTitle = (title: string, y: number) => {
         doc.rect(20, y, 555, 12).fill('#000000')
         doc.fillColor('#ffffff')
-           .fontSize(7.5)
+           .fontSize(8)
            .font('Helvetica-Bold')
-           .text(title.toUpperCase(), 25, y + 2.5, { width: 545, align: 'center' })
+           .text(title.toUpperCase(), 25, y + 2, { width: 545, align: 'center' })
       }
 
       // Desenha campos normais
@@ -31,15 +31,15 @@ function generateAPACPDF(data: any): Promise<Buffer> {
         doc.rect(x, y, width, height).stroke(gridColor)
         
         doc.fillColor(labelColor)
-           .fontSize(5.5)
+           .fontSize(6.5)
            .font('Helvetica-Bold')
-           .text(label.toUpperCase(), x + 3, y + 3, { width: width - 6 })
+           .text(label.toUpperCase(), x + 3, y + 2.5, { width: width - 6 })
 
         if (value !== undefined && value !== null && value !== '') {
           doc.fillColor(valueColor)
-             .fontSize(8)
+             .fontSize(9.5)
              .font('Helvetica')
-             .text(String(value).toUpperCase(), x + 3, y + 12, { width: width - 6, align })
+             .text(String(value).toUpperCase(), x + 3, y + 11.5, { width: width - 6, align })
         }
       }
 
@@ -47,13 +47,13 @@ function generateAPACPDF(data: any): Promise<Buffer> {
       const drawTextArea = (label: string, value: string | null | undefined, x: number, y: number, width: number, height: number) => {
         doc.rect(x, y, width, height).stroke(gridColor)
         doc.fillColor(labelColor)
-           .fontSize(5.5)
+           .fontSize(6.5)
            .font('Helvetica-Bold')
            .text(label.toUpperCase(), x + 3, y + 3, { width: width - 6 })
 
         if (value) {
           doc.fillColor(valueColor)
-             .fontSize(7)
+             .fontSize(8.5)
              .font('Helvetica')
              .text(String(value).toUpperCase(), x + 3, y + 12, { width: width - 6, align: 'justify', lineGap: 1 })
         }
@@ -63,27 +63,27 @@ function generateAPACPDF(data: any): Promise<Buffer> {
       // SUS Box
       doc.rect(20, 20, 100, 35).stroke(gridColor)
       doc.fillColor(valueColor)
-         .fontSize(10)
+         .fontSize(12)
          .font('Helvetica-Bold')
-         .text('SUS', 25, 24, { width: 90, align: 'center' })
-      doc.fontSize(5.5)
+         .text('SUS', 25, 22, { width: 90, align: 'center' })
+      doc.fontSize(6.5)
          .font('Helvetica-Bold')
-         .text('Sistema\nÚnico de\nSaúde', 25, 36, { width: 45, align: 'center' })
-         .text('Ministério\nda\nSaúde', 70, 36, { width: 45, align: 'center' })
+         .text('Sistema\nÚnico de\nSaúde', 25, 34, { width: 45, align: 'center' })
+         .text('Ministério\nda\nSaúde', 70, 34, { width: 45, align: 'center' })
 
       // Título
       doc.rect(120, 20, 410, 35).stroke(gridColor)
       doc.fillColor(valueColor)
-         .fontSize(9.5)
+         .fontSize(10.5)
          .font('Helvetica-Bold')
-         .text('LAUDO PARA SOLICITAÇÃO/AUTORIZAÇÃO DE\nPROCEDIMENTO AMBULATORIAL', 125, 24, { width: 400, align: 'center' })
+         .text('LAUDO PARA SOLICITAÇÃO/AUTORIZAÇÃO DE\nPROCEDIMENTO AMBULATORIAL', 125, 23, { width: 400, align: 'center' })
 
       // Folhas fls.
       doc.rect(530, 20, 45, 35).stroke(gridColor)
       doc.fillColor(valueColor)
-         .fontSize(9)
+         .fontSize(10)
          .font('Helvetica-Bold')
-         .text('fls.1/2', 530, 32, { width: 45, align: 'center' })
+         .text('fls.1/2', 530, 31, { width: 45, align: 'center' })
 
       // ─── IDENTIFICAÇÃO DO ESTABELECIMENTO SOLICITANTE (y: 60 a 95) ───
       drawSectionTitle('IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE (SOLICITANTE)', 60)
@@ -176,7 +176,7 @@ function generateAPACPDF(data: any): Promise<Buffer> {
       
       // Caixa do Número da APAC (49) - Direita (Linhas 1 e 2)
       doc.rect(395, 579, 180, 46).stroke(gridColor)
-      doc.fillColor(labelColor).fontSize(5.5).font('Helvetica-Bold').text('49 - Nº DA AUTORIZAÇÃO (APAC)', 398, 582)
+      doc.fillColor(labelColor).fontSize(6.5).font('Helvetica-Bold').text('49 - Nº DA AUTORIZAÇÃO (APAC)', 398, 582)
 
       // Linha 2 (Esquerda)
       const docAutFmt = 'CNS ( )  CPF ( )'
@@ -189,8 +189,8 @@ function generateAPACPDF(data: any): Promise<Buffer> {
 
       // Linha 3 (Direita) - Período de validade da APAC (50)
       doc.rect(395, 625, 180, 23).stroke(gridColor)
-      doc.fillColor(labelColor).fontSize(5.5).font('Helvetica-Bold').text('50 - PERÍODO DE VALIDADE DA APAC', 398, 628)
-      doc.fillColor(valueColor).fontSize(7).font('Helvetica').text('      /      /      a      /      /      ', 398, 636, { width: 174, align: 'center' })
+      doc.fillColor(labelColor).fontSize(6.5).font('Helvetica-Bold').text('50 - PERÍODO DE VALIDADE DA APAC', 398, 628)
+      doc.fillColor(valueColor).fontSize(8.5).font('Helvetica').text('      /      /      a      /      /      ', 398, 636, { width: 174, align: 'center' })
 
       // ─── IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE EXECUTANTE (y: 654 a 689) ───
       drawSectionTitle('IDENTIFICAÇÃO DO ESTABELECIMENTO DE SAÚDE (EXECUTANTE)', 654)
