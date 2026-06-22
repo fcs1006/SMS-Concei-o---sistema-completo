@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 const DEFAULT_SISREG_URL = 'https://sisreg-es.saude.gov.br'
 
 export async function GET(request: NextRequest) {

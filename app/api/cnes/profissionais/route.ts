@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServer } from '@/lib/supabaseServer'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/cnes/profissionais?cnes=5193273
 export async function GET(request: NextRequest) {
   try {

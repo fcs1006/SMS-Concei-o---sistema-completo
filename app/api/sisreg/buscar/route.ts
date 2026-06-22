@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServer } from '@/lib/supabaseServer'
 
+export const dynamic = 'force-dynamic'
+
 const DEFAULT_SISREG_URL = 'https://sisreg-es.saude.gov.br'
 const INDEX_MARCACAO = 'marcacao-ambulatorial-to-conceicao-do-tocantins'
 const INDEX_SOLICITACAO = 'solicitacao-ambulatorial-to-conceicao-do-tocantins'
