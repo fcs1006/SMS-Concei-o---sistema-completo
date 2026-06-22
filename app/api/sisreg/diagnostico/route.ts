@@ -6,7 +6,18 @@ export async function GET(request: NextRequest) {
   try {
     const sisregUser = process.env.SISREG_USER
     const sisregPassword = process.env.SISREG_PASSWORD
-    const url = process.env.SISREG_URL || DEFAULT_SISREG_URL
+    let url = process.env.SISREG_URL || DEFAULT_SISREG_URL
+
+    url = url.replace(/\/$/, '')
+    const indicesToRemove = [
+      'solicitacao-ambulatorial-to-conceicao-do-tocantins',
+      'marcacao-ambulatorial-to-conceicao-do-tocantins'
+    ]
+    for (const idxName of indicesToRemove) {
+      if (url.endsWith(idxName)) {
+        url = url.slice(0, -idxName.length).replace(/\/$/, '')
+      }
+    }
 
     const hasUser = !!sisregUser
     const hasPassword = !!sisregPassword

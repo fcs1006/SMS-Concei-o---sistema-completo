@@ -43,14 +43,25 @@ const DEFAULT_SISREG_INDEX = 'solicitacao-ambulatorial-to-conceicao-do-tocantins
 function getSisregConfig() {
   const user = process.env.SISREG_USER
   const password = process.env.SISREG_PASSWORD
-  const url = process.env.SISREG_URL || DEFAULT_SISREG_URL
+  let url = process.env.SISREG_URL || DEFAULT_SISREG_URL
   const index = process.env.SISREG_INDEX || DEFAULT_SISREG_INDEX
+
+  url = url.replace(/\/$/, '')
+  const indicesToRemove = [
+    'solicitacao-ambulatorial-to-conceicao-do-tocantins',
+    'marcacao-ambulatorial-to-conceicao-do-tocantins'
+  ]
+  for (const idxName of indicesToRemove) {
+    if (url.endsWith(idxName)) {
+      url = url.slice(0, -idxName.length).replace(/\/$/, '')
+    }
+  }
 
   if (!user || !password) {
     throw new SisregConfigError('Configure SISREG_USER e SISREG_PASSWORD no ambiente.')
   }
 
-  return { user, password, url: url.replace(/\/$/, ''), index }
+  return { user, password, url, index }
 }
 
 function montarQueryBase(busca: string) {
