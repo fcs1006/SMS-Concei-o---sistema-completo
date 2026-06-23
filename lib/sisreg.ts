@@ -41,8 +41,20 @@ const DEFAULT_SISREG_URL = 'https://sisreg-es.saude.gov.br'
 const DEFAULT_SISREG_INDEX = 'solicitacao-ambulatorial-to-conceicao-do-tocantins'
 
 function getSisregConfig() {
-  const user = process.env.SISREG_USER
-  const password = process.env.SISREG_PASSWORD
+  const sanitize = (val: string | undefined, prefix: string): string => {
+    if (!val) return ''
+    let clean = val.trim()
+    if (clean.startsWith(`${prefix}=`)) {
+      clean = clean.substring(prefix.length + 1).trim()
+    }
+    if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+      clean = clean.substring(1, clean.length - 1).trim()
+    }
+    return clean
+  }
+
+  const user = sanitize(process.env.SISREG_USER, 'SISREG_USER')
+  const password = sanitize(process.env.SISREG_PASSWORD, 'SISREG_PASSWORD')
   let url = process.env.SISREG_URL || DEFAULT_SISREG_URL
   const index = process.env.SISREG_INDEX || DEFAULT_SISREG_INDEX
 

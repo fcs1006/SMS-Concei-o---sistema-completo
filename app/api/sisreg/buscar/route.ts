@@ -8,8 +8,20 @@ const INDEX_MARCACAO = 'marcacao-ambulatorial-to-conceicao-do-tocantins'
 const INDEX_SOLICITACAO = 'solicitacao-ambulatorial-to-conceicao-do-tocantins'
 
 async function buscarExterno(codigoNum: number): Promise<any | null> {
-  const sisregUser = process.env.SISREG_USER
-  const sisregPassword = process.env.SISREG_PASSWORD
+  const sanitize = (val: string | undefined, prefix: string): string => {
+    if (!val) return ''
+    let clean = val.trim()
+    if (clean.startsWith(`${prefix}=`)) {
+      clean = clean.substring(prefix.length + 1).trim()
+    }
+    if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+      clean = clean.substring(1, clean.length - 1).trim()
+    }
+    return clean
+  }
+
+  const sisregUser = sanitize(process.env.SISREG_USER, 'SISREG_USER')
+  const sisregPassword = sanitize(process.env.SISREG_PASSWORD, 'SISREG_PASSWORD')
   let url = process.env.SISREG_URL || DEFAULT_SISREG_URL
 
   url = url.replace(/\/$/, '')

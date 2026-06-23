@@ -6,8 +6,23 @@ const DEFAULT_SISREG_URL = 'https://sisreg-es.saude.gov.br'
 
 export async function GET(request: NextRequest) {
   try {
-    const sisregUser = process.env.SISREG_USER
-    const sisregPassword = process.env.SISREG_PASSWORD
+    const sanitize = (val: string | undefined, prefix: string): string => {
+      if (!val) return ''
+      let clean = val.trim()
+      if (clean.startsWith(`${prefix}=`)) {
+        clean = clean.substring(prefix.length + 1).trim()
+      }
+      if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+        clean = clean.substring(1, clean.length - 1).trim()
+      }
+      return clean
+    }
+
+    const rawUser = process.env.SISREG_USER
+    const rawPassword = process.env.SISREG_PASSWORD
+
+    const sisregUser = sanitize(rawUser, 'SISREG_USER')
+    const sisregPassword = sanitize(rawPassword, 'SISREG_PASSWORD')
     let url = process.env.SISREG_URL || DEFAULT_SISREG_URL
 
     url = url.replace(/\/$/, '')
@@ -34,6 +49,7 @@ export async function GET(request: NextRequest) {
           hasUser,
           hasPassword,
           userLength,
+          rawUserLength: rawUser ? rawUser.length : 0,
           url
         }
       })
