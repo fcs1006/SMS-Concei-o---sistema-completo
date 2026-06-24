@@ -986,17 +986,28 @@ export default function Especialidades() {
   }
 
   async function salvarTiposUsgNoDb(novaLista) {
+    if (!usuario?.usuario) {
+      mostrarMsg('Erro: Usuário não autenticado.', false)
+      return
+    }
+    if (usuario?.perfil !== 'admin') {
+      mostrarMsg('Acesso negado. Apenas administradores podem alterar configurações.', false)
+      return
+    }
     setSalvandoTipoUsg(true)
     try {
-      const { error } = await supabase
-        .from('configuracoes')
-        .upsert({
-          chave: 'especialidades_tipos_usg',
-          valor: novaLista,
-          atualizado_em: new Date().toISOString()
-        }, { onConflict: 'chave' })
-
-      if (error) throw error
+      const res = await fetch('/api/config/geral', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminCpf: usuario.usuario,
+          configs: {
+            especialidades_tipos_usg: novaLista
+          }
+        })
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error || 'Erro ao salvar tipos de USG')
       
       setTiposUsgOrdem(novaLista)
       setTiposUsg([...novaLista].sort((a, b) => a.localeCompare(b, 'pt-BR')))

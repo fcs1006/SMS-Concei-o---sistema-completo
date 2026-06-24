@@ -13,7 +13,8 @@ const CHAVES_CONFIG = [
   'servicos_municipio',
   'lista_ubs',
   'lista_acs',
-  'tfd_destinos'
+  'tfd_destinos',
+  'especialidades_tipos_usg'
 ]
 
 export async function GET() {
