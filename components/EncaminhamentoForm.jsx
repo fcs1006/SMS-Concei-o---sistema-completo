@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-function calcularIdadeCompleta(dataNasc: string) {
+function calcularIdadeCompleta(dataNasc) {
   if (!dataNasc) return ''
   // Adiciona time zone para evitar problemas de fuso horário na data em formato YYYY-MM-DD
   const parts = dataNasc.split('-')
@@ -44,7 +44,7 @@ function calcularIdadeCompleta(dataNasc: string) {
 
 export default function EncaminhamentoForm() {
   const router = useRouter()
-  const [usuario, setUsuario] = useState<any>(null)
+  const [usuario, setUsuario] = useState(null)
   
   // Estados de busca
   const [codigoBusca, setCodigoBusca] = useState('')
@@ -53,18 +53,18 @@ export default function EncaminhamentoForm() {
   const [sucessoBusca, setSucessoBusca] = useState(false)
 
   // Estados para CNES do Município
-  const [unidadesSolicitantes, setUnidadesSolicitantes] = useState<any[]>([])
+  const [unidadesSolicitantes, setUnidadesSolicitantes] = useState([])
   const [carregandoUnidades, setCarregandoUnidades] = useState(false)
   const [ibgeConsulta, setIbgeConsulta] = useState('1705607')
-  const [excluidosCnes, setExcluidosCnes] = useState<string[]>([])
+  const [excluidosCnes, setExcluidosCnes] = useState([])
 
   // Estados para autocomplete / sugestões
-  const [sugestoesPacientes, setSugestoesPacientes] = useState<any[]>([])
-  const [sugestoesProcedimentos, setSugestoesProcedimentos] = useState<any[]>([])
+  const [sugestoesPacientes, setSugestoesPacientes] = useState([])
+  const [sugestoesProcedimentos, setSugestoesProcedimentos] = useState([])
   const [focoProcedimento, setFocoProcedimento] = useState('') // 'codigo' | 'descricao'
-  const [sugestoesProfissionais, setSugestoesProfissionais] = useState<any[]>([])
+  const [sugestoesProfissionais, setSugestoesProfissionais] = useState([])
   const [buscandoProfissionais, setBuscandoProfissionais] = useState(false)
-  const [sugestoesCid, setSugestoesCid] = useState<any[]>([])
+  const [sugestoesCid, setSugestoesCid] = useState([])
   const [buscandoCid, setBuscandoCid] = useState(false)
 
   // Fecha todas as caixas de sugestões ao clicar fora
@@ -80,7 +80,7 @@ export default function EncaminhamentoForm() {
   }, [])
 
   // Função para buscar pacientes locais (por nome, CPF ou CNS)
-  async function buscarPacientesLocal(val: string) {
+  async function buscarPacientesLocal(val) {
     const termo = String(val || '').trim()
     if (termo.length < 3) {
       setSugestoesPacientes([])
@@ -110,7 +110,7 @@ export default function EncaminhamentoForm() {
   }
 
   // Preenche dados do paciente selecionado
-  const selecionarPaciente = (pac: any) => {
+  const selecionarPaciente = (pac) => {
     setFormData(prev => {
       const limpo = pac.cpf_cns ? pac.cpf_cns.replace(/\D/g, '') : ''
       const isCns = limpo.length >= 15
@@ -134,7 +134,7 @@ export default function EncaminhamentoForm() {
   }
 
   // Busca especialidade/procedimento no SIGTAP (por código ou nome)
-  async function buscarSigtapLocal(val: string) {
+  async function buscarSigtapLocal(val) {
     const termo = String(val || '').trim()
     if (termo.length < 3) {
       setSugestoesProcedimentos([])
@@ -155,7 +155,7 @@ export default function EncaminhamentoForm() {
   }
 
   // Seleciona especialidade/procedimento
-  const selecionarProcedimento = (proc: any) => {
+  const selecionarProcedimento = (proc) => {
     setFormData(prev => ({
       ...prev,
       especialidade: proc.no_procedimento || ''
@@ -164,7 +164,7 @@ export default function EncaminhamentoForm() {
   }
 
   // Busca CID-10
-  async function buscarCidLocal(val: string) {
+  async function buscarCidLocal(val) {
     const termo = String(val || '').trim()
     if (termo.length < 2) {
       setSugestoesCid([])
@@ -190,7 +190,7 @@ export default function EncaminhamentoForm() {
   }
 
   // Seleciona CID-10
-  const selecionarCid = (cid: any) => {
+  const selecionarCid = (cid) => {
     setFormData(prev => ({
       ...prev,
       cid10: cid.co_cid || '',
@@ -200,7 +200,7 @@ export default function EncaminhamentoForm() {
   }
 
   // Busca profissionais
-  async function buscarProfissionaisLocal(val: string) {
+  async function buscarProfissionaisLocal(val) {
     const termo = String(val || '').trim()
     
     if (termo.length < 3 && !formData.cnesSolicitante) {
@@ -218,7 +218,7 @@ export default function EncaminhamentoForm() {
           const data = await res.json()
           if (data.ok && data.resultados) {
             if (termo.length >= 3) {
-              resultados = data.resultados.filter((p: any) => 
+              resultados = data.resultados.filter((p) => 
                 p.nome.toUpperCase().includes(termo.toUpperCase()) || 
                 (p.crm && p.crm.includes(termo))
               )
@@ -265,7 +265,7 @@ export default function EncaminhamentoForm() {
   }
 
   // Preenche dados do profissional selecionado
-  const selecionarProfissional = (prof: any) => {
+  const selecionarProfissional = (prof) => {
     setFormData(prev => {
       let crm = prof.crm || ''
       if (crm && !crm.includes('-') && !crm.toUpperCase().includes('CRM')) {
@@ -380,7 +380,7 @@ export default function EncaminhamentoForm() {
   }, [router])
 
   // Função para buscar os CNES do município pelo IBGE
-  async function carregarUnidadesCnes(ibgeCode: string) {
+  async function carregarUnidadesCnes(ibgeCode) {
     if (!ibgeCode || !ibgeCode.trim()) return
     setCarregandoUnidades(true)
     try {
@@ -388,12 +388,12 @@ export default function EncaminhamentoForm() {
       if (res.ok) {
         const data = await res.json()
         if (data.resultados) {
-          let excluidos: string[] = []
+          let excluidos = []
           try {
             const saved = localStorage.getItem('sms_excluded_cnes')
             if (saved) excluidos = JSON.parse(saved)
           } catch (e) {}
-          setUnidadesSolicitantes(data.resultados.filter((u: any) => !excluidos.includes(u.cnes)))
+          setUnidadesSolicitantes(data.resultados.filter((u) => !excluidos.includes(u.cnes)))
         }
       }
     } catch (err) {
@@ -408,7 +408,7 @@ export default function EncaminhamentoForm() {
     carregarUnidadesCnes(ibgeConsulta)
   }, [])
 
-  const handleSelectEstabelecimento = (e: any) => {
+  const handleSelectEstabelecimento = (e) => {
     const cnes = e.target.value
     if (!cnes) {
       setFormData(prev => ({
@@ -428,7 +428,7 @@ export default function EncaminhamentoForm() {
     }
   }
 
-  const excluirEstabelecimento = (cnes: string) => {
+  const excluirEstabelecimento = (cnes) => {
     if (!cnes) return
     const unidade = unidadesSolicitantes.find(u => u.cnes === cnes)
     const nomeUnidade = unidade ? unidade.nome : cnes
@@ -497,7 +497,7 @@ export default function EncaminhamentoForm() {
       if (s.codigo_unidade_solicitante && s.nome_unidade_solicitante) {
         setUnidadesSolicitantes(prevList => {
           const exists = prevList.some(u => u.cnes === s.codigo_unidade_solicitante)
-          let excluidos: string[] = []
+          let excluidos = []
           try {
             const saved = localStorage.getItem('sms_excluded_cnes')
             if (saved) excluidos = JSON.parse(saved)
@@ -512,7 +512,7 @@ export default function EncaminhamentoForm() {
 
       setSucessoBusca(true)
       setTimeout(() => setSucessoBusca(false), 3000)
-    } catch (err: any) {
+    } catch (err) {
       console.error(err)
       setErroBusca(err.message || 'Solicitação não encontrada no banco local.')
     } finally {
@@ -521,7 +521,7 @@ export default function EncaminhamentoForm() {
   }
 
   // Lida com mudanças simples de campos
-  const handleChange = (e: any) => {
+  const handleChange = (e) => {
     const { name, value } = e.target
     
     // Se mudar a data de nascimento, recalcula a idade
@@ -538,7 +538,7 @@ export default function EncaminhamentoForm() {
   }
 
   // Envia os dados e gera o PDF
-  async function handleGerarPdf(e: any) {
+  async function handleGerarPdf(e) {
     e.preventDefault()
     setGerandoPdf(true)
 
@@ -559,7 +559,7 @@ export default function EncaminhamentoForm() {
       const blob = await response.blob()
       const fileURL = URL.createObjectURL(blob)
       window.open(fileURL, '_blank')
-    } catch (err: any) {
+    } catch (err) {
       alert(err.message || 'Erro ao gerar o PDF.')
     } finally {
       setGerandoPdf(false)
