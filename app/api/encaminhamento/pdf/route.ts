@@ -31,7 +31,7 @@ function generateEncaminhamentoPDF(data: any): Promise<Buffer> {
         doc.fillColor(labelColor)
            .fontSize(6.5)
            .font('Helvetica-Bold')
-           .text(label.toUpperCase(), x + 3, y + 2.5, { width: width - 6 })
+           .text(label.toUpperCase(), x + 3, y + 4, { width: width - 6 })
 
         if (value !== undefined && value !== null && value !== '') {
           const valStr = String(value).toUpperCase().trim().replace(/\s+/g, ' ')
@@ -46,7 +46,7 @@ function generateEncaminhamentoPDF(data: any): Promise<Buffer> {
             textWidth = doc.widthOfString(valStr)
           }
           
-          const yVal = y + 10.5 + (valFontSize - currentSize) * 0.35
+          const yVal = y + 11.5 + (valFontSize - currentSize) * 0.35
           
           doc.fillColor(valueColor)
              .text(valStr, x + 4, yVal, { width: width - 8, align })
@@ -59,42 +59,29 @@ function generateEncaminhamentoPDF(data: any): Promise<Buffer> {
         doc.fillColor(labelColor)
            .fontSize(6.5)
            .font('Helvetica-Bold')
-           .text(label.toUpperCase(), x + 3, y + 3, { width: width - 6 })
+           .text(label.toUpperCase(), x + 3, y + 4.5, { width: width - 6 })
 
         if (value) {
           const valStr = String(value).toUpperCase().trim().replace(/\s+/g, ' ')
           doc.fillColor(valueColor)
              .fontSize(8.5)
              .font('Helvetica')
-             .text(valStr, x + 4, y + 11, { width: width - 8, align: 'justify', lineGap: 1 })
+             .text(valStr, x + 4, y + 15, { width: width - 8, align: 'justify', lineGap: 1 })
         }
       }
 
       // ─── CABEÇALHO (y: 20 a 55) ───
-      // Logotipo / Identificação Esquerda
-      doc.rect(20, 20, 110, 35).stroke(gridColor)
-      doc.fillColor(valueColor)
-         .fontSize(13)
-         .font('Helvetica-Bold')
-         .text('SAÚDE', 25, 22, { width: 100, align: 'left' })
-         .fontSize(7)
-         .font('Helvetica-Bold')
-         .text('e-sus', 70, 26, { width: 30 })
-         .fontSize(6.5)
-         .font('Helvetica-Bold')
-         .text('ATENÇÃO PRIMÁRIA', 25, 34, { width: 100, align: 'left' })
-
-      // Órgão Emissor / Identificação Direita
-      doc.rect(130, 20, 445, 35).stroke(gridColor)
+      // Caixa única centralizada do cabeçalho
+      doc.rect(20, 20, 555, 35).stroke(gridColor)
       doc.fillColor(valueColor)
          .fontSize(7.5)
          .font('Helvetica-Bold')
-         .text('MINISTÉRIO DA SAÚDE', 135, 23, { width: 435, align: 'right' })
-         .text('ESTADO DE TOCANTINS', 135, 31, { width: 435, align: 'right' })
-         .text('MUNICÍPIO DE CONCEIÇÃO DO TOCANTINS', 135, 39, { width: 435, align: 'right' })
+         .text('MINISTÉRIO DA SAÚDE', 20, 22, { width: 555, align: 'center' })
+         .text('ESTADO DE TOCANTINS', 20, 30, { width: 555, align: 'center' })
+         .text('MUNICÍPIO DE CONCEIÇÃO DO TOCANTINS', 20, 38, { width: 555, align: 'center' })
          
       const unidadeCabecalho = data.unidadeCabecalho || 'Unidade de Saude Luiz Francisco de Miranda'
-      doc.text(`UNIDADE DE SAÚDE: ${unidadeCabecalho.toUpperCase()}`, 135, 47, { width: 435, align: 'right' })
+      doc.text(unidadeCabecalho.toUpperCase(), 20, 46, { width: 555, align: 'center' })
 
       // Título
       doc.fillColor(valueColor)
@@ -143,8 +130,8 @@ function generateEncaminhamentoPDF(data: any): Promise<Buffer> {
       // Linha 8 (Observação)
       drawTextArea('Observação', data.observacao || '', 20, 348, 555, 45)
 
-      // ─── ASSINATURA SOLICITANTE (y: 405 a 455) ───
-      const ySig = 403
+      // ─── ASSINATURA SOLICITANTE (y: 425 a 475) ───
+      const ySig = 425
       doc.moveTo(177, ySig).lineTo(417, ySig).stroke(gridColor)
       doc.fillColor(valueColor)
          .fontSize(9.5)
@@ -162,8 +149,8 @@ function generateEncaminhamentoPDF(data: any): Promise<Buffer> {
          .font('Helvetica')
          .text(localDataStr, 20, ySig + 24, { width: 555, align: 'center' })
 
-      // ─── CONTRA-REFERÊNCIA (y: 450+) ───
-      const yContra = 448
+      // ─── CONTRA-REFERÊNCIA (y: 478+) ───
+      const yContra = 478
       doc.moveTo(20, yContra).lineTo(575, yContra).stroke(gridColor)
       doc.moveTo(20, yContra + 2).lineTo(575, yContra + 2).stroke(gridColor)
 
@@ -183,7 +170,7 @@ function generateEncaminhamentoPDF(data: any): Promise<Buffer> {
       doc.fillColor(labelColor)
          .fontSize(6.5)
          .font('Helvetica-Bold')
-         .text('PARECER / CONDUTA DA ESPECIALIDADE', 23, yRow2 + 2.5, { width: 409 })
+         .text('PARECER / CONDUTA DA ESPECIALIDADE', 23, yRow2 + 4.5, { width: 409 })
 
       // Linhas pontilhadas/linhas para escrever parecer
       doc.lineWidth(0.5).strokeColor('#94a3b8')
@@ -195,6 +182,7 @@ function generateEncaminhamentoPDF(data: any): Promise<Buffer> {
 
       // Diagnóstico (CID10)
       drawField('Diagnóstico (CID10)', '', 435, yRow2, 140, 25)
+      doc.rect(435, yRow2 + 25, 140, 65).stroke(gridColor)
 
       // Row 3 Contra-Referência (Observação)
       const yRow3 = yRow2 + 90
@@ -202,7 +190,7 @@ function generateEncaminhamentoPDF(data: any): Promise<Buffer> {
       doc.fillColor(labelColor)
          .fontSize(6.5)
          .font('Helvetica-Bold')
-         .text('OBSERVAÇÃO', 23, yRow3 + 2.5, { width: 549 })
+         .text('OBSERVAÇÃO', 23, yRow3 + 4.5, { width: 549 })
 
       // Linhas para observação
       doc.lineWidth(0.5).strokeColor('#94a3b8')
