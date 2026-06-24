@@ -199,7 +199,7 @@ function generateEncaminhamentoPDF(data: any): Promise<Buffer> {
       doc.lineWidth(1).strokeColor(gridColor)
 
       // Linhas inferiores para Assinatura e Data da Consulta
-      const yBottom = yRow3 + 68
+      const yBottom = yRow3 + 100
       
       // Data da Consulta
       doc.moveTo(20, yBottom).lineTo(200, yBottom).stroke(gridColor)
