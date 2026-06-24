@@ -200,24 +200,24 @@ function imprimirComprovante(ag, espLabel, municipio = `${clientConfig.municipal
 }
 
 // ── Impressão de lista do relatório ──────────────────────────────────────────
-function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConfig = [], statusFiltro = '') {
+function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConfig = [], statusFiltro = '', tiposUsgOrdem = TIPOS_USG_ORDEM) {
   const hoje = new Date()
   const dataEmissao = hoje.toLocaleDateString('pt-BR')
   const horaEmissao = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
   // isUsg: verdadeiro se a especialidade é USG (por label) OU se os registros são de USG
   const isUsg = espLabel?.toLowerCase() === 'usg' ||
-    (registros.length > 0 && registros.some(r => TIPOS_USG_ORDEM.includes(r.tipo_exame)))
+    (registros.length > 0 && registros.some(r => tiposUsgOrdem.includes(r.tipo_exame)))
 
   // Modo agrupado por período: apenas para autorizados (ou quando não há filtro de status)
   const modoAgrupado = statusFiltro === 'autorizado' || (!statusFiltro && registros.some(r => r.periodo))
 
-  // Ordena por TIPOS_USG_ORDEM (USG) ou por data de solicitação (demais)
+  // Ordena por tiposUsgOrdem (USG) ou por data de solicitação (demais)
   function sortarLista(lista) {
     return [...lista].sort((a, b) => {
       if (isUsg && modoAgrupado) {
-        const ia = TIPOS_USG_ORDEM.indexOf(a.tipo_exame)
-        const ib = TIPOS_USG_ORDEM.indexOf(b.tipo_exame)
+        const ia = tiposUsgOrdem.indexOf(a.tipo_exame)
+        const ib = tiposUsgOrdem.indexOf(b.tipo_exame)
         const diff = (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
         if (diff !== 0) return diff
       }
@@ -564,6 +564,7 @@ export default function Especialidades() {
   const [relFiltroStatus, setRelFiltroStatus] = useState('autorizado')
   const [relFiltroProf, setRelFiltroProf] = useState('')
   const [relFiltroPaciente, setRelFiltroPaciente] = useState('')
+  const [relFiltroTipoUsg, setRelFiltroTipoUsg] = useState('')
 
   // Config dinâmica
   const [especialidades, setEspecialidades] = useState([])
@@ -584,6 +585,12 @@ export default function Especialidades() {
   const [periodos, setPeriodos] = useState([])
   const [formPeriodo, setFormPeriodo] = useState({ nome: '', horario: '' })
   const [salvandoPeriodo, setSalvandoPeriodo] = useState(false)
+
+  // Config dinâmica de USG
+  const [tiposUsgOrdem, setTiposUsgOrdem] = useState(TIPOS_USG_ORDEM)
+  const [tiposUsg, setTiposUsg] = useState(TIPOS_USG)
+  const [novoTipoUsg, setNovoTipoUsg] = useState('')
+  const [salvandoTipoUsg, setSalvandoTipoUsg] = useState(false)
 
   useEffect(() => {
     const u = localStorage.getItem('sms_user')
@@ -614,6 +621,25 @@ export default function Especialidades() {
         const mapa = {}
         dataPre.filter(p => p.ativo).forEach(p => { mapa[p.tipo_exame] = p.instrucoes })
         setPreparosDb(mapa)
+      }
+
+      try {
+        const { data: cfgUsg } = await supabase
+          .from('configuracoes')
+          .select('valor')
+          .eq('chave', 'especialidades_tipos_usg')
+          .maybeSingle()
+        if (cfgUsg?.valor && Array.isArray(cfgUsg.valor) && cfgUsg.valor.length > 0) {
+          setTiposUsgOrdem(cfgUsg.valor)
+          setTiposUsg([...cfgUsg.valor].sort((a, b) => a.localeCompare(b, 'pt-BR')))
+        } else {
+          setTiposUsgOrdem(TIPOS_USG_ORDEM)
+          setTiposUsg(TIPOS_USG)
+        }
+      } catch (errUsg) {
+        console.error('Erro ao carregar tipos de USG do banco:', errUsg)
+        setTiposUsgOrdem(TIPOS_USG_ORDEM)
+        setTiposUsg(TIPOS_USG)
       }
     } catch (_) { }
   }
@@ -684,6 +710,7 @@ export default function Especialidades() {
         return r.data_consulta || null
       }
       const pertenceAoMes = (r) => {
+        if (r.status === 'pendente') return true
         const dataRef = getDataRef(r)
         if (relModoFiltro === 'periodo') {
           if (!dataRef) return false
@@ -958,6 +985,47 @@ export default function Especialidades() {
     } catch (e) { mostrarMsg('' + e.message, false) }
   }
 
+  async function salvarTiposUsgNoDb(novaLista) {
+    setSalvandoTipoUsg(true)
+    try {
+      const { error } = await supabase
+        .from('configuracoes')
+        .upsert({
+          chave: 'especialidades_tipos_usg',
+          valor: novaLista,
+          atualizado_em: new Date().toISOString()
+        }, { onConflict: 'chave' })
+
+      if (error) throw error
+      
+      setTiposUsgOrdem(novaLista)
+      setTiposUsg([...novaLista].sort((a, b) => a.localeCompare(b, 'pt-BR')))
+      mostrarMsg('Tipos de Ultrassom atualizados com sucesso')
+    } catch (e) {
+      mostrarMsg('Erro ao salvar tipos de USG: ' + e.message, false)
+    } finally {
+      setSalvandoTipoUsg(false)
+    }
+  }
+
+  async function handleAdicionarTipoUsg() {
+    const nome = novoTipoUsg.trim().toUpperCase()
+    if (!nome) return
+    if (tiposUsgOrdem.includes(nome)) {
+      mostrarMsg('Este tipo de ultrassom já existe', false)
+      return
+    }
+    const novaLista = [...tiposUsgOrdem, nome]
+    await salvarTiposUsgNoDb(novaLista)
+    setNovoTipoUsg('')
+  }
+
+  async function handleExcluirTipoUsg(tipoExcluir) {
+    if (!window.confirm(`Tem certeza que deseja excluir o tipo de ultrassom "${tipoExcluir}"?`)) return
+    const novaLista = tiposUsgOrdem.filter(t => t !== tipoExcluir)
+    await salvarTiposUsgNoDb(novaLista)
+  }
+
   async function confirmarExclusao() {
     if (!motivoExclusao.trim()) { mostrarMsg('Informe o motivo', false); return }
     try {
@@ -1091,8 +1159,13 @@ export default function Especialidades() {
         {modalConfig && (
           <Modal titulo="Configurações de Especialidades" onClose={() => { setModalConfig(false); setEditandoEsp(null); setFormEsp({ label: '', icon: '', cota: '30' }) }} largura="640px">
             {/* Abas */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-              {[['especialidades', <><Stethoscope size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Especialidades</>], ['preparos', <><FlaskConical size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Preparos</>], ['periodos', <><Clock size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Períodos</>]].map(([id, lbl]) => (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', flexWrap: 'wrap' }}>
+              {[
+                ['especialidades', <><Stethoscope size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Especialidades</>],
+                ['preparos', <><FlaskConical size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Preparos</>],
+                ['periodos', <><Clock size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Períodos</>],
+                ['tipos_usg', <><Settings size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Tipos de USG</>]
+              ].map(([id, lbl]) => (
                 <button key={id} onClick={() => setAbaConfig(id)} style={{
                   background: abaConfig === id ? '#d97706' : 'none',
                   color: abaConfig === id ? 'white' : '#64748b',
@@ -1266,6 +1339,42 @@ export default function Especialidades() {
                 </p>
               </div>
             )}
+
+            {abaConfig === 'tipos_usg' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tipos de Ultrassom Cadastrados</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
+                    {tiposUsgOrdem.length === 0 && <p style={{ fontSize: '12px', color: '#94a3b8' }}>Nenhum tipo de ultrassom cadastrado ainda.</p>}
+                    {tiposUsgOrdem.map(t => (
+                      <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontWeight: '700', fontSize: '13px', color: '#166534' }}>{t}</span>
+                        </div>
+                        <button onClick={() => handleExcluirTipoUsg(t)} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#991b1b', display: 'inline-flex', alignItems: 'center' }}>
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Novo Tipo de Ultrassom</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', alignItems: 'end' }}>
+                    <div>
+                      <label className="label-modern">Nome *</label>
+                      <input className="input-modern" placeholder="Ex.: USG OBSTÉTRICA COM DOPPLER" value={novoTipoUsg} onChange={e => setNovoTipoUsg(e.target.value)} />
+                    </div>
+                    <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={handleAdicionarTipoUsg} disabled={salvandoTipoUsg}>
+                      {salvandoTipoUsg ? '...' : '+ Adicionar'}
+                    </button>
+                  </div>
+                </div>
+                <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
+                  Os tipos de ultrassom ficam disponíveis para seleção ao fazer agendamentos e nos filtros de relatórios.
+                </p>
+              </div>
+            )}
           </Modal>
         )}
         </AnimatePresence>
@@ -1394,7 +1503,7 @@ export default function Especialidades() {
                         onChange={e => setForm(f => ({ ...f, tipo_exame: e.target.value }))}
                         style={{ width: '100%' }}>
                         <option value="">— Selecione —</option>
-                        {(esp === 'usg' ? TIPOS_USG.filter(t => {
+                        {(esp === 'usg' ? tiposUsg.filter(t => {
                           const sexoM = ['M', 'MASCULINO', 'Masculino', 'm'].includes(form.sexo)
                           const sexoF = ['F', 'FEMININO', 'Feminino', 'f'].includes(form.sexo)
                           if (!form.sexo) return true // sem sexo cadastrado → mostra tudo
@@ -1630,8 +1739,8 @@ export default function Especialidades() {
 
         {/* ── ABA: RELATÓRIO ── */}
         {abaMain === 'relatorio' && (() => {
-          const detalhesFiltrados = relDetalhes.filter(r => {
-            // Pendentes só aparecem se o usuário filtrar explicitamente por "pendente"
+          // Filtros aplicados antes de filtrar por tipo de USG, para gerar o resumo total por tipo correto
+          const detalhesSemTipoUsg = relDetalhes.filter(r => {
             if (!relFiltroStatus && r.status === 'pendente') return false
             if (relFiltroEsp && r.especialidade !== relFiltroEsp) return false
             if (relFiltroStatus && r.status !== relFiltroStatus) return false
@@ -1639,6 +1748,31 @@ export default function Especialidades() {
             if (relFiltroPaciente && !r.paciente_nome?.toLowerCase().includes(relFiltroPaciente.toLowerCase())) return false
             return true
           })
+
+          const detalhesFiltrados = detalhesSemTipoUsg.filter(r => {
+            if (relFiltroEsp === 'usg' && relFiltroTipoUsg && r.tipo_exame !== relFiltroTipoUsg) return false
+            return true
+          })
+
+          // Gera resumo de USG por tipo
+          const usgBreakdown = {}
+          if (relFiltroEsp === 'usg') {
+            tiposUsg.forEach(tipo => {
+              usgBreakdown[tipo] = { label: tipo, pendente: 0, autorizado: 0, negado: 0, excluido: 0, total: 0 }
+            })
+            detalhesSemTipoUsg.forEach(r => {
+              const tipo = r.tipo_exame || 'NÃO ESPECIFICADO'
+              if (!usgBreakdown[tipo]) {
+                usgBreakdown[tipo] = { label: tipo, pendente: 0, autorizado: 0, negado: 0, excluido: 0, total: 0 }
+              }
+              if (r.status in usgBreakdown[tipo]) {
+                usgBreakdown[tipo][r.status]++
+              }
+              usgBreakdown[tipo].total++
+            })
+          }
+          const usgList = Object.values(usgBreakdown).filter(x => x.total > 0 || tiposUsg.includes(x.label))
+
           return (
             <div>
               {/* Filtros */}
@@ -1687,11 +1821,20 @@ export default function Especialidades() {
                   </div>
                   <div>
                     <label className="label-modern">Especialidade</label>
-                    <select className="input-modern" value={relFiltroEsp} onChange={e => setRelFiltroEsp(e.target.value)} style={{ width: '160px' }}>
+                    <select className="input-modern" value={relFiltroEsp} onChange={e => { setRelFiltroEsp(e.target.value); setRelFiltroTipoUsg(''); }} style={{ width: '160px' }}>
                       <option value="">Todas</option>
                       {especialidades.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
                     </select>
                   </div>
+                  {relFiltroEsp === 'usg' && (
+                    <div>
+                      <label className="label-modern">Tipo de Ultrassom</label>
+                      <select className="input-modern" value={relFiltroTipoUsg} onChange={e => setRelFiltroTipoUsg(e.target.value)} style={{ width: '160px' }}>
+                        <option value="">Todos</option>
+                        {tiposUsg.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="label-modern">Status</label>
                     <select className="input-modern" value={relFiltroStatus} onChange={e => setRelFiltroStatus(e.target.value)} style={{ width: '140px' }}>
@@ -1708,7 +1851,7 @@ export default function Especialidades() {
                     const espL = relFiltroEsp ? especialidades.find(e => e.id === relFiltroEsp)?.label : ''
                     const periodoLabel = relModoFiltro === 'periodo' ? `${relDataInicio} a ${relDataFim}` : MESES[Number(relMes) - 1]
                     const anoLabel = relModoFiltro === 'periodo' ? '' : relAno
-                    imprimirRelatorio(detalhesFiltrados, periodoLabel, anoLabel, espL, periodos, relFiltroStatus)
+                    imprimirRelatorio(detalhesFiltrados, periodoLabel, anoLabel, espL, periodos, relFiltroStatus, tiposUsgOrdem)
                   }}><Printer size={13} /> Imprimir Lista</button>
                 </div>
               </div>
@@ -1721,6 +1864,7 @@ export default function Especialidades() {
                   <p style={{ fontFamily: 'Arial', fontSize: '12px', margin: 0, color: '#333' }}>
                     {relModoFiltro === 'periodo' ? `Período: ${relDataInicio} a ${relDataFim}` : `Competência: ${MESES[Number(relMes) - 1]}/${relAno}`}
                     {relFiltroEsp ? ` · ${especialidades.find(e => e.id === relFiltroEsp)?.label}` : ''}
+                    {relFiltroEsp === 'usg' && relFiltroTipoUsg ? ` · ${relFiltroTipoUsg}` : ''}
                     {relFiltroStatus ? ` · ${STATUS_LABEL[relFiltroStatus]}` : ''}
                   </p>
                 </div>
@@ -1766,6 +1910,37 @@ export default function Especialidades() {
                       })}
                     </tbody>
                   </table>
+                )}
+
+                {/* Resumo de Ultrassons por Tipo */}
+                {!relLoading && relFiltroEsp === 'usg' && (
+                  <div style={{ marginBottom: '28px' }}>
+                    <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '0 0 14px' }}>
+                      Resumo de Ultrassons por Tipo
+                    </h3>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ background: GRAD, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                          {['Tipo de Ultrassom', 'Pendente', 'Autorizado', 'Negado', 'Excluído', 'Total'].map(h => (
+                            <th key={h} style={{ padding: '9px 12px', color: 'white', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', letterSpacing: '0.05em' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {usgList.map((r, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 0 ? '#fff' : '#f8fafc', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                            <td style={{ padding: '9px 12px', fontWeight: '700', color: '#0f172a' }}>{r.label}</td>
+                            {['pendente', 'autorizado', 'negado', 'excluido'].map(s => (
+                              <td key={s} style={{ padding: '9px 12px' }}>
+                                <span style={{ background: STATUS_STYLE[s].bg, color: STATUS_STYLE[s].cor, padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: '700' }}>{r[s] || 0}</span>
+                              </td>
+                            ))}
+                            <td style={{ padding: '9px 12px', fontWeight: '700', color: '#0f172a' }}>{r.total}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
 
                 {/* Tabela detalhada */}
@@ -1939,7 +2114,7 @@ export default function Especialidades() {
                   <label className="label-modern">Tipo de Exame</label>
                   <select className="input-modern" value={formEditar.tipo_exame} onChange={e => setFormEditar(f => ({ ...f, tipo_exame: e.target.value }))} style={{ width: '100%' }}>
                     <option value="">— Selecione —</option>
-                    {TIPOS_USG.filter(t => {
+                    {tiposUsg.filter(t => {
                       if (formEditar.sexo === 'M' && t === 'TRANSVAGINAL') return false
                       if (formEditar.sexo === 'F' && (t === 'PRÓSTATA TRANSRETAL' || t === 'PRÓSTATA ABDOMINAL' || t === 'BOLSA ESCROTAL')) return false
                       return true
