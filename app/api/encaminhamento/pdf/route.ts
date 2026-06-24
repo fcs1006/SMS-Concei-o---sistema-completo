@@ -80,7 +80,7 @@ function generateEncaminhamentoPDF(data: any): Promise<Buffer> {
          .text('ESTADO DE TOCANTINS', 20, 30, { width: 555, align: 'center' })
          .text('MUNICÍPIO DE CONCEIÇÃO DO TOCANTINS', 20, 38, { width: 555, align: 'center' })
          
-      const unidadeCabecalho = data.unidadeCabecalho || 'Unidade de Saude Luiz Francisco de Miranda'
+      const unidadeCabecalho = data.estabelecimentoSolicitante || 'Unidade de Saude Luiz Francisco de Miranda'
       doc.text(unidadeCabecalho.toUpperCase(), 20, 46, { width: 555, align: 'center' })
 
       // Título

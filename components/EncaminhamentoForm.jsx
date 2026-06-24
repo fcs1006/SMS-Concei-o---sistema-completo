@@ -298,7 +298,6 @@ export default function EncaminhamentoForm() {
 
   // Dados do formulário
   const [formData, setFormData] = useState({
-    unidadeCabecalho: 'Unidade de Saude Luiz Francisco de Miranda',
     estabelecimentoSolicitante: 'SECRETARIA MUNICIPAL DE SAÚDE',
     cnesSolicitante: '1234567',
     nomePaciente: '',
@@ -638,24 +637,6 @@ export default function EncaminhamentoForm() {
       {/* Formulário Principal */}
       <form onSubmit={handleGerarPdf} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-        {/* CABEÇALHO DO ESTABELECIMENTO */}
-        <div className="card" style={{ padding: '28px' }}>
-          <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '15px', fontWeight: '700', color: '#172554', margin: '0 0 20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Building size={18} style={{ color: '#3b82f6' }} />
-            CABEÇALHO DA GUIA DE ENCAMINHAMENTO
-          </h3>
-          <div>
-            <label className="label-modern">Nome da Unidade de Saúde (Exibido no Cabeçalho do PDF)</label>
-            <input
-              type="text"
-              name="unidadeCabecalho"
-              value={formData.unidadeCabecalho}
-              onChange={handleChange}
-              required
-              className="input-modern"
-            />
-          </div>
-        </div>
 
         {/* IDENTIFICAÇÃO DO ESTABELECIMENTO SOLICITANTE */}
         <div className="card" style={{ padding: '28px' }}>
