@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Layout from '@/components/Layout'
 import { Settings, BarChart2, Upload, ClipboardList, RefreshCw, Download, Search, Printer, CheckCircle, AlertTriangle, FileText } from 'lucide-react'
 import APACForm from '@/components/APACForm'
+import EncaminhamentoForm from '@/components/EncaminhamentoForm'
 
 const FIXOS_PADRAO = {
   urgencia: {
@@ -86,6 +87,8 @@ function BPAContent() {
       setAba('apac')
     } else if (tab === 'historico') {
       setAba('historico')
+    } else if (tab === 'encaminhamento') {
+      setAba('encaminhamento')
     } else {
       setAba('importacao')
     }
@@ -318,7 +321,7 @@ function BPAContent() {
 
   return (
     <Layout usuario={usuario}>
-      <div style={{ padding: '28px', maxWidth: aba === 'apac' ? '1200px' : '900px', margin: '0 auto', transition: 'max-width 0.2s' }}>
+      <div style={{ padding: '28px', maxWidth: (aba === 'apac' || aba === 'encaminhamento') ? '1200px' : '900px', margin: '0 auto', transition: 'max-width 0.2s' }}>
 
         {/* Header */}
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
@@ -329,6 +332,15 @@ function BPAContent() {
               </h1>
               <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
                 Consulte e preencha automaticamente o Laudo para Procedimentos de Alta Complexidade. O PDF gerado estará no modelo oficial de 55 campos.
+              </p>
+            </div>
+          ) : aba === 'encaminhamento' ? (
+            <div>
+              <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' }}>
+                Guia de Encaminhamento
+              </h1>
+              <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
+                Consulte a solicitação no SISREG para preencher e emitir a Guia de Encaminhamento (Referência e Contra-Referência).
               </p>
             </div>
           ) : (
@@ -369,6 +381,12 @@ function BPAContent() {
             onClick={() => router.replace('/bpa?tab=apac', { scroll: false })}
           >
             <FileText size={14} /> Laudo APAC
+          </button>
+          <button
+            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'encaminhamento' ? '#3b82f6' : '#64748b', borderBottom: aba === 'encaminhamento' ? `3px solid #3b82f6` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => router.replace('/bpa?tab=encaminhamento', { scroll: false })}
+          >
+            <FileText size={14} /> Encaminhamento
           </button>
         </div>
 
@@ -713,6 +731,10 @@ function BPAContent() {
 
         {aba === 'apac' && (
           <APACForm />
+        )}
+
+        {aba === 'encaminhamento' && (
+          <EncaminhamentoForm />
         )}
 
       </div>
