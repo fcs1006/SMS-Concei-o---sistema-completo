@@ -91,6 +91,112 @@ function fmtData(v) {
   return `${d}/${m}/${a}`
 }
 
+function abbreviateStatus(status) {
+  if (!status) return '—'
+  const s = status.toUpperCase().trim()
+  if (s.includes('PENDENTE') && s.includes('REGULADOR')) return 'SOL/PEN/REG'
+  if (s.includes('PENDENTE CONFIRMAÇÃO')) return 'AGEN/PEND_CONF'
+  if (s.includes('AUTORIZADA') && s.includes('REGULADOR')) return 'SOL/AUT/REG'
+  if (s.includes('AGENDADA') && s.includes('SOLICITANTE')) return 'SOL/AGEN/SOL'
+  if (s.includes('CANCELADO') && s.includes('SOLICITANTE')) return 'AGEN/CANC/SOL'
+  if (s.includes('CANCELADO') && s.includes('REGULADOR')) return 'AGEN/CANC/REG'
+  if (s.includes('CANCELADO') && s.includes('COORDENADOR')) return 'AGEN/CANC/COORD'
+  if (s.includes('CANCELADA') && s.includes('SOLICITANTE')) return 'SOL/CANC/SOL'
+  if (s.includes('CANCELADA') && s.includes('COORDENADOR')) return 'SOL/CANC/COORD'
+  if (s.includes('CONFIRMADO') && s.includes('EXECUTANTE')) return 'AGEN/CONF/EXEC'
+  if (s.includes('FALTA') && s.includes('EXECUTANTE')) return 'AGEN/FALTA/EXEC'
+  if (s.includes('NEGADA') && s.includes('REGULADOR')) return 'SOL/NEG/REG'
+  return s
+}
+
+function imprimirRelatorioSisreg(dados, periodoLabel, espLabel = '', statusLabel = '') {
+  const hoje = new Date()
+  const dataEmissao = hoje.toLocaleDateString('pt-BR')
+  const horaEmissao = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Relatório SISREG</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 11px; color: #000; padding: 20px; }
+    .header { margin-bottom: 20px; border-bottom: 2px solid #1a7a3c; padding-bottom: 10px; }
+    .header h1 { font-size: 16px; font-weight: bold; color: #1a7a3c; text-transform: uppercase; margin-bottom: 4px; }
+    .header p { font-size: 11px; color: #555; }
+    .meta { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 10px; color: #666; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { background-color: #1a7a3c; color: #fff; text-align: left; padding: 8px 6px; font-weight: bold; border: 1px solid #1a7a3c; font-size: 10px; text-transform: uppercase; }
+    td { padding: 7px 6px; border-bottom: 1px solid #ddd; font-size: 10.5px; word-break: break-word; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    @media print {
+      body { padding: 0; }
+      th { -webkit-print-color-adjust: exact; printColorAdjust: exact; }
+      tr:nth-child(even) { -webkit-print-color-adjust: exact; printColorAdjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Secretaria Municipal de Saúde — Conceição do Tocantins/TO</h1>
+    <p><strong>Relatório de Monitoramento do SISREG</strong> — Central de Regulação</p>
+  </div>
+  
+  <div class="meta">
+    <div>
+      <strong>Período:</strong> ${periodoLabel}
+      ${espLabel ? ` | <strong>Filtro Procedimento:</strong> ${espLabel}` : ''}
+      ${statusLabel ? ` | <strong>Situação:</strong> ${statusLabel}` : ''}
+    </div>
+    <div>
+      <strong>Gerado em:</strong> ${dataEmissao} às ${horaEmissao}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 4%">Nº</th>
+        <th style="width: 14%">Cód. Solicitação</th>
+        <th style="width: 12%">Data Solic.</th>
+        <th style="width: 21%">Paciente</th>
+        <th style="width: 14%">CPF/CNS</th>
+        <th style="width: 23%">Procedimento</th>
+        <th style="width: 12%">Situação</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${dados.map((r, i) => {
+        const dataFmt = r.data_solicitacao ? r.data_solicitacao.slice(0, 10).split('-').reverse().join('/') : '—'
+        const cnsCpf = r.cpf_usuario || r.cns_usuario || '—'
+        const situacaoAbreviada = abbreviateStatus(r.status_solicitacao)
+        
+        return `<tr>
+          <td>${i + 1}</td>
+          <td style="font-weight: bold;">${r.codigo_solicitacao || '—'}</td>
+          <td>${dataFmt}</td>
+          <td style="text-transform: uppercase; font-weight: 600;">${r.no_usuario || '—'}</td>
+          <td>${cnsCpf}</td>
+          <td style="text-transform: uppercase;">${r.descricao_interna_procedimento || '—'}</td>
+          <td style="font-weight: bold; color: #1a7a3c;">${situacaoAbreviada}</td>
+        </tr>`
+      }).join('')}
+    </tbody>
+  </table>
+</body>
+</html>`
+
+  const win = window.open('', '_blank')
+  if (win) {
+    win.document.write(html)
+    win.document.close()
+    setTimeout(() => {
+      win.print()
+    }, 250)
+  }
+}
+
 // ── Comprovante de Autorização ────────────────────────────────────────────────
 function imprimirComprovante(ag, espLabel, municipio = `${clientConfig.municipalityName}/${clientConfig.municipalityUF}`, preparos = PREPARO_USG, dtNasc = null) {
   const hoje = new Date()
@@ -566,6 +672,24 @@ export default function Especialidades() {
   const [relFiltroPaciente, setRelFiltroPaciente] = useState('')
   const [relFiltroTipoUsg, setRelFiltroTipoUsg] = useState('')
 
+  // Relatório SISREG
+  const [sisregDados, setSisregDados] = useState([])
+  const [sisregLoading, setSisregLoading] = useState(false)
+  const [sisregFiltroDataInicio, setSisregFiltroDataInicio] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+  })
+  const [sisregFiltroDataFim, setSisregFiltroDataFim] = useState(() => {
+    const d = new Date()
+    const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${ultimoDia}`
+  })
+  const [sisregFiltroEsp, setSisregFiltroEsp] = useState('')
+  const [sisregFiltroProc, setSisregFiltroProc] = useState('')
+  const [sisregFiltroStatus, setSisregFiltroStatus] = useState('')
+  const [sisregSincronizando, setSisregSincronizando] = useState(false)
+
+
   // Config dinâmica
   const [especialidades, setEspecialidades] = useState([])
   const [especialidadesConfig, setEspecialidadesConfig] = useState([])
@@ -658,6 +782,12 @@ export default function Especialidades() {
   }, [mes, ano])
 
   useEffect(() => { if (abaMain === 'relatorio') buscarRelatorio() }, [abaMain, relMes, relAno, relModoFiltro, relDataInicio, relDataFim])
+
+  useEffect(() => {
+    if (abaMain === 'relatorio_sisreg') {
+      buscarRelatorioSisreg()
+    }
+  }, [abaMain, sisregFiltroDataInicio, sisregFiltroDataFim, sisregFiltroEsp, sisregFiltroStatus])
 
   function mostrarMsg(txt, ok = true) {
     setMsg({ txt, ok })
@@ -753,6 +883,96 @@ export default function Especialidades() {
       // limpa tipo de exame se o sexo mudou e o exame selecionado fosse incompatível
       tipo_exame: '',
     }))
+  }
+
+  async function buscarRelatorioSisreg() {
+    setSisregLoading(true)
+    try {
+      let query = supabase
+        .from('monitoramento_sisreg')
+        .select('*')
+        .order('data_solicitacao', { ascending: false })
+
+      if (sisregFiltroDataInicio) {
+        query = query.gte('data_solicitacao', `${sisregFiltroDataInicio}T00:00:00`)
+      }
+      if (sisregFiltroDataFim) {
+        query = query.lte('data_solicitacao', `${sisregFiltroDataFim}T23:59:59`)
+      }
+      if (sisregFiltroStatus) {
+        if (sisregFiltroStatus === 'SOLICITAÇÃO / CANCELADA') {
+          query = query.ilike('status_solicitacao', '%SOLICITAÇÃO / CANCELADA%')
+        } else if (sisregFiltroStatus === 'AGENDAMENTO / CANCELADO') {
+          query = query.ilike('status_solicitacao', '%AGENDAMENTO / CANCELADO%')
+        } else {
+          query = query.eq('status_solicitacao', sisregFiltroStatus)
+        }
+      }
+      if (sisregFiltroProc) {
+        query = query.ilike('descricao_interna_procedimento', `%${sisregFiltroProc}%`)
+      }
+      if (sisregFiltroEsp) {
+        const espObj = especialidades.find(e => e.id === sisregFiltroEsp)
+        if (espObj) {
+          query = query.ilike('descricao_interna_procedimento', `%${espObj.label}%`)
+        }
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+      setSisregDados(data || [])
+    } catch (e) {
+      mostrarMsg('Erro ao carregar dados do SISREG: ' + e.message, false)
+    } finally {
+      setSisregLoading(false)
+    }
+  }
+
+  async function sincronizarSisreg() {
+    if (!usuario?.usuario) {
+      mostrarMsg('Erro: Usuário não autenticado.', false)
+      return
+    }
+    setSisregSincronizando(true)
+    try {
+      const res = await fetch(`/api/whatsapp/sisreg/sync?userCpf=${usuario.usuario}`, {
+        method: 'POST'
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error || 'Erro na sincronização')
+      
+      mostrarMsg(`Sincronização concluída: ${data.total} registros processados.`)
+      buscarRelatorioSisreg()
+    } catch (e) {
+      mostrarMsg('Erro ao sincronizar com o SISREG: ' + e.message, false)
+    } finally {
+      setSisregSincronizando(false)
+    }
+  }
+
+  function exportarCsvSisreg(dados) {
+    const headers = 'Nº;Código Solicitação;Data de Solicitação;Paciente;CPF/CNS;Procedimento;Situação\n'
+    const rows = dados.map((r, i) => {
+      const num = i + 1
+      const codigo = r.codigo_solicitacao || ''
+      const data = r.data_solicitacao ? new Date(r.data_solicitacao).toLocaleDateString('pt-BR') : ''
+      const paciente = r.no_usuario || ''
+      const cnsCpf = r.cpf_usuario || r.cns_usuario || ''
+      const procedimento = r.descricao_interna_procedimento || ''
+      const situacao = abbreviateStatus(r.status_solicitacao)
+      
+      const escape = (val) => `"${String(val).replace(/"/g, '""')}"`
+      return `${num};${escape(codigo)};${escape(data)};${escape(paciente)};${escape(cnsCpf)};${escape(procedimento)};${escape(situacao)}`
+    }).join('\n')
+    
+    const blob = new Blob(['\ufeff' + headers + rows], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `relatorio_sisreg_${new Date().toISOString().slice(0,10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   async function salvarAgendamento() {
@@ -1418,7 +1638,11 @@ export default function Especialidades() {
 
         {/* Abas principais */}
         <div style={{ display: 'flex', gap: '4px', borderBottom: '2px solid #e2e8f0', marginBottom: '20px' }}>
-          {[{ id: 'agendamento', label: 'Solicitações', Icon: CalendarDays }, { id: 'relatorio', label: 'Relatório', Icon: BarChart2 }].map(t => (
+          {[
+            { id: 'agendamento', label: 'Solicitações', Icon: CalendarDays }, 
+            { id: 'relatorio', label: 'Relatório', Icon: BarChart2 },
+            { id: 'relatorio_sisreg', label: 'Relatório SISREG', Icon: BarChart2 }
+          ].map(t => (
             <button key={t.id} onClick={() => setAbaMain(t.id)}
               style={{ background: 'none', border: 'none', padding: '10px 18px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', color: abaMain === t.id ? COR : '#64748b', borderBottom: 'none', marginBottom: '-2px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px', position: 'relative', paddingBottom: '13px' }}>
               <t.Icon size={15} /> {t.label}
@@ -2053,6 +2277,138 @@ export default function Especialidades() {
             </div>
           )
         })()}
+
+        {abaMain === 'relatorio_sisreg' && (
+          <div>
+            {/* Filtros */}
+            <div className="card no-print" style={{ padding: '16px 20px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div>
+                  <label className="label-modern" style={{ fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px', display: 'block' }}>Período de Solicitação</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input className="input-modern" type="date" value={sisregFiltroDataInicio} onChange={e => setSisregFiltroDataInicio(e.target.value)} style={{ width: '130px', fontSize: '12px', padding: '6px 8px' }} />
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>até</span>
+                    <input className="input-modern" type="date" value={sisregFiltroDataFim} onChange={e => setSisregFiltroDataFim(e.target.value)} style={{ width: '130px', fontSize: '12px', padding: '6px 8px' }} />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="label-modern" style={{ fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px', display: 'block' }}>Especialidade (Filtro Rápido)</label>
+                  <select className="input-modern" value={sisregFiltroEsp} onChange={e => setSisregFiltroEsp(e.target.value)} style={{ width: '160px', fontSize: '12px', padding: '6px 8px' }}>
+                    <option value="">Todas</option>
+                    {especialidades.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label-modern" style={{ fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px', display: 'block' }}>Procedimento (Busca Textual)</label>
+                  <input className="input-modern" type="text" placeholder="Ex: UROLOGIA" value={sisregFiltroProc} onChange={e => setSisregFiltroProc(e.target.value.toUpperCase())} style={{ width: '180px', fontSize: '12px', padding: '6px 8px' }} />
+                </div>
+
+                <div>
+                  <label className="label-modern" style={{ fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px', display: 'block' }}>Situação</label>
+                  <select className="input-modern" value={sisregFiltroStatus} onChange={e => setSisregFiltroStatus(e.target.value)} style={{ width: '180px', fontSize: '12px', padding: '6px 8px' }}>
+                    <option value="">Todas</option>
+                    <option value="SOLICITAÇÃO / PENDENTE / REGULADOR">Pendente Regulação</option>
+                    <option value="SOLICITAÇÃO / AGENDADA / SOLICITANTE">Agendada</option>
+                    <option value="SOLICITAÇÃO / AUTORIZADA / REGULADOR">Autorizada</option>
+                    <option value="SOLICITAÇÃO / NEGADA / REGULADOR">Negada</option>
+                    <option value="SOLICITAÇÃO / CANCELADA">Cancelada (Solicitação)</option>
+                    <option value="AGENDAMENTO / CONFIRMADO / EXECUTANTE">Confirmada (Agendamento)</option>
+                    <option value="AGENDAMENTO / CANCELADO">Cancelado (Agendamento)</option>
+                    <option value="AGENDAMENTO / FALTA / EXECUTANTE">Falta</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <button className="btn-primary" style={{ background: GRAD, display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', fontSize: '12px', fontWeight: '700' }} onClick={buscarRelatorioSisreg} disabled={sisregLoading}>
+                    <RefreshCw size={13} className={sisregLoading ? 'animate-spin' : ''} /> {sisregLoading ? 'Carregando...' : 'Filtrar'}
+                  </button>
+                  
+                  <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', fontSize: '12px', fontWeight: '700' }} onClick={() => {
+                    const labelPeriodo = `${fmtData(sisregFiltroDataInicio)} a ${fmtData(sisregFiltroDataFim)}`
+                    const espL = sisregFiltroEsp ? especialidades.find(e => e.id === sisregFiltroEsp)?.label : (sisregFiltroProc || '')
+                    const statusL = sisregFiltroStatus ? abbreviateStatus(sisregFiltroStatus) : ''
+                    imprimirRelatorioSisreg(sisregDados, labelPeriodo, espL, statusL)
+                  }} disabled={sisregDados.length === 0}>
+                    <Printer size={13} /> Imprimir PDF
+                  </button>
+
+                  <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', fontSize: '12px', fontWeight: '700' }} onClick={() => exportarCsvSisreg(sisregDados)} disabled={sisregDados.length === 0}>
+                    <Save size={13} /> Exportar CSV
+                  </button>
+
+                  <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', fontSize: '12px', fontWeight: '700' }} onClick={sincronizarSisreg} disabled={sisregSincronizando}>
+                    <RefreshCw size={13} className={sisregSincronizando ? 'animate-spin' : ''} /> {sisregSincronizando ? 'Sincronizando...' : 'Sincronizar SISREG'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabela de Resultados */}
+            <div className="card" style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
+                  Solicitações Monitoradas no SISREG ({sisregDados.length})
+                </h3>
+              </div>
+
+              {sisregLoading ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                  <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 10px' }} />
+                  Carregando registros do banco...
+                </div>
+              ) : sisregDados.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: '13px' }}>
+                  Nenhuma solicitação encontrada para os filtros selecionados.
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#475569', width: '5%' }}>Nº</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#475569', width: '14%' }}>Cód. Solicitação</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#475569', width: '12%' }}>Data Solic.</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#475569', width: '22%' }}>Paciente</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#475569', width: '14%' }}>CPF/CNS</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#475569', width: '23%' }}>Procedimento</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#475569', width: '10%' }}>Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sisregDados.map((r, i) => {
+                        const dataFmt = r.data_solicitacao ? r.data_solicitacao.slice(0, 10).split('-').reverse().join('/') : '—'
+                        const cnsCpf = r.cpf_usuario || r.cns_usuario || '—'
+                        const situacaoAbreviada = abbreviateStatus(r.status_solicitacao)
+                        
+                        return (
+                          <tr key={r.codigo_solicitacao} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                            <td style={{ padding: '10px 12px', color: '#64748b' }}>{i + 1}</td>
+                            <td style={{ padding: '10px 12px', fontWeight: '700', color: '#0f172a' }}>{r.codigo_solicitacao}</td>
+                            <td style={{ padding: '10px 12px', color: '#334155' }}>{dataFmt}</td>
+                            <td style={{ padding: '10px 12px', fontWeight: '600', color: '#0f172a', textTransform: 'uppercase' }}>{r.no_usuario}</td>
+                            <td style={{ padding: '10px 12px', color: '#475569', fontFamily: 'monospace' }}>{cnsCpf}</td>
+                            <td style={{ padding: '10px 12px', color: '#334155', textTransform: 'uppercase', fontSize: '12px' }}>{r.descricao_interna_procedimento}</td>
+                            <td style={{ padding: '10px 12px' }}>
+                              <span style={{ 
+                                background: r.status_solicitacao?.includes('PENDENTE') ? '#fef9c3' : r.status_solicitacao?.includes('CONFIRMADO') || r.status_solicitacao?.includes('AUTORIZADA') || r.status_solicitacao?.includes('AGENDADA') ? '#dcfce7' : '#fee2e2',
+                                color: r.status_solicitacao?.includes('PENDENTE') ? '#854d0e' : r.status_solicitacao?.includes('CONFIRMADO') || r.status_solicitacao?.includes('AUTORIZADA') || r.status_solicitacao?.includes('AGENDADA') ? '#166534' : '#991b1b',
+                                padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' 
+                              }}>
+                                {situacaoAbreviada}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── MODAL: CANCELAMENTO ── */}
