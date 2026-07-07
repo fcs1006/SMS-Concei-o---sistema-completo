@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Search, FileText, User, Stethoscope, Building, 
-  AlertCircle, Download, CheckCircle, RefreshCw, Trash2, Heart
+  AlertCircle, Download, CheckCircle, RefreshCw, Trash2, Heart, Loader2
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -57,6 +57,12 @@ export default function CitopatologicoForm() {
 
   const [sugestoesProfissionais, setSugestoesProfissionais] = useState([])
   const [buscandoProfissionais, setBuscandoProfissionais] = useState(false)
+
+  // Estados de busca por solicitação do SISREG
+  const [codigoBusca, setCodigoBusca] = useState('')
+  const [buscando, setBuscando] = useState(false)
+  const [erroBusca, setErroBusca] = useState('')
+  const [sucessoBusca, setSucessoBusca] = useState(false)
 
   // Dados do formulário
   const [formData, setFormData] = useState({
@@ -112,8 +118,8 @@ export default function CitopatologicoForm() {
     inspecaoColo: '',
     sinaisDst: '',
 
-    // Coleta
-    dataColeta: new Date().toISOString().substring(0, 10),
+    // Coleta - DEVEM VIR EM BRANCO
+    dataColeta: '',
     responsavel: ''
   })
 
@@ -122,10 +128,6 @@ export default function CitopatologicoForm() {
     if (u) {
       const parsedUser = JSON.parse(u)
       setUsuario(parsedUser)
-      setFormData(prev => ({
-        ...prev,
-        responsavel: parsedUser.nome || ''
-      }))
     }
   }, [])
 
@@ -330,6 +332,74 @@ export default function CitopatologicoForm() {
     }
   }
 
+  // Função para buscar a solicitação no SISREG
+  async function buscarSolicitacao() {
+    if (!codigoBusca.trim()) {
+      setErroBusca('Por favor, digite o número da solicitação.')
+      return
+    }
+
+    setBuscando(true)
+    setErroBusca('')
+    setSucessoBusca(false)
+
+    try {
+      const res = await fetch(`/api/sisreg/buscar?codigo=${codigoBusca}`)
+      const resData = await res.json()
+
+      if (!res.ok) {
+        throw new Error(resData.error || 'Erro ao buscar solicitação.')
+      }
+
+      const s = resData.data
+
+      // Preenche os campos do formulário com os dados do SISREG
+      setFormData(prev => ({
+        ...prev,
+        unidadeSaude: s.nome_unidade_solicitante || prev.unidadeSaude,
+        cnesUnidade: s.codigo_unidade_solicitante || prev.cnesUnidade,
+        nomePaciente: s.no_usuario || '',
+        cnsPaciente: s.cns_usuario || '',
+        cpfPaciente: s.cpf_usuario || '',
+        dataNascimento: s.dt_nascimento_usuario ? s.dt_nascimento_usuario.split('T')[0] : '',
+        sexo: s.sexo_usuario === 'F' || s.sexo_usuario === 'FEMININO' ? 'F' : 'M',
+        nomeMae: s.no_mae_usuario || '',
+        telefone: s.telefone || '',
+        logradouro: s.endereco_paciente || '',
+        cep: s.cep_paciente || '',
+        codigoMunicipio: s.codigo_ibge_paciente || prev.codigoMunicipio,
+        municipio: s.municipio_paciente_residencia || prev.municipio,
+        ufResidencia: s.uf_paciente || prev.ufResidencia,
+        idade: s.dt_nascimento_usuario ? calcularIdadeCompleta(s.dt_nascimento_usuario.split('T')[0]) : ''
+      }))
+
+      // Atualiza dropdown de unidades
+      if (s.codigo_unidade_solicitante && s.nome_unidade_solicitante) {
+        setUnidadesSolicitantes(prevList => {
+          const exists = prevList.some(u => u.cnes === s.codigo_unidade_solicitante)
+          let excluidos = []
+          try {
+            const saved = localStorage.getItem('sms_excluded_cnes')
+            if (saved) excluidos = JSON.parse(saved)
+          } catch (e) {}
+          const isExcluded = excluidos.includes(s.codigo_unidade_solicitante)
+          if (!exists && !isExcluded) {
+            return [...prevList, { cnes: s.codigo_unidade_solicitante, nome: s.nome_unidade_solicitante.toUpperCase() }]
+          }
+          return prevList
+        })
+      }
+
+      setSucessoBusca(true)
+      setTimeout(() => setSucessoBusca(false), 3000)
+    } catch (err) {
+      console.error(err)
+      setErroBusca(err.message || 'Solicitação não encontrada no banco local.')
+    } finally {
+      setBuscando(false)
+    }
+  }
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
@@ -369,6 +439,71 @@ export default function CitopatologicoForm() {
   return (
     <div style={{ padding: '0 0 28px', maxWidth: '1200px', margin: '0 auto' }}>
       
+      {/* Busca SISREG */}
+      <div className="card" style={{ padding: '28px', marginBottom: '24px' }}>
+        <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '15px', fontWeight: '700', color: '#172554', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Search size={18} style={{ color: '#10b981' }} />
+          Buscar Solicitação no SISREG
+        </h2>
+        
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ position: 'relative', flexGrow: 1 }}>
+            <input
+              type="text"
+              placeholder="Insira o número da solicitação do SISREG (ex: 374928372)"
+              value={codigoBusca}
+              onChange={(e) => setCodigoBusca(e.target.value)}
+              className="input-modern"
+              style={{ paddingLeft: '40px' }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') buscarSolicitacao()
+              }}
+            />
+            <Search size={16} style={{ position: 'absolute', left: '14px', top: '13px', color: '#94a3b8' }} />
+          </div>
+          <button
+            type="button"
+            onClick={buscarSolicitacao}
+            disabled={buscando}
+            className="btn-primary"
+            style={{
+              background: '#059669',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '0 24px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              height: '42px'
+            }}
+          >
+            {buscando ? (
+              <>
+                <Loader2 size={16} className="animate-spin" /> Buscando...
+              </>
+            ) : (
+              <>
+                <Search size={16} /> Buscar Dados
+              </>
+            )}
+          </button>
+        </div>
+
+        {erroBusca && (
+          <div style={{ color: '#dc2626', fontSize: '12.5px', marginTop: '8px', fontWeight: '500' }}>
+            ❌ {erroBusca}
+          </div>
+        )}
+        {sucessoBusca && (
+          <div style={{ color: '#16a34a', fontSize: '12.5px', marginTop: '8px', fontWeight: '500' }}>
+            ✅ Solicitação carregada com sucesso! Os campos foram preenchidos.
+          </div>
+        )}
+      </div>
+
       {/* Busca de Paciente */}
       <div className="card" style={{ padding: '28px', marginBottom: '24px' }}>
         <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '15px', fontWeight: '700', color: '#172554', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
