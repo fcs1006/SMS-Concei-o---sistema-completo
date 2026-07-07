@@ -1082,6 +1082,13 @@ export default function Especialidades() {
       return
     }
 
+    // 4. Se for exame com jejum de 8h, impedir agendamento no período da tarde
+    const exigeJejum = EXAMES_JEJUM.includes(modalAutorizar.tipo_exame)
+    if (exigeJejum && periodoAutorizar && String(periodoAutorizar).toLowerCase().includes('tarde')) {
+      mostrarMsg('Exames com jejum de 8h (como Abdomen Total/Superior) não podem ser agendados no período da tarde.', false)
+      return
+    }
+
     const datasEscala = Array.from(new Set(escala.map(item => item.data_atendimento)))
     const diasEscalaCount = datasEscala.length
     const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
@@ -2660,6 +2667,9 @@ export default function Especialidades() {
           if (exigeJejum && p.nome.toLowerCase().includes('tarde')) return false
           return true
         })
+        const escalaFiltrada = exigeJejum
+          ? escala.filter(e => !(e.periodo && String(e.periodo).toLowerCase().includes('tarde')))
+          : escala
         const datasEscala = Array.from(new Set(escala.map(item => item.data_atendimento)))
         const diasEscalaCount = datasEscala.length
         const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
@@ -2680,15 +2690,15 @@ export default function Especialidades() {
             {/* Escala Disponível */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginBottom: '14px' }}>
               <h4 style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: '700', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>📅</span> ESCALA DE ATENDIMENTO DISPONÍVEL ({escala.length})
+                <span>📅</span> ESCALA DE ATENDIMENTO DISPONÍVEL ({escalaFiltrada.length})
               </h4>
-              {escala.length === 0 ? (
+              {escalaFiltrada.length === 0 ? (
                 <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>
                   Nenhuma data de atendimento cadastrada na escala para esta especialidade neste mês.
                 </p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '150px', overflowY: 'auto' }}>
-                  {escala.map(e => {
+                  {escalaFiltrada.map(e => {
                     const formatDt = e.data_atendimento ? fmtData(e.data_atendimento) : 'Data não informada'
                     const isSelected = dataAtendimentoAutorizar === e.data_atendimento && periodoAutorizar === e.periodo
                     return (
@@ -2821,7 +2831,7 @@ export default function Especialidades() {
                     style={{ width: '100%' }}
                   >
                     <option value="">— Selecione uma data/período da escala —</option>
-                    {escala.map(e => {
+                    {escalaFiltrada.map(e => {
                       const formatDt = e.data_atendimento ? fmtData(e.data_atendimento) : 'Data não informada'
                       const val = `${e.data_atendimento}|${e.periodo}`
                       return (
