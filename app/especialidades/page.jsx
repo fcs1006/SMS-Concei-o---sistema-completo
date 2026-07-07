@@ -1031,9 +1031,14 @@ export default function Especialidades() {
   // ── Status ────────────────────────────────────────────────────────────────
   async function confirmarAutorizar() {
     if (!dataAtendimentoAutorizar) { mostrarMsg('Informe a data de atendimento', false); return }
-    const cotaEsgotada = usados >= espAtiva.cota
+    const datasEscala = Array.from(new Set(escala.map(item => item.data_atendimento)))
+    const diasEscalaCount = datasEscala.length
+    const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
+    const usadosNoDia = agendamentos.filter(a => a.status === 'autorizado' && a.data_atendimento === dataAtendimentoAutorizar).reduce((acc, a) => acc + pesoCota(a), 0)
+    const cotaEsgotada = usadosNoDia >= cotaDiaria
+
     const isAdmin = usuario?.perfil === 'admin'
-    if (cotaEsgotada && !isAdmin) { mostrarMsg('Cota esgotada. Apenas o administrador pode autorizar novos agendamentos.', false); return }
+    if (cotaEsgotada && !isAdmin) { mostrarMsg('Cota diária para esta data esgotada. Apenas o administrador pode autorizar.', false); return }
     if (cotaEsgotada && isAdmin && !justificativaCota.trim()) { mostrarMsg('Informe a justificativa para autorizar além da cota', false); return }
     const id = modalAutorizar.id
     try {
@@ -2594,7 +2599,15 @@ export default function Especialidades() {
           if (exigeJejum && p.nome.toLowerCase().includes('tarde')) return false
           return true
         })
-        const cotaEsgotada = usados >= espAtiva.cota
+        const datasEscala = Array.from(new Set(escala.map(item => item.data_atendimento)))
+        const diasEscalaCount = datasEscala.length
+        const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
+        
+        const usadosNoDia = dataAtendimentoAutorizar 
+          ? agendamentos.filter(a => a.status === 'autorizado' && a.data_atendimento === dataAtendimentoAutorizar).reduce((acc, a) => acc + pesoCota(a), 0)
+          : 0
+        
+        const cotaEsgotada = usadosNoDia >= cotaDiaria
         const isAdmin = usuario?.perfil === 'admin'
         const fecharModal = () => { setModalAutorizar(null); setPeriodoAutorizar(''); setDataAtendimentoAutorizar(''); setJustificativaCota('') }
         return (
@@ -2606,12 +2619,12 @@ export default function Especialidades() {
             {/* Aviso de cota esgotada */}
             {cotaEsgotada && !isAdmin && (
               <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: '#991b1b', fontWeight: '600' }}>
-                Cota esgotada ({usados}/{espAtiva.cota}). Somente o administrador pode autorizar novos agendamentos neste mês.
+                Cota diária para esta data esgotada ({usadosNoDia}/{cotaDiaria}). Somente o administrador pode autorizar novos agendamentos nesta data.
               </div>
             )}
             {cotaEsgotada && isAdmin && (
               <div style={{ background: '#fff7ed', border: '1px solid #fb923c', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: '#7c2d12', fontWeight: '600' }}>
-                Cota esgotada ({usados}/{espAtiva.cota}). Como administrador você pode autorizar, mas é necessário justificar.
+                Cota diária para esta data esgotada ({usadosNoDia}/{cotaDiaria}). Como administrador você pode autorizar, mas é necessário justificar.
               </div>
             )}
 
@@ -2813,6 +2826,21 @@ export default function Especialidades() {
               <input className="input-modern" type="number" value={ano} onChange={e => setAno(e.target.value)} min="2020" max="2099" style={{ width: '90px' }} />
             </div>
           </div>
+
+          {(() => {
+            const datasEscala = Array.from(new Set(escala.map(item => item.data_atendimento)))
+            const diasEscalaCount = datasEscala.length
+            const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
+            return (
+              <div style={{ marginBottom: '16px', padding: '12px 16px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '13px', color: '#1e3a8a', fontFamily: 'Sora, sans-serif' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <div><strong>Cota Mensal:</strong> {espAtiva.cota}</div>
+                  <div><strong>Dias na Escala:</strong> {diasEscalaCount}</div>
+                  <div><strong>Cota Diária Calculada:</strong> <span style={{ fontWeight: '800', color: '#1d4ed8' }}>{cotaDiaria}</span> por dia</div>
+                </div>
+              </div>
+            )
+          })()}
           {profissionais.length === 0 ? (
             <p style={{ color: '#64748b', fontSize: '13px' }}>
               Nenhum profissional cadastrado. Cadastre profissionais primeiro em <strong>Profissionais</strong>.
