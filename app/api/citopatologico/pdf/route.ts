@@ -55,15 +55,15 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
 
       // Helper para desenhar caixas de seção preenchidas
       const drawSectionTitle = (title: string, y: number) => {
-        doc.rect(20, y, 555, 11).fill('#000000')
+        doc.rect(20, y, 555, 14).fill('#000000')
         doc.fillColor('#ffffff')
-           .fontSize(7.5)
+           .fontSize(8.5)
            .font('Helvetica-Bold')
-           .text(title.toUpperCase(), 25, y + 2, { width: 545, align: 'center' })
+           .text(title.toUpperCase(), 25, y + 3, { width: 545, align: 'center' })
       }
 
       // Helper para desenhar checkboxes
-      const drawCheckbox = (label: string, isChecked: boolean, x: number, y: number, labelSize = 7) => {
+      const drawCheckbox = (label: string, isChecked: boolean, x: number, y: number, labelSize = 8) => {
         doc.rect(x, y, 7, 7).stroke(gridColor)
         if (isChecked) {
           doc.fillColor(valueColor)
@@ -102,7 +102,7 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
       drawField('CNES da Unidade de Saúde', data.cnesUnidade, 55, 48, 110, 22, 'center')
       drawField('Unidade de Saúde', data.unidadeSaude, 170, 48, 235, 22)
       
-      const protocoloVal = data.numeroProtocolo || '(GERADO PELO SISCAN)'
+      const protocoloVal = data.numeroProtocolo || ''
       drawField('Nº Protocolo', protocoloVal, 410, 48, 165, 22, 'center', 9)
 
       // Linha 2 Unidade
@@ -171,48 +171,47 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
       const aY = 384
       doc.rect(20, aY, 275, 200).stroke(gridColor) // Coluna Esquerda
       doc.rect(300, aY, 275, 200).stroke(gridColor) // Coluna Direita
-
-      // Coluna Esquerda Conteúdo
+             // Coluna Esquerda Conteúdo
       let cy = aY + 5
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('1. Motivo do exame*', 25, cy)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5).text('1. Motivo do exame*', 25, cy)
       cy += 11
       drawCheckbox('Rastreamento', data.motivoExame === 'Rastreamento', 28, cy)
       drawCheckbox('Repetição', data.motivoExame === 'Repetição', 105, cy)
       drawCheckbox('Seguimento', data.motivoExame === 'Seguimento', 170, cy)
 
       cy += 16
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('2. Fez o exame preventivo alguma vez?*', 25, cy)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5).text('2. Fez o exame preventivo alguma vez?*', 25, cy)
       cy += 11
       drawCheckbox('Sim', data.fezPreventivo === 'Sim', 28, cy)
       drawCheckbox('Não', data.fezPreventivo === 'Não', 75, cy)
       drawCheckbox('Não sabe', data.fezPreventivo === 'Não sabe', 120, cy)
       if (data.fezPreventivo === 'Sim') {
-        doc.fillColor(valueColor).fontSize(7.5).font('Helvetica').text(`Ano: ${data.preventivoAno || '—'}`, 185, cy)
+        doc.fillColor(valueColor).fontSize(8.5).font('Helvetica').text(`Ano: ${data.preventivoAno || '—'}`, 185, cy)
       }
 
       cy += 18
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('3. Usa DIU?*', 25, cy)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5).text('3. Usa DIU?*', 25, cy)
       cy += 11
       drawCheckbox('Sim', data.usaDiu === 'Sim', 28, cy)
       drawCheckbox('Não', data.usaDiu === 'Não', 75, cy)
       drawCheckbox('Não sabe', data.usaDiu === 'Não sabe', 120, cy)
 
       cy += 16
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('4. Está grávida?*', 25, cy)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5).text('4. Está grávida?*', 25, cy)
       cy += 11
       drawCheckbox('Sim', data.estaGravida === 'Sim', 28, cy)
       drawCheckbox('Não', data.estaGravida === 'Não', 75, cy)
       drawCheckbox('Não sabe', data.estaGravida === 'Não sabe', 120, cy)
 
       cy += 16
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('5. Usa pílula anticoncepcional?*', 25, cy)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5).text('5. Usa pílula anticoncepcional?*', 25, cy)
       cy += 11
       drawCheckbox('Sim', data.usaPilula === 'Sim', 28, cy)
       drawCheckbox('Não', data.usaPilula === 'Não', 75, cy)
       drawCheckbox('Não sabe', data.usaPilula === 'Não sabe', 120, cy)
 
       cy += 16
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8)
          .text('6. Usa hormônio / remédio para menopausa?*', 25, cy)
       cy += 11
       drawCheckbox('Sim', data.usaHormonioMenopausa === 'Sim', 28, cy)
@@ -221,14 +220,14 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
 
       // Coluna Direita Conteúdo
       cy = aY + 5
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('7. Já fez tratamento por radioterapia?*', 305, cy)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5).text('7. Já fez tratamento por radioterapia?*', 305, cy)
       cy += 11
       drawCheckbox('Sim', data.tratamentoRadioterapia === 'Sim', 308, cy)
       drawCheckbox('Não', data.tratamentoRadioterapia === 'Não', 355, cy)
       drawCheckbox('Não sabe', data.tratamentoRadioterapia === 'Não sabe', 400, cy)
 
       cy += 16
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('8. Data da última menstruação / regra (DUM)*', 305, cy)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5).text('8. Data da última menstruação / regra (DUM)*', 305, cy)
       cy += 11
       if (data.dumNaoSabe) {
         drawCheckbox('Não sabe / Não lembra', true, 308, cy)
@@ -238,14 +237,14 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
       }
 
       cy += 18
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5)
          .text('9. Tem ou teve algum sangramento após relações sexuais?*', 305, cy)
       cy += 11
       drawCheckbox('Sim', data.sangramentoAposRacao === 'Sim', 308, cy)
       drawCheckbox('Não / Não sabe / Não lembra', data.sangramentoAposRacao !== 'Sim', 355, cy)
 
       cy += 20
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5)
          .text('10. Tem ou teve algum sangramento após a menopausa?*', 305, cy)
       cy += 11
       drawCheckbox('Sim', data.sangramentoAposMenopausa === 'Sim', 308, cy)
@@ -259,14 +258,14 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
       doc.rect(300, ecY, 275, 45).stroke(gridColor)
 
       // Inspeção do colo
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('11. Inspeção do colo*', 25, ecY + 4)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5).text('11. Inspeção do colo*', 25, ecY + 4)
       drawCheckbox('Normal', data.inspecaoColo === 'Normal', 28, ecY + 15)
       drawCheckbox('Ausente', data.inspecaoColo === 'Ausente', 90, ecY + 15)
       drawCheckbox('Alterado', data.inspecaoColo === 'Alterado', 150, ecY + 15)
       drawCheckbox('Não visualizado', data.inspecaoColo === 'Colo não visualizado', 210, ecY + 15)
 
       // Sinais DST
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('12. Sinais sugestivos de DST?*', 305, ecY + 4)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8.5).text('12. Sinais sugestivos de DST?*', 305, ecY + 4)
       drawCheckbox('Sim', data.sinaisDst === 'Sim', 308, ecY + 18)
       drawCheckbox('Não', data.sinaisDst === 'Não', 360, ecY + 18)
 
