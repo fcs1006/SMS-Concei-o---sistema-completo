@@ -397,7 +397,9 @@ export default function CitopatologicoForm() {
         sexo: s.sexo_usuario === 'F' || s.sexo_usuario === 'FEMININO' ? 'F' : 'M',
         nomeMae: s.no_mae_usuario || '',
         telefone: s.telefone || '',
-        logradouro: s.endereco_paciente_residencia || '',
+        logradouro: s.tipo_logradouro_paciente_residencia 
+          ? `${s.tipo_logradouro_paciente_residencia} ${s.endereco_paciente_residencia || ''}`.trim()
+          : (s.endereco_paciente_residencia || ''),
         numero: s.numero_paciente_residencia || '',
         bairro: s.bairro_paciente_residencia || '',
         cep: s.cep_paciente_residencia || '',
