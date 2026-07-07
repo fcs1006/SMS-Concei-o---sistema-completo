@@ -2616,6 +2616,68 @@ export default function Especialidades() {
               Autorizando <strong>{modalAutorizar.paciente_nome}</strong> — {modalAutorizar.tipo_exame || 'Consulta'}
             </p>
 
+            {/* Escala Disponível */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginBottom: '14px' }}>
+              <h4 style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: '700', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>📅</span> ESCALA DE ATENDIMENTO DISPONÍVEL ({escala.length})
+              </h4>
+              {escala.length === 0 ? (
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>
+                  Nenhuma data de atendimento cadastrada na escala para esta especialidade neste mês.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '150px', overflowY: 'auto' }}>
+                  {escala.map(e => {
+                    const formatDt = e.data_atendimento ? fmtData(e.data_atendimento) : 'Data não informada'
+                    const isSelected = dataAtendimentoAutorizar === e.data_atendimento && periodoAutorizar === e.periodo
+                    return (
+                      <div 
+                        key={e.id} 
+                        onClick={() => {
+                          if (e.data_atendimento) setDataAtendimentoAutorizar(e.data_atendimento)
+                          if (e.periodo) setPeriodoAutorizar(e.periodo)
+                        }}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '8px 10px',
+                          background: isSelected ? '#dcfce7' : '#ffffff',
+                          border: isSelected ? '1px solid #22c55e' : '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={ev => {
+                          if (!isSelected) ev.currentTarget.style.backgroundColor = '#f1f5f9'
+                        }}
+                        onMouseLeave={ev => {
+                          if (!isSelected) ev.currentTarget.style.backgroundColor = '#ffffff'
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a' }}>
+                            {formatDt}
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                            👨‍⚕️ {e.profissional_nome || 'Profissional não informado'}
+                          </span>
+                        </div>
+                        {e.periodo && (
+                          <span style={{ fontSize: '10px', color: '#0369a1', background: '#e0f2fe', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
+                            {e.periodo.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
+                💡 Clique em uma das escalas acima para preencher automaticamente a data e o período.
+              </p>
+            </div>
+
             {/* Aviso de cota esgotada */}
             {cotaEsgotada && !isAdmin && (
               <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: '#991b1b', fontWeight: '600' }}>
