@@ -71,9 +71,9 @@ export default function CitopatologicoForm() {
   const [formData, setFormData] = useState({
     // Unidade
     ufUnidade: 'TO',
-    cnesUnidade: '5193273',
-    unidadeSaude: 'UBS LUIZ FRANCISCO DE MIRANDA',
-    municipioUnidade: 'CONCEIÇÃO DO TOCANTINS',
+    cnesUnidade: '',
+    unidadeSaude: '',
+    municipioUnidade: '',
     prontuario: '',
     numeroProtocolo: '',
 
@@ -241,16 +241,45 @@ export default function CitopatologicoForm() {
       setFormData(prev => ({
         ...prev,
         cnesUnidade: '',
-        unidadeSaude: ''
+        unidadeSaude: '',
+        municipioUnidade: ''
       }))
       return
     }
+    const NOMES_MUNICIPIOS = {
+      '1705607': 'CONCEIÇÃO DO TOCANTINS',
+      '170560': 'CONCEIÇÃO DO TOCANTINS',
+      '1721000': 'PALMAS',
+      '172100': 'PALMAS',
+      '1718204': 'PORTO NACIONAL',
+      '171820': 'PORTO NACIONAL',
+      '1707001': 'DIANÓPOLIS',
+      '170700': 'DIANÓPOLIS',
+      '1702406': 'ARRAIAS',
+      '170240': 'ARRAIAS',
+      '1716109': 'PARANÃ',
+      '171610': 'PARANÃ',
+      '1720903': 'TAGUATINGA',
+      '172090': 'TAGUATINGA',
+      '1714302': 'NATIVIDADE',
+      '171430': 'NATIVIDADE',
+      '1700402': 'ALMAS',
+      '170040': 'ALMAS',
+      '1718006': 'PONTE ALTA DO BOM JESUS',
+      '171800': 'PONTE ALTA DO BOM JESUS',
+      '1702901': 'AURORA DO TOCANTINS',
+      '170290': 'AURORA DO TOCANTINS',
+      '1709502': 'GURUPI',
+      '170950': 'GURUPI'
+    }
     const unidade = unidadesSolicitantes.find(u => u.cnes === cnes)
     if (unidade) {
+      const nomeMuni = NOMES_MUNICIPIOS[ibgeConsulta] || 'CONCEIÇÃO DO TOCANTINS'
       setFormData(prev => ({
         ...prev,
         cnesUnidade: cnes,
-        unidadeSaude: unidade.nome
+        unidadeSaude: unidade.nome,
+        municipioUnidade: nomeMuni
       }))
       // Puxa profissionais do CNES selecionado
       buscarProfissionaisCNES('', cnes)
@@ -361,8 +390,6 @@ export default function CitopatologicoForm() {
       // Preenche os campos do formulário com os dados do SISREG
       setFormData(prev => ({
         ...prev,
-        unidadeSaude: s.nome_unidade_solicitante || prev.unidadeSaude,
-        cnesUnidade: s.codigo_unidade_solicitante || prev.cnesUnidade,
         nomePaciente: s.no_usuario || '',
         cnsPaciente: s.cns_usuario || '',
         cpfPaciente: s.cpf_usuario || '',
