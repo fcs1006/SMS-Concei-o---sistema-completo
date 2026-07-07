@@ -445,6 +445,54 @@ export default function CitopatologicoForm() {
     }))
   }
 
+  const resetForm = () => {
+    setCodigoBusca('')
+    setSucessoBusca(false)
+    setErroBusca('')
+    setFormData(prev => ({
+      ...prev,
+      prontuario: '',
+      numeroProtocolo: '',
+      cnsPaciente: '',
+      nomePaciente: '',
+      nomeMae: '',
+      apelido: '',
+      cpfPaciente: '',
+      nacionalidade: 'BRASILEIRA',
+      dataNascimento: '',
+      idade: '',
+      sexo: '',
+      raca: '03',
+      logradouro: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      ufResidencia: 'TO',
+      codigoMunicipio: '170560',
+      municipio: 'CONCEIÇÃO DO TOCANTINS',
+      cep: '77305000',
+      ddd: '63',
+      telefone: '',
+      pontoReferencia: '',
+      escolaridade: 'Ensino Médio Completo',
+      motivoExame: '',
+      fezPreventivo: '',
+      preventivoAno: '',
+      usaDiu: '',
+      estaGravida: '',
+      usaPilula: '',
+      usaHormonioMenopausa: '',
+      tratamentoRadioterapia: '',
+      dataUltimaMenstruacao: '',
+      dumNaoSabe: false,
+      sangramentoAposRacao: '',
+      sangramentoAposMenopausa: '',
+      inspecaoColo: '',
+      sinaisDst: '',
+      dataColeta: ''
+    }))
+  }
+
   const handleGerarPdf = async (e) => {
     e.preventDefault()
     setGerandoPdf(true)
@@ -466,6 +514,8 @@ export default function CitopatologicoForm() {
       const blob = await response.blob()
       const fileURL = URL.createObjectURL(blob)
       window.open(fileURL, '_blank')
+      
+      resetForm()
     } catch (err) {
       alert(err.message || 'Erro ao gerar o PDF.')
     } finally {
