@@ -90,7 +90,7 @@ export default function EncaminhamentoForm() {
     try {
       let query = supabase
         .from('pacientes')
-        .select('id, nome, cpf_cns, dt_nasc, sexo, telefone, mae, nascido_em')
+        .select('id, nome, cpf_cns, dt_nasc, sexo, telefone, endereco, bairro, cep')
         .order('nome')
         .limit(10)
 

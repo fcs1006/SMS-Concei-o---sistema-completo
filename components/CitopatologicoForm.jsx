@@ -150,7 +150,7 @@ export default function CitopatologicoForm() {
     try {
       let query = supabase
         .from('pacientes')
-        .select('id, nome, cpf_cns, dt_nasc, sexo, telefone, endereco, bairro, cep, mae')
+        .select('id, nome, cpf_cns, dt_nasc, sexo, telefone, endereco, bairro, cep')
         .order('nome')
         .limit(10)
 
