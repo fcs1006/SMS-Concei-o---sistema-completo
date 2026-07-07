@@ -324,7 +324,7 @@ function BPAContent() {
 
   return (
     <Layout usuario={usuario}>
-      <div style={{ padding: '28px', maxWidth: (aba === 'apac' || aba === 'encaminhamento') ? '1200px' : '900px', margin: '0 auto', transition: 'max-width 0.2s' }}>
+      <div style={{ padding: '28px', maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
