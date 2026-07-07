@@ -539,75 +539,7 @@ export default function CitopatologicoForm() {
         )}
       </div>
 
-      {/* Busca de Paciente */}
-      <div className="card" style={{ padding: '28px', marginBottom: '24px' }}>
-        <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '15px', fontWeight: '700', color: '#172554', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Search size={18} style={{ color: '#10b981' }} />
-          Buscar Paciente Cadastrado
-        </h2>
-        <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-          <input
-            type="text"
-            placeholder="Comece a digitar o Nome, CPF ou CNS do paciente..."
-            onChange={(e) => {
-              handleChange(e)
-              buscarPacientesLocal(e.target.value)
-            }}
-            name="nomePaciente"
-            value={formData.nomePaciente}
-            className="input-modern"
-            autoComplete="off"
-            style={{ paddingLeft: '40px' }}
-          />
-          <Search size={16} style={{ position: 'absolute', left: '14px', top: '13px', color: '#94a3b8' }} />
 
-          {sugestoesPacientes.length > 0 && (
-            <div style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              backgroundColor: 'white',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
-              zIndex: 50,
-              maxHeight: '220px',
-              overflowY: 'auto',
-              marginTop: '4px'
-            }}>
-              {sugestoesPacientes.map(pac => (
-                <div
-                  key={pac.id}
-                  onClick={() => selecionarPaciente(pac)}
-                  style={{
-                    padding: '10px 14px',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid #f1f5f9',
-                    fontSize: '13px',
-                    color: '#1e293b',
-                    transition: 'background-color 0.15s'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                  <div style={{ fontWeight: '600' }}>{pac.nome}</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>
-                    Doc: {pac.cpf_cns} | Nasc: {pac.dt_nasc ? pac.dt_nasc.split('-').reverse().join('/') : '-'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {avisoSexo && (
-          <div style={{ padding: '12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', color: '#b45309', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
-            <AlertCircle size={18} className="shrink-0" style={{ color: '#f59e0b' }} />
-            <span><strong>Atenção:</strong> O paciente selecionado está cadastrado com o sexo Masculino. Este exame é destinado ao público feminino.</span>
-          </div>
-        )}
-      </div>
 
       {/* Formulário Principal */}
       <form onSubmit={handleGerarPdf} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
