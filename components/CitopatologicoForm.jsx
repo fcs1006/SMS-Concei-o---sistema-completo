@@ -23,21 +23,13 @@ function calcularIdadeCompleta(dataNasc) {
   
   if (dias < 0) {
     meses--
-    const uMes = new Date(hoje.getFullYear(), hoje.getMonth(), 0)
-    dias += uMes.getDate()
   }
   
   if (meses < 0) {
     anos--
-    meses += 12
   }
   
-  const partes = []
-  if (anos > 0) partes.push(`${anos} ano${anos > 1 ? 's' : ''}`)
-  if (meses > 0) partes.push(`${meses} me${meses > 1 ? 'ses' : 's'}`)
-  if (dias > 0) partes.push(`${dias} dia${dias > 1 ? 's' : ''}`)
-  
-  return partes.join(' e ')
+  return `${anos} ano${anos !== 1 ? 's' : ''}`
 }
 
 export default function CitopatologicoForm() {

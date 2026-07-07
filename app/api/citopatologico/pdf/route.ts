@@ -24,12 +24,12 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
         width: number, 
         height: number, 
         align: 'left' | 'center' | 'right' = 'left',
-        valFontSize = 9.5
+        valFontSize = 10.5
       ) => {
         doc.rect(x, y, width, height).stroke(gridColor)
         
         doc.fillColor(labelColor)
-           .fontSize(6)
+           .fontSize(6.5)
            .font('Helvetica-Bold')
            .text(label.toUpperCase(), x + 3, y + 3, { width: width - 6 })
 
@@ -40,13 +40,13 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
           doc.font('Helvetica').fontSize(currentSize)
           let textWidth = doc.widthOfString(valStr)
           
-          while (textWidth > width - 8 && currentSize > 6.5) {
+          while (textWidth > width - 8 && currentSize > 7) {
             currentSize -= 0.5
             doc.fontSize(currentSize)
             textWidth = doc.widthOfString(valStr)
           }
           
-          const yVal = y + 10.5 + (valFontSize - currentSize) * 0.35
+          const yVal = y + 11.5 + (valFontSize - currentSize) * 0.35
           
           doc.fillColor(valueColor)
              .text(valStr, x + 4, yVal, { width: width - 8, align })
@@ -285,7 +285,6 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
       drawField('Responsável / Assinatura e Carimbo*', respVal, 190, 690, 385, 28, 'center', 10.5)
 
       // Nota do final da página
-      doc.fillColor('#64748b').fontSize(7).font('Helvetica-Oblique').text('nº 415', 20, 802)
       doc.fillColor('#64748b').fontSize(7).font('Helvetica-Oblique').text('Atenção: Os campos com asterisco (*) são obrigatórios', 390, 802, { width: 185, align: 'right' })
 
       // ==========================================
@@ -296,139 +295,140 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
       // Título do Laboratório
       doc.rect(20, 20, 555, 30).stroke(gridColor)
       doc.fillColor(valueColor)
-         .fontSize(9.5)
+         .fontSize(10.5)
          .font('Helvetica-Bold')
          .text('IDENTIFICAÇÃO DO LABORATÓRIO', 20, 24, { width: 555, align: 'center' })
 
-      drawField('CNES do Laboratório*', '', 20, 50, 160, 24)
-      drawField('Nome do Laboratório*', '', 180, 50, 220, 24)
-      drawField('Número do Exame*', '', 400, 50, 95, 24)
-      drawField('Recebido em*', '', 495, 50, 80, 24, 'center')
+      drawField('CNES do Laboratório*', '', 20, 50, 160, 26)
+      drawField('Nome do Laboratório*', '', 180, 50, 220, 26)
+      drawField('Número do Exame*', '', 400, 50, 95, 26)
+      drawField('Recebido em*', '', 495, 50, 80, 26, 'center')
 
       // Título Resultado
-      doc.rect(20, 80, 555, 12).fill('#000000')
+      doc.rect(20, 90, 555, 16).fill('#000000')
       doc.fillColor('#ffffff')
-         .fontSize(8.5)
+         .fontSize(9.5)
          .font('Helvetica-Bold')
-         .text('RESULTADO DO EXAME CITOPATOLÓGICO - COLO DO ÚTERO', 20, 82, { width: 555, align: 'center' })
+         .text('RESULTADO DO EXAME CITOPATOLÓGICO - COLO DO ÚTERO', 20, 94, { width: 555, align: 'center' })
 
       // 1. Avaliação Pré-Analítica
-      doc.rect(20, 96, 270, 75).stroke(gridColor)
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('AVALIAÇÃO PRÉ-ANALÍTICA', 23, 99)
-      doc.fontSize(6.5).text('AMOSTRA REJEITADA POR:', 23, 107)
-      drawCheckbox('Ausência ou erro na identificação da lâmina/frasco', false, 25, 117, 6)
-      drawCheckbox('Lâmina danificada ou ausente', false, 25, 126, 6)
-      drawCheckbox('Causas alheias ao laboratório; especificar:', false, 25, 135, 6)
-      drawCheckbox('Outras causas; especificar:', false, 25, 144, 6)
+      doc.rect(20, 120, 270, 110).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8).text('AVALIAÇÃO PRÉ-ANALÍTICA', 23, 124)
+      doc.fontSize(7.5).text('AMOSTRA REJEITADA POR:', 23, 136)
+      drawCheckbox('Ausência ou erro na identificação da lâmina/frasco', false, 25, 148, 7)
+      drawCheckbox('Lâmina danificada ou ausente', false, 25, 161, 7)
+      drawCheckbox('Causas alheias ao laboratório; especificar:', false, 25, 174, 7)
+      drawCheckbox('Outras causas; especificar:', false, 25, 187, 7)
       
       // Linhas pontilhadas sob especificações
-      doc.lineCap('square').lineWidth(0.5).dash(2, { space: 2 }).moveTo(170, 141).lineTo(285, 141).stroke()
-      doc.lineCap('square').lineWidth(0.5).dash(2, { space: 2 }).moveTo(125, 150).lineTo(285, 150).stroke()
+      doc.lineCap('square').lineWidth(0.5).dash(2, { space: 2 }).moveTo(175, 179).lineTo(285, 179).stroke()
+      doc.lineCap('square').lineWidth(0.5).dash(2, { space: 2 }).moveTo(125, 192).lineTo(285, 192).stroke()
       doc.undash()
 
       // 2. Epitélios representados
-      doc.rect(20, 175, 270, 42).stroke(gridColor)
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('EPITÉLIOS REPRESENTADOS NA AMOSTRA:*', 23, 178)
-      drawCheckbox('Escamoso', false, 25, 189)
-      drawCheckbox('Glandular', false, 95, 189)
-      drawCheckbox('Metaplásico', false, 165, 189)
+      doc.rect(20, 245, 270, 52).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8).text('EPITÉLIOS REPRESENTADOS NA AMOSTRA:*', 23, 249)
+      drawCheckbox('Escamoso', false, 25, 265, 7.5)
+      drawCheckbox('Glandular', false, 95, 265, 7.5)
+      drawCheckbox('Metaplásico', false, 165, 265, 7.5)
 
       // 3. Adequabilidade
-      doc.rect(300, 96, 275, 121).stroke(gridColor)
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('ADEQUABILIDADE DO MATERIAL*', 303, 99)
-      drawCheckbox('Satisfatória', false, 305, 109)
-      drawCheckbox('Insatisfatória para avaliação oncótica devido a:', false, 305, 118)
+      doc.rect(300, 120, 275, 177).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8).text('ADEQUABILIDADE DO MATERIAL*', 303, 124)
+      drawCheckbox('Satisfatória', false, 305, 136, 7.5)
+      drawCheckbox('Insatisfatória para avaliação oncótica devido a:', false, 305, 148, 7.5)
       
-      const adY = 129
-      drawCheckbox('Material acelular ou hipocelular em menos de 10% do esfregaço', false, 312, adY, 6)
-      drawCheckbox('Sangue em mais de 75% do esfregaço', false, 312, adY + 9, 6)
-      drawCheckbox('Piócitos em mais de 75% do esfregaço', false, 312, adY + 18, 6)
-      drawCheckbox('Artefatos de dessecamento em mais de 75% do esfregaço', false, 312, adY + 27, 6)
-      drawCheckbox('Contaminantes externos em mais de 75% do esfregaço', false, 312, adY + 36, 6)
-      drawCheckbox('Intensa superposição celular em mais de 75% do esfregaço', false, 312, adY + 45, 6)
-      drawCheckbox('Outros, especificar:', false, 312, adY + 54, 6)
-      doc.lineCap('square').lineWidth(0.5).dash(2, { space: 2 }).moveTo(395, adY + 59).lineTo(570, adY + 59).stroke()
+      const adY = 162
+      drawCheckbox('Material acelular ou hipocelular em menos de 10% do esfregaço', false, 312, adY, 6.5)
+      drawCheckbox('Sangue em mais de 75% do esfregaço', false, 312, adY + 12, 6.5)
+      drawCheckbox('Piócitos em mais de 75% do esfregaço', false, 312, adY + 24, 6.5)
+      drawCheckbox('Artefatos de dessecamento em mais de 75% do esfregaço', false, 312, adY + 36, 6.5)
+      drawCheckbox('Contaminantes externos em mais de 75% do esfregaço', false, 312, adY + 48, 6.5)
+      drawCheckbox('Intensa superposição celular em mais de 75% do esfregaço', false, 312, adY + 60, 6.5)
+      drawCheckbox('Outros, especificar:', false, 312, adY + 72, 6.5)
+      doc.lineCap('square').lineWidth(0.5).dash(2, { space: 2 }).moveTo(395, adY + 77).lineTo(570, adY + 77).stroke()
       doc.undash()
 
       // Diagnóstico Descritivo
-      doc.rect(20, 221, 555, 12).fill('#000000')
-      doc.fillColor('#ffffff').fontSize(8.5).font('Helvetica-Bold').text('DIAGNÓSTICO DESCRITIVO', 20, 223, { width: 555, align: 'center' })
+      doc.rect(20, 312, 555, 16).fill('#000000')
+      doc.fillColor('#ffffff').fontSize(9.5).font('Helvetica-Bold').text('DIAGNÓSTICO DESCRITIVO', 20, 316, { width: 555, align: 'center' })
 
-      const dY = 237
+      const dY = 340
       // Dentro dos limites
-      doc.rect(20, dY, 270, 25).stroke(gridColor)
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('DENTRO DOS LIMITES DA NORMALIDADE?', 23, dY + 3)
-      drawCheckbox('Sim', false, 25, dY + 13)
-      drawCheckbox('Não', false, 75, dY + 13)
+      doc.rect(20, dY, 270, 32).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8).text('DENTRO DOS LIMITES DA NORMALIDADE?', 23, dY + 4)
+      drawCheckbox('Sim', false, 25, dY + 16, 7.5)
+      drawCheckbox('Não', false, 75, dY + 16, 7.5)
 
       // Benignas
-      doc.rect(20, dY + 29, 270, 75).stroke(gridColor)
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('ALTERAÇÕES CELULARES BENIGNAS OU REPARATIVAS', 23, dY + 32)
-      drawCheckbox('Inflamação', false, 25, dY + 42, 6.5)
-      drawCheckbox('Metaplasia escamosa imatura', false, 25, dY + 50, 6.5)
-      drawCheckbox('Reparação', false, 25, dY + 58, 6.5)
-      drawCheckbox('Atrofia com inflamação', false, 25, dY + 66, 6.5)
-      drawCheckbox('Radiação', false, 25, dY + 74, 6.5)
-      drawCheckbox('Outros; especificar:', false, 25, dY + 82, 6.5)
+      doc.rect(20, dY + 38, 270, 110).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8).text('ALTERAÇÕES CELULARES BENIGNAS OU REPARATIVAS', 23, dY + 42)
+      const bgY = dY + 54
+      drawCheckbox('Inflamação', false, 25, bgY, 7.5)
+      drawCheckbox('Metaplasia escamosa imatura', false, 25, bgY + 13, 7.5)
+      drawCheckbox('Reparação', false, 25, bgY + 26, 7.5)
+      drawCheckbox('Atrofia com inflamação', false, 25, bgY + 39, 7.5)
+      drawCheckbox('Radiação', false, 25, bgY + 52, 7.5)
+      drawCheckbox('Outros; especificar:', false, 25, bgY + 65, 7.5)
       
       // Microbiologia
-      doc.rect(20, dY + 108, 270, 115).stroke(gridColor)
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('MICROBIOLOGIA', 23, dY + 111)
-      const micY = dY + 120
-      drawCheckbox('Lactobacillus sp', false, 25, micY, 6.5)
-      drawCheckbox('Cocos', false, 25, micY + 9, 6.5)
-      drawCheckbox('Sugestivo de Chlamydia sp', false, 25, micY + 18, 6.5)
-      drawCheckbox('Actinomyces sp', false, 25, micY + 27, 6.5)
-      drawCheckbox('Candida sp', false, 25, micY + 36, 6.5)
-      drawCheckbox('Trichomonas vaginalis', false, 25, micY + 45, 6.5)
-      drawCheckbox('Efeito citopático compatível com vírus do grupo Herpes', false, 25, micY + 54, 6.5)
-      drawCheckbox('Bacilos supracitoplasmáticos (Gardnerella/Mobiluncus)', false, 25, micY + 63, 6.5)
-      drawCheckbox('Outros bacilos', false, 25, micY + 72, 6.5)
-      drawCheckbox('Outros; especificar:', false, 25, micY + 81, 6.5)
+      doc.rect(20, dY + 154, 270, 175).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8).text('MICROBIOLOGIA', 23, dY + 158)
+      const micY = dY + 170
+      drawCheckbox('Lactobacillus sp', false, 25, micY, 7.5)
+      drawCheckbox('Cocos', false, 25, micY + 13, 7.5)
+      drawCheckbox('Sugestivo de Chlamydia sp', false, 25, micY + 26, 7.5)
+      drawCheckbox('Actinomyces sp', false, 25, micY + 39, 7.5)
+      drawCheckbox('Candida sp', false, 25, micY + 52, 7.5)
+      drawCheckbox('Trichomonas vaginalis', false, 25, micY + 65, 7.5)
+      drawCheckbox('Efeito citopático compatível com vírus do grupo Herpes', false, 25, micY + 78, 7.5)
+      drawCheckbox('Bacilos supracitoplasmáticos (Gardnerella/Mobiluncus)', false, 25, micY + 91, 7.5)
+      drawCheckbox('Outros bacilos', false, 25, micY + 104, 7.5)
+      drawCheckbox('Outros; especificar:', false, 25, micY + 117, 7.5)
 
       // Células Atípicas
       const catY = dY
-      doc.rect(300, catY, 275, 223).stroke(gridColor)
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('CÉLULAS ATÍPICAS DE SIGNIFICADO INDETERMINADO', 303, catY + 3)
+      doc.rect(300, catY, 275, 329).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8).text('CÉLULAS ATÍPICAS DE SIGNIFICADO INDETERMINADO', 303, catY + 3)
       
-      doc.font('Helvetica-Bold').fontSize(6.5).text('ESCAMOSAS:', 303, catY + 12)
-      drawCheckbox('Possivelmente não neoplásicas (ASC-US)', false, 305, catY + 20, 6)
-      drawCheckbox('Não se pode afastar lesão de alto grau (ASC-H)', false, 305, catY + 28, 6)
+      doc.font('Helvetica-Bold').fontSize(7.5).text('ESCAMOSAS:', 303, catY + 14)
+      drawCheckbox('Possivelmente não neoplásicas (ASC-US)', false, 305, catY + 24, 7)
+      drawCheckbox('Não se pode afastar lesão de alto grau (ASC-H)', false, 305, catY + 36, 7)
       
-      doc.font('Helvetica-Bold').fontSize(6.5).text('GLANDULARES:', 303, catY + 38)
-      drawCheckbox('Possivelmente não neoplásicas', false, 305, catY + 46, 6)
-      drawCheckbox('Não se pode afastar lesão de alto grau', false, 305, catY + 54, 6)
+      doc.font('Helvetica-Bold').fontSize(7.5).text('GLANDULARES:', 303, catY + 50)
+      drawCheckbox('Possivelmente não neoplásicas', false, 305, catY + 60, 7)
+      drawCheckbox('Não se pode afastar lesão de alto grau', false, 305, catY + 72, 7)
 
-      doc.font('Helvetica-Bold').fontSize(6.5).text('DE ORIGEM INDEFINIDA:', 303, catY + 64)
-      drawCheckbox('Possivelmente não neoplásicas', false, 305, catY + 72, 6)
-      drawCheckbox('Não se pode afastar lesão de alto grau', false, 305, catY + 80, 6)
+      doc.font('Helvetica-Bold').fontSize(7.5).text('DE ORIGEM INDEFINIDA:', 303, catY + 86)
+      drawCheckbox('Possivelmente não neoplásicas', false, 305, catY + 96, 7)
+      drawCheckbox('Não se pode afastar lesão de alto grau', false, 305, catY + 108, 7)
 
-      doc.font('Helvetica-Bold').fontSize(7).text('ATIPIAS EM CÉLULAS ESCAMOSAS', 303, catY + 92)
-      drawCheckbox('Lesão intra-epitelial de baixo grau (HPV / NIC I)', false, 305, catY + 100, 6)
-      drawCheckbox('Lesão intra-epitelial de alto grau (NIC II e III)', false, 305, catY + 109, 6)
-      drawCheckbox('Lesão intra-epitelial de alto grau, não podendo excluir micro-invasão', false, 305, catY + 118, 6)
-      drawCheckbox('Carcinoma epidermóide invasor', false, 305, catY + 127, 6)
+      doc.font('Helvetica-Bold').fontSize(8).text('ATIPIAS EM CÉLULAS ESCAMOSAS', 303, catY + 124)
+      drawCheckbox('Lesão intra-epitelial de baixo grau (HPV / NIC I)', false, 305, catY + 134, 7)
+      drawCheckbox('Lesão intra-epitelial de alto grau (NIC II e III)', false, 305, catY + 146, 7)
+      drawCheckbox('Lesão intra-epitelial de alto grau, não podendo excluir micro-invasão', false, 305, catY + 158, 7)
+      drawCheckbox('Carcinoma epidermóide invasor', false, 305, catY + 170, 7)
 
-      doc.font('Helvetica-Bold').fontSize(7).text('ATIPIAS EM CÉLULAS GLANDULARES', 303, catY + 139)
-      drawCheckbox('Adenocarcinoma "in situ"', false, 305, catY + 147, 6)
-      doc.font('Helvetica-Bold').fontSize(6.5).text('ADENOCARCINOMA INVASOR:', 303, catY + 156)
-      drawCheckbox('Cervical', false, 305, catY + 164, 6)
-      drawCheckbox('Endometrial', false, 360, catY + 164, 6)
-      drawCheckbox('Sem outras especificações', false, 420, catY + 164, 6)
+      doc.font('Helvetica-Bold').fontSize(8).text('ATIPIAS EM CÉLULAS GLANDULARES', 303, catY + 186)
+      drawCheckbox('Adenocarcinoma "in situ"', false, 305, catY + 196, 7)
+      doc.font('Helvetica-Bold').fontSize(7.5).text('ADENOCARCINOMA INVASOR:', 303, catY + 208)
+      drawCheckbox('Cervical', false, 305, catY + 218, 7)
+      drawCheckbox('Endometrial', false, 365, catY + 218, 7)
+      drawCheckbox('Sem outras especificações', false, 435, catY + 218, 7)
 
-      doc.font('Helvetica-Bold').fontSize(7).text('OUTRAS NEOPLASIAS MALIGNAS:', 303, catY + 176)
-      drawCheckbox('Presença de células endometriais (na pós-menopausa ou', false, 305, catY + 185, 6)
-      doc.fillColor(labelColor).fontSize(6).font('Helvetica').text('acima de 40 anos, fora do período menstrual)', 315, catY + 192)
+      doc.font('Helvetica-Bold').fontSize(8).text('OUTRAS NEOPLASIAS MALIGNAS:', 303, catY + 234)
+      drawCheckbox('Presença de células endometriais (na pós-menopausa ou', false, 305, catY + 246, 7)
+      doc.fillColor(labelColor).fontSize(6.5).font('Helvetica').text('acima de 40 anos, fora do período menstrual)', 315, catY + 254)
 
       // Observações Gerais
-      doc.rect(20, 485, 555, 30).stroke(gridColor)
-      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('OBSERVAÇÕES GERAIS:', 23, 488)
+      doc.rect(20, 692, 555, 36).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(8).text('OBSERVAÇÕES GERAIS:', 23, 696)
       
       // Assinatura do Laboratório
-      drawField('Screening pelo citotécnico', '', 20, 520, 270, 26)
-      drawField('Responsável / Assinatura e Registro*', '', 300, 520, 275, 26)
+      drawField('Screening pelo citotécnico', '', 20, 735, 270, 30)
+      drawField('Responsável / Assinatura e Registro*', '', 300, 735, 275, 30)
       
-      drawField('Data do Resultado*', '', 20, 550, 160, 26)
+      drawField('Data do Resultado*', '', 20, 770, 160, 30)
 
       doc.end()
     } catch (e) {
