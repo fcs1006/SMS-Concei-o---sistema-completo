@@ -2739,6 +2739,48 @@ export default function Especialidades() {
               </p>
             </div>
 
+            {/* Cota e Saldo do Dia */}
+            {dataAtendimentoAutorizar && (
+              (() => {
+                const saldo = cotaDiaria - usadosNoDia
+                const isVermelho = saldo <= 0
+                return (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr 1fr',
+                    gap: '10px',
+                    background: isVermelho ? '#fef2f2' : '#f0fdf4',
+                    border: isVermelho ? '1px solid #fca5a5' : '1px solid #bbf7d0',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    marginBottom: '14px',
+                    textAlign: 'center'
+                  }}>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cota do Dia</span>
+                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', display: 'block', marginTop: '2px' }}>{cotaDiaria}</span>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agendados</span>
+                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', display: 'block', marginTop: '2px' }}>{usadosNoDia}</span>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Saldo do Dia</span>
+                      <span style={{ 
+                        fontSize: '15px', 
+                        fontWeight: '800', 
+                        color: isVermelho ? '#dc2626' : '#16a34a',
+                        display: 'block',
+                        marginTop: '2px'
+                      }}>
+                        {saldo}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })()
+            )}
+
             {/* Aviso de cota esgotada */}
             {cotaEsgotada && !isAdmin && (
               <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: '#991b1b', fontWeight: '600' }}>
