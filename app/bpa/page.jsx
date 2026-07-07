@@ -5,6 +5,7 @@ import Layout from '@/components/Layout'
 import { Settings, BarChart2, Upload, ClipboardList, RefreshCw, Download, Search, Printer, CheckCircle, AlertTriangle, FileText } from 'lucide-react'
 import APACForm from '@/components/APACForm'
 import EncaminhamentoForm from '@/components/EncaminhamentoForm'
+import CitopatologicoForm from '@/components/CitopatologicoForm'
 
 const FIXOS_PADRAO = {
   urgencia: {
@@ -89,6 +90,8 @@ function BPAContent() {
       setAba('historico')
     } else if (tab === 'encaminhamento') {
       setAba('encaminhamento')
+    } else if (tab === 'citopatologico') {
+      setAba('citopatologico')
     } else {
       setAba('importacao')
     }
@@ -387,6 +390,12 @@ function BPAContent() {
             onClick={() => router.replace('/bpa?tab=encaminhamento', { scroll: false })}
           >
             <FileText size={14} /> Encaminhamento
+          </button>
+          <button
+            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'citopatologico' ? '#10b981' : '#64748b', borderBottom: aba === 'citopatologico' ? `3px solid #10b981` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => router.replace('/bpa?tab=citopatologico', { scroll: false })}
+          >
+            <FileText size={14} /> Colo do Útero
           </button>
         </div>
 
@@ -735,6 +744,10 @@ function BPAContent() {
 
         {aba === 'encaminhamento' && (
           <EncaminhamentoForm />
+        )}
+
+        {aba === 'citopatologico' && (
+          <CitopatologicoForm />
         )}
 
       </div>

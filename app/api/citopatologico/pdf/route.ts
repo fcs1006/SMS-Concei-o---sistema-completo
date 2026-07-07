@@ -1,0 +1,458 @@
+import { NextRequest, NextResponse } from 'next/server'
+import PDFDocument from 'pdfkit'
+
+function generateCitopatologicoPDF(data: any): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 20 })
+      const chunks: any[] = []
+      
+      doc.on('data', (chunk: any) => chunks.push(chunk))
+      doc.on('end', () => resolve(Buffer.concat(chunks)))
+      doc.on('error', (err: any) => reject(err))
+
+      const gridColor = '#000000'
+      const labelColor = '#000000'
+      const valueColor = '#000000'
+
+      // Helper para desenhar campos com bordas
+      const drawField = (
+        label: string, 
+        value: string | number | null | undefined, 
+        x: number, 
+        y: number, 
+        width: number, 
+        height: number, 
+        align: 'left' | 'center' | 'right' = 'left',
+        valFontSize = 9.5
+      ) => {
+        doc.rect(x, y, width, height).stroke(gridColor)
+        
+        doc.fillColor(labelColor)
+           .fontSize(6)
+           .font('Helvetica-Bold')
+           .text(label.toUpperCase(), x + 3, y + 3, { width: width - 6 })
+
+        if (value !== undefined && value !== null && value !== '') {
+          const valStr = String(value).toUpperCase().trim()
+          
+          let currentSize = valFontSize
+          doc.font('Helvetica').fontSize(currentSize)
+          let textWidth = doc.widthOfString(valStr)
+          
+          while (textWidth > width - 8 && currentSize > 6.5) {
+            currentSize -= 0.5
+            doc.fontSize(currentSize)
+            textWidth = doc.widthOfString(valStr)
+          }
+          
+          const yVal = y + 10.5 + (valFontSize - currentSize) * 0.35
+          
+          doc.fillColor(valueColor)
+             .text(valStr, x + 4, yVal, { width: width - 8, align })
+        }
+      }
+
+      // Helper para desenhar caixas de seção preenchidas
+      const drawSectionTitle = (title: string, y: number) => {
+        doc.rect(20, y, 555, 11).fill('#000000')
+        doc.fillColor('#ffffff')
+           .fontSize(7.5)
+           .font('Helvetica-Bold')
+           .text(title.toUpperCase(), 25, y + 2, { width: 545, align: 'center' })
+      }
+
+      // Helper para desenhar checkboxes
+      const drawCheckbox = (label: string, isChecked: boolean, x: number, y: number, labelSize = 7) => {
+        doc.rect(x, y, 7, 7).stroke(gridColor)
+        if (isChecked) {
+          doc.fillColor(valueColor)
+             .fontSize(6.5)
+             .font('Helvetica-Bold')
+             .text('X', x + 1, y + 0.5)
+        }
+        doc.fillColor(labelColor)
+           .fontSize(labelSize)
+           .font('Helvetica')
+           .text(label, x + 10, y + 0.5)
+      }
+
+      // ==========================================
+      // PAGINA 1: REQUISIÇÃO (FRENTE)
+      // ==========================================
+      
+      // Cabeçalho Oficial
+      doc.rect(20, 20, 180, 24).stroke(gridColor)
+      doc.fillColor(valueColor)
+         .fontSize(10)
+         .font('Helvetica-Bold')
+         .text('MINISTÉRIO DA SAÚDE', 25, 27, { width: 170, align: 'left' })
+
+      doc.rect(200, 20, 375, 24).stroke(gridColor)
+      doc.fillColor(valueColor)
+         .fontSize(9.5)
+         .font('Helvetica-Bold')
+         .text('REQUISIÇÃO DE EXAME CITOPATOLÓGICO - COLO DO ÚTERO', 205, 24, { width: 365, align: 'center' })
+         .fontSize(7.5)
+         .font('Helvetica-Oblique')
+         .text('Programa Nacional de Controle do Câncer do Colo do Útero', 205, 33, { width: 365, align: 'center' })
+
+      // Linha 1 Unidade
+      drawField('UF', data.ufUnidade, 20, 48, 30, 22, 'center')
+      drawField('CNES da Unidade de Saúde', data.cnesUnidade, 55, 48, 110, 22, 'center')
+      drawField('Unidade de Saúde', data.unidadeSaude, 170, 48, 235, 22)
+      
+      const protocoloVal = data.numeroProtocolo || '(GERADO PELO SISCAN)'
+      drawField('Nº Protocolo', protocoloVal, 410, 48, 165, 22, 'center', 9)
+
+      // Linha 2 Unidade
+      drawField('Município da Unidade', data.municipioUnidade, 20, 73, 385, 22)
+      drawField('Prontuário', data.prontuario || '—', 410, 73, 165, 22, 'center')
+
+      // Seção: Informações Pessoais
+      drawSectionTitle('Informações Pessoais', 100)
+
+      // CNS
+      drawField('Cartão SUS*', data.cnsPaciente, 20, 114, 555, 22)
+      // Nome Completo
+      drawField('Nome Completo da Mulher*', data.nomePaciente, 20, 139, 555, 22)
+      // Mãe
+      drawField('Nome Completo da Mãe*', data.nomeMae, 20, 164, 555, 22)
+      // Apelido
+      drawField('Apelido da Mulher', data.apelido || '—', 20, 189, 555, 22)
+      
+      // CPF e Nacionalidade
+      drawField('CPF', data.cpfPaciente || '—', 20, 214, 180, 22, 'center')
+      drawField('Nacionalidade', data.nacionalidade || 'BRASILEIRA', 205, 214, 370, 22)
+
+      // Nasc, Idade, Raça
+      const dataNascFmt = data.dataNascimento ? data.dataNascimento.split('-').reverse().join('/') : '—'
+      drawField('Data de Nascimento*', dataNascFmt, 20, 239, 130, 22, 'center')
+      drawField('Idade', data.idade || '—', 155, 239, 60, 22, 'center')
+      
+      // Raça/cor boxes
+      const rY = 239
+      doc.rect(220, rY, 355, 22).stroke(gridColor)
+      doc.fillColor(labelColor).fontSize(6).font('Helvetica-Bold').text('RAÇA/COR', 223, rY + 3)
+      drawCheckbox('Branca', data.raca === '01', 225, rY + 11)
+      drawCheckbox('Preta', data.raca === '02', 270, rY + 11)
+      drawCheckbox('Parda', data.raca === '03', 315, rY + 11)
+      drawCheckbox('Amarela', data.raca === '04', 360, rY + 11)
+      drawCheckbox('Indígena/Etnia', data.raca === '05', 415, rY + 11)
+
+      // Residência
+      drawField('Dados Residenciais: Logradouro', data.logradouro || '—', 20, 264, 555, 22)
+      
+      drawField('Número', data.numero || '—', 20, 289, 80, 22, 'center')
+      drawField('Complemento', data.complemento || '—', 100, 289, 120, 22)
+      drawField('Bairro', data.bairro || '—', 225, 289, 195, 22)
+      drawField('UF', data.ufResidencia || 'TO', 425, 289, 30, 22, 'center')
+      drawField('Código do Município', data.codigoMunicipio || '170560', 460, 289, 115, 22, 'center')
+
+      drawField('Município', data.municipio || 'CONCEIÇÃO DO TOCANTINS', 20, 314, 215, 22)
+      drawField('CEP', data.cep || '77305000', 240, 314, 85, 22, 'center')
+      drawField('DDD / Telefone', data.telefone ? `(${data.ddd}) ${data.telefone}` : '—', 330, 314, 110, 22, 'center')
+      drawField('Ponto de Referência', data.pontoReferencia || '—', 445, 314, 130, 22)
+
+      // Escolaridade boxes
+      const escY = 339
+      doc.rect(20, escY, 555, 22).stroke(gridColor)
+      doc.fillColor(labelColor).fontSize(6).font('Helvetica-Bold').text('ESCOLARIDADE', 23, escY + 3)
+      drawCheckbox('Analfabeta', data.escolaridade === 'Analfabeta', 25, escY + 11)
+      drawCheckbox('F. Incompleto', data.escolaridade === 'Ensino Fundamental Incompleto', 95, escY + 11)
+      drawCheckbox('F. Completo', data.escolaridade === 'Ensino Fundamental Completo', 185, escY + 11)
+      drawCheckbox('Médio Completo', data.escolaridade === 'Ensino Médio Completo', 270, escY + 11)
+      drawCheckbox('Superior Completo', data.escolaridade === 'Ensino Superior Completo', 370, escY + 11)
+
+      // Seção: Anamnese
+      drawSectionTitle('Dados da Anamnese', 370)
+
+      // Grid Anamnese (Esquerda / Direita)
+      const aY = 384
+      doc.rect(20, aY, 275, 200).stroke(gridColor) // Coluna Esquerda
+      doc.rect(300, aY, 275, 200).stroke(gridColor) // Coluna Direita
+
+      // Coluna Esquerda Conteúdo
+      let cy = aY + 5
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('1. Motivo do exame*', 25, cy)
+      cy += 11
+      drawCheckbox('Rastreamento', data.motivoExame === 'Rastreamento', 28, cy)
+      drawCheckbox('Repetição', data.motivoExame === 'Repetição', 105, cy)
+      drawCheckbox('Seguimento', data.motivoExame === 'Seguimento', 170, cy)
+
+      cy += 16
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('2. Fez o exame preventivo alguma vez?*', 25, cy)
+      cy += 11
+      drawCheckbox('Sim', data.fezPreventivo === 'Sim', 28, cy)
+      drawCheckbox('Não', data.fezPreventivo === 'Não', 75, cy)
+      drawCheckbox('Não sabe', data.fezPreventivo === 'Não sabe', 120, cy)
+      if (data.fezPreventivo === 'Sim') {
+        doc.fillColor(valueColor).fontSize(7.5).font('Helvetica').text(`Ano: ${data.preventivoAno || '—'}`, 185, cy)
+      }
+
+      cy += 18
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('3. Usa DIU?*', 25, cy)
+      cy += 11
+      drawCheckbox('Sim', data.usaDiu === 'Sim', 28, cy)
+      drawCheckbox('Não', data.usaDiu === 'Não', 75, cy)
+      drawCheckbox('Não sabe', data.usaDiu === 'Não sabe', 120, cy)
+
+      cy += 16
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('4. Está grávida?*', 25, cy)
+      cy += 11
+      drawCheckbox('Sim', data.estaGravida === 'Sim', 28, cy)
+      drawCheckbox('Não', data.estaGravida === 'Não', 75, cy)
+      drawCheckbox('Não sabe', data.estaGravida === 'Não sabe', 120, cy)
+
+      cy += 16
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('5. Usa pílula anticoncepcional?*', 25, cy)
+      cy += 11
+      drawCheckbox('Sim', data.usaPilula === 'Sim', 28, cy)
+      drawCheckbox('Não', data.usaPilula === 'Não', 75, cy)
+      drawCheckbox('Não sabe', data.usaPilula === 'Não sabe', 120, cy)
+
+      cy += 16
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7)
+         .text('6. Usa hormônio / remédio para menopausa?*', 25, cy)
+      cy += 11
+      drawCheckbox('Sim', data.usaHormonioMenopausa === 'Sim', 28, cy)
+      drawCheckbox('Não', data.usaHormonioMenopausa === 'Não', 75, cy)
+      drawCheckbox('Não sabe', data.usaHormonioMenopausa === 'Não sabe', 120, cy)
+
+      // Coluna Direita Conteúdo
+      cy = aY + 5
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('7. Já fez tratamento por radioterapia?*', 305, cy)
+      cy += 11
+      drawCheckbox('Sim', data.tratamentoRadioterapia === 'Sim', 308, cy)
+      drawCheckbox('Não', data.tratamentoRadioterapia === 'Não', 355, cy)
+      drawCheckbox('Não sabe', data.tratamentoRadioterapia === 'Não sabe', 400, cy)
+
+      cy += 16
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('8. Data da última menstruação / regra (DUM)*', 305, cy)
+      cy += 11
+      if (data.dumNaoSabe) {
+        drawCheckbox('Não sabe / Não lembra', true, 308, cy)
+      } else {
+        const dumVal = data.dataUltimaMenstruacao ? data.dataUltimaMenstruacao.split('-').reverse().join('/') : '—'
+        doc.fillColor(valueColor).fontSize(8.5).font('Helvetica-Bold').text(`DATA: ${dumVal}`, 308, cy)
+      }
+
+      cy += 18
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5)
+         .text('9. Tem ou teve algum sangramento após relações sexuais?*', 305, cy)
+      cy += 11
+      drawCheckbox('Sim', data.sangramentoAposRacao === 'Sim', 308, cy)
+      drawCheckbox('Não / Não sabe / Não lembra', data.sangramentoAposRacao !== 'Sim', 355, cy)
+
+      cy += 20
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5)
+         .text('10. Tem ou teve algum sangramento após a menopausa?*', 305, cy)
+      cy += 11
+      drawCheckbox('Sim', data.sangramentoAposMenopausa === 'Sim', 308, cy)
+      drawCheckbox('Não / Não sabe / Não lembra / Não na menopausa', data.sangramentoAposMenopausa !== 'Sim', 355, cy)
+
+      // Seção: Exame Clínico
+      drawSectionTitle('Exame Clínico', 592)
+
+      const ecY = 606
+      doc.rect(20, ecY, 275, 45).stroke(gridColor)
+      doc.rect(300, ecY, 275, 45).stroke(gridColor)
+
+      // Inspeção do colo
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('11. Inspeção do colo*', 25, ecY + 4)
+      drawCheckbox('Normal', data.inspecaoColo === 'Normal', 28, ecY + 15)
+      drawCheckbox('Ausente', data.inspecaoColo === 'Ausente', 90, ecY + 15)
+      drawCheckbox('Alterado', data.inspecaoColo === 'Alterado', 150, ecY + 15)
+      drawCheckbox('Não visualizado', data.inspecaoColo === 'Colo não visualizado', 210, ecY + 15)
+
+      // Sinais DST
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('12. Sinais sugestivos de DST?*', 305, ecY + 4)
+      drawCheckbox('Sim', data.sinaisDst === 'Sim', 308, ecY + 18)
+      drawCheckbox('Não', data.sinaisDst === 'Não', 360, ecY + 18)
+
+      // Nota importante
+      const nY = 658
+      doc.rect(20, nY, 555, 24).fill('#f1f5f9')
+      doc.rect(20, nY, 555, 24).stroke(gridColor)
+      doc.fillColor(valueColor).fontSize(7.5).font('Helvetica-Bold')
+         .text('NOTA: Na presença de colo alterado, com lesão sugestiva de câncer, não aguardar o resultado do exame citopatológico para encaminhar a mulher para colposcopia.', 25, nY + 4, { width: 545, align: 'center' })
+
+      // Coleta & Responsável
+      const colDataFmt = data.dataColeta ? data.dataColeta.split('-').reverse().join('/') : '—'
+      drawField('Data da Coleta*', colDataFmt, 20, 690, 160, 28, 'center', 10.5)
+      
+      const respVal = data.responsavel || '—'
+      drawField('Responsável / Assinatura e Carimbo*', respVal, 190, 690, 385, 28, 'center', 10.5)
+
+      // Nota do final da página
+      doc.fillColor('#64748b').fontSize(7).font('Helvetica-Oblique').text('nº 415', 20, 802)
+      doc.fillColor('#64748b').fontSize(7).font('Helvetica-Oblique').text('Atenção: Os campos com asterisco (*) são obrigatórios', 390, 802, { width: 185, align: 'right' })
+
+      // ==========================================
+      // PAGINA 2: RESULTADOS (VERSO EM BRANCO)
+      // ==========================================
+      doc.addPage()
+
+      // Título do Laboratório
+      doc.rect(20, 20, 555, 30).stroke(gridColor)
+      doc.fillColor(valueColor)
+         .fontSize(9.5)
+         .font('Helvetica-Bold')
+         .text('IDENTIFICAÇÃO DO LABORATÓRIO', 20, 24, { width: 555, align: 'center' })
+
+      drawField('CNES do Laboratório*', '', 20, 50, 160, 24)
+      drawField('Nome do Laboratório*', '', 180, 50, 220, 24)
+      drawField('Número do Exame*', '', 400, 50, 95, 24)
+      drawField('Recebido em*', '', 495, 50, 80, 24, 'center')
+
+      // Título Resultado
+      doc.rect(20, 80, 555, 12).fill('#000000')
+      doc.fillColor('#ffffff')
+         .fontSize(8.5)
+         .font('Helvetica-Bold')
+         .text('RESULTADO DO EXAME CITOPATOLÓGICO - COLO DO ÚTERO', 20, 82, { width: 555, align: 'center' })
+
+      // 1. Avaliação Pré-Analítica
+      doc.rect(20, 96, 270, 75).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('AVALIAÇÃO PRÉ-ANALÍTICA', 23, 99)
+      doc.fontSize(6.5).text('AMOSTRA REJEITADA POR:', 23, 107)
+      drawCheckbox('Ausência ou erro na identificação da lâmina/frasco', false, 25, 117, 6)
+      drawCheckbox('Lâmina danificada ou ausente', false, 25, 126, 6)
+      drawCheckbox('Causas alheias ao laboratório; especificar:', false, 25, 135, 6)
+      drawCheckbox('Outras causas; especificar:', false, 25, 144, 6)
+      
+      // Linhas pontilhadas sob especificações
+      doc.lineCap('square').lineWidth(0.5).dash(2, { space: 2 }).moveTo(170, 141).lineTo(285, 141).stroke()
+      doc.lineCap('square').lineWidth(0.5).dash(2, { space: 2 }).moveTo(125, 150).lineTo(285, 150).stroke()
+      doc.undash()
+
+      // 2. Epitélios representados
+      doc.rect(20, 175, 270, 42).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('EPITÉLIOS REPRESENTADOS NA AMOSTRA:*', 23, 178)
+      drawCheckbox('Escamoso', false, 25, 189)
+      drawCheckbox('Glandular', false, 95, 189)
+      drawCheckbox('Metaplásico', false, 165, 189)
+
+      // 3. Adequabilidade
+      doc.rect(300, 96, 275, 121).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('ADEQUABILIDADE DO MATERIAL*', 303, 99)
+      drawCheckbox('Satisfatória', false, 305, 109)
+      drawCheckbox('Insatisfatória para avaliação oncótica devido a:', false, 305, 118)
+      
+      const adY = 129
+      drawCheckbox('Material acelular ou hipocelular em menos de 10% do esfregaço', false, 312, adY, 6)
+      drawCheckbox('Sangue em mais de 75% do esfregaço', false, 312, adY + 9, 6)
+      drawCheckbox('Piócitos em mais de 75% do esfregaço', false, 312, adY + 18, 6)
+      drawCheckbox('Artefatos de dessecamento em mais de 75% do esfregaço', false, 312, adY + 27, 6)
+      drawCheckbox('Contaminantes externos em mais de 75% do esfregaço', false, 312, adY + 36, 6)
+      drawCheckbox('Intensa superposição celular em mais de 75% do esfregaço', false, 312, adY + 45, 6)
+      drawCheckbox('Outros, especificar:', false, 312, adY + 54, 6)
+      doc.lineCap('square').lineWidth(0.5).dash(2, { space: 2 }).moveTo(395, adY + 59).lineTo(570, adY + 59).stroke()
+      doc.undash()
+
+      // Diagnóstico Descritivo
+      doc.rect(20, 221, 555, 12).fill('#000000')
+      doc.fillColor('#ffffff').fontSize(8.5).font('Helvetica-Bold').text('DIAGNÓSTICO DESCRITIVO', 20, 223, { width: 555, align: 'center' })
+
+      const dY = 237
+      // Dentro dos limites
+      doc.rect(20, dY, 270, 25).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7.5).text('DENTRO DOS LIMITES DA NORMALIDADE?', 23, dY + 3)
+      drawCheckbox('Sim', false, 25, dY + 13)
+      drawCheckbox('Não', false, 75, dY + 13)
+
+      // Benignas
+      doc.rect(20, dY + 29, 270, 75).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('ALTERAÇÕES CELULARES BENIGNAS OU REPARATIVAS', 23, dY + 32)
+      drawCheckbox('Inflamação', false, 25, dY + 42, 6.5)
+      drawCheckbox('Metaplasia escamosa imatura', false, 25, dY + 50, 6.5)
+      drawCheckbox('Reparação', false, 25, dY + 58, 6.5)
+      drawCheckbox('Atrofia com inflamação', false, 25, dY + 66, 6.5)
+      drawCheckbox('Radiação', false, 25, dY + 74, 6.5)
+      drawCheckbox('Outros; especificar:', false, 25, dY + 82, 6.5)
+      
+      // Microbiologia
+      doc.rect(20, dY + 108, 270, 115).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('MICROBIOLOGIA', 23, dY + 111)
+      const micY = dY + 120
+      drawCheckbox('Lactobacillus sp', false, 25, micY, 6.5)
+      drawCheckbox('Cocos', false, 25, micY + 9, 6.5)
+      drawCheckbox('Sugestivo de Chlamydia sp', false, 25, micY + 18, 6.5)
+      drawCheckbox('Actinomyces sp', false, 25, micY + 27, 6.5)
+      drawCheckbox('Candida sp', false, 25, micY + 36, 6.5)
+      drawCheckbox('Trichomonas vaginalis', false, 25, micY + 45, 6.5)
+      drawCheckbox('Efeito citopático compatível com vírus do grupo Herpes', false, 25, micY + 54, 6.5)
+      drawCheckbox('Bacilos supracitoplasmáticos (Gardnerella/Mobiluncus)', false, 25, micY + 63, 6.5)
+      drawCheckbox('Outros bacilos', false, 25, micY + 72, 6.5)
+      drawCheckbox('Outros; especificar:', false, 25, micY + 81, 6.5)
+
+      // Células Atípicas
+      const catY = dY
+      doc.rect(300, catY, 275, 223).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('CÉLULAS ATÍPICAS DE SIGNIFICADO INDETERMINADO', 303, catY + 3)
+      
+      doc.font('Helvetica-Bold').fontSize(6.5).text('ESCAMOSAS:', 303, catY + 12)
+      drawCheckbox('Possivelmente não neoplásicas (ASC-US)', false, 305, catY + 20, 6)
+      drawCheckbox('Não se pode afastar lesão de alto grau (ASC-H)', false, 305, catY + 28, 6)
+      
+      doc.font('Helvetica-Bold').fontSize(6.5).text('GLANDULARES:', 303, catY + 38)
+      drawCheckbox('Possivelmente não neoplásicas', false, 305, catY + 46, 6)
+      drawCheckbox('Não se pode afastar lesão de alto grau', false, 305, catY + 54, 6)
+
+      doc.font('Helvetica-Bold').fontSize(6.5).text('DE ORIGEM INDEFINIDA:', 303, catY + 64)
+      drawCheckbox('Possivelmente não neoplásicas', false, 305, catY + 72, 6)
+      drawCheckbox('Não se pode afastar lesão de alto grau', false, 305, catY + 80, 6)
+
+      doc.font('Helvetica-Bold').fontSize(7).text('ATIPIAS EM CÉLULAS ESCAMOSAS', 303, catY + 92)
+      drawCheckbox('Lesão intra-epitelial de baixo grau (HPV / NIC I)', false, 305, catY + 100, 6)
+      drawCheckbox('Lesão intra-epitelial de alto grau (NIC II e III)', false, 305, catY + 109, 6)
+      drawCheckbox('Lesão intra-epitelial de alto grau, não podendo excluir micro-invasão', false, 305, catY + 118, 6)
+      drawCheckbox('Carcinoma epidermóide invasor', false, 305, catY + 127, 6)
+
+      doc.font('Helvetica-Bold').fontSize(7).text('ATIPIAS EM CÉLULAS GLANDULARES', 303, catY + 139)
+      drawCheckbox('Adenocarcinoma "in situ"', false, 305, catY + 147, 6)
+      doc.font('Helvetica-Bold').fontSize(6.5).text('ADENOCARCINOMA INVASOR:', 303, catY + 156)
+      drawCheckbox('Cervical', false, 305, catY + 164, 6)
+      drawCheckbox('Endometrial', false, 360, catY + 164, 6)
+      drawCheckbox('Sem outras especificações', false, 420, catY + 164, 6)
+
+      doc.font('Helvetica-Bold').fontSize(7).text('OUTRAS NEOPLASIAS MALIGNAS:', 303, catY + 176)
+      drawCheckbox('Presença de células endometriais (na pós-menopausa ou', false, 305, catY + 185, 6)
+      doc.fillColor(labelColor).fontSize(6).font('Helvetica').text('acima de 40 anos, fora do período menstrual)', 315, catY + 192)
+
+      // Observações Gerais
+      doc.rect(20, 485, 555, 30).stroke(gridColor)
+      doc.fillColor(labelColor).font('Helvetica-Bold').fontSize(7).text('OBSERVAÇÕES GERAIS:', 23, 488)
+      
+      // Assinatura do Laboratório
+      drawField('Screening pelo citotécnico', '', 20, 520, 270, 26)
+      drawField('Responsável / Assinatura e Registro*', '', 300, 520, 275, 26)
+      
+      drawField('Data do Resultado*', '', 20, 550, 160, 26)
+
+      doc.end()
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const data = await request.json()
+    const pdfBuffer = await generateCitopatologicoPDF(data)
+    const uint8Array = new Uint8Array(pdfBuffer)
+    
+    return new NextResponse(uint8Array, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'inline; filename="requisicao_citopatologico.pdf"',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+      }
+    })
+  } catch (error: any) {
+    console.error('Erro ao gerar o PDF do Citopatológico:', error)
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
+  }
+}
