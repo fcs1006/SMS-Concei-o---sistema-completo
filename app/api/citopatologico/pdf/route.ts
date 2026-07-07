@@ -151,7 +151,21 @@ function generateCitopatologicoPDF(data: any): Promise<Buffer> {
 
       drawField('Município', data.municipio || 'CONCEIÇÃO DO TOCANTINS', 20, 314, 215, 22)
       drawField('CEP', data.cep || '77305000', 240, 314, 85, 22, 'center')
-      drawField('DDD / Telefone', data.telefone ? `(${data.ddd}) ${data.telefone}` : '—', 330, 314, 110, 22, 'center')
+      let telVal = '—'
+      if (data.telefone && data.telefone.trim() !== '') {
+        const cleanTel = data.telefone.replace(/\D/g, '')
+        const dddStr = String(data.ddd || '63').replace(/\D/g, '')
+        if (cleanTel.length >= 10) {
+          if (cleanTel.startsWith(dddStr)) {
+            telVal = `(${dddStr}) ${cleanTel.substring(dddStr.length)}`
+          } else {
+            telVal = `(${cleanTel.substring(0, 2)}) ${cleanTel.substring(2)}`
+          }
+        } else {
+          telVal = `(${dddStr}) ${cleanTel}`
+        }
+      }
+      drawField('DDD / Telefone', telVal, 330, 314, 110, 22, 'center')
       drawField('Ponto de Referência', data.pontoReferencia || '—', 445, 314, 130, 22)
 
       // Escolaridade boxes
