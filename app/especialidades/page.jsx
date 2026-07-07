@@ -1031,6 +1031,33 @@ export default function Especialidades() {
   // ── Status ────────────────────────────────────────────────────────────────
   async function confirmarAutorizar() {
     if (!dataAtendimentoAutorizar) { mostrarMsg('Informe a data de atendimento', false); return }
+    if (!periodoAutorizar) { mostrarMsg('Selecione o período de atendimento', false); return }
+
+    // 1. Verificar se existe escala cadastrada
+    if (escala.length === 0) {
+      mostrarMsg('Não é permitido autorizar agendamentos sem profissional ou escala cadastrada para esta especialidade.', false)
+      return
+    }
+
+    // 2. Verificar se a data e o período selecionados correspondem a alguma entrada na escala
+    const escalaValida = escala.find(e => {
+      const dataBate = e.data_atendimento === dataAtendimentoAutorizar
+      const escalaPeriodoNorm = String(e.periodo || '').trim().toUpperCase()
+      const selecionadoPeriodoNorm = String(periodoAutorizar || '').trim().toUpperCase()
+      return dataBate && (escalaPeriodoNorm === selecionadoPeriodoNorm)
+    })
+
+    if (!escalaValida) {
+      mostrarMsg('A data ou período informados não constam na escala cadastrada para esta especialidade.', false)
+      return
+    }
+
+    // 3. Verificar se a escala possui um profissional configurado
+    if (!escalaValida.profissional_nome || !escalaValida.profissional_nome.trim()) {
+      mostrarMsg('A escala selecionada não possui um profissional de saúde cadastrado.', false)
+      return
+    }
+
     const datasEscala = Array.from(new Set(escala.map(item => item.data_atendimento)))
     const diasEscalaCount = datasEscala.length
     const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
