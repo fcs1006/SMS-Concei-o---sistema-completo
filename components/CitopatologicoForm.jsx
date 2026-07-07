@@ -49,6 +49,15 @@ export default function CitopatologicoForm() {
   const [gerandoPdf, setGerandoPdf] = useState(false)
   const [avisoSexo, setAvisoSexo] = useState(false)
 
+  // Estados de Unidades e Profissionais SCNES
+  const [unidadesSolicitantes, setUnidadesSolicitantes] = useState([])
+  const [carregandoUnidades, setCarregandoUnidades] = useState(false)
+  const [excluidosCnes, setExcluidosCnes] = useState([])
+  const [ibgeConsulta, setIbgeConsulta] = useState('1705607')
+
+  const [sugestoesProfissionais, setSugestoesProfissionais] = useState([])
+  const [buscandoProfissionais, setBuscandoProfissionais] = useState(false)
+
   // Dados do formulário
   const [formData, setFormData] = useState({
     // Unidade
@@ -85,23 +94,23 @@ export default function CitopatologicoForm() {
     pontoReferencia: '',
     escolaridade: 'Ensino Médio Completo',
 
-    // Anamnese
-    motivoExame: 'Rastreamento',
-    fezPreventivo: 'Não',
+    // Anamnese - DEVEM VIR EM BRANCO
+    motivoExame: '',
+    fezPreventivo: '',
     preventivoAno: '',
-    usaDiu: 'Não',
-    estaGravida: 'Não',
-    usaPilula: 'Não',
-    usaHormonioMenopausa: 'Não',
-    tratamentoRadioterapia: 'Não',
+    usaDiu: '',
+    estaGravida: '',
+    usaPilula: '',
+    usaHormonioMenopausa: '',
+    tratamentoRadioterapia: '',
     dataUltimaMenstruacao: '',
     dumNaoSabe: false,
-    sangramentoAposRacao: 'Não / Não sabe / Não lembra',
-    sangramentoAposMenopausa: 'Não / Não sabe / Não lembra / Não está na menopausa',
+    sangramentoAposRacao: '',
+    sangramentoAposMenopausa: '',
 
-    // Exame Clínico
-    inspecaoColo: 'Normal',
-    sinaisDst: 'Não',
+    // Exame Clínico - EM BRANCO
+    inspecaoColo: '',
+    sinaisDst: '',
 
     // Coleta
     dataColeta: new Date().toISOString().substring(0, 10),
@@ -124,6 +133,7 @@ export default function CitopatologicoForm() {
   useEffect(() => {
     const handleClose = () => {
       setSugestoesPacientes([])
+      setSugestoesProfissionais([])
     }
     window.addEventListener('click', handleClose)
     return () => window.removeEventListener('click', handleClose)
@@ -190,6 +200,136 @@ export default function CitopatologicoForm() {
     setSugestoesPacientes([])
   }
 
+  // Função para buscar os CNES do município pelo IBGE
+  async function carregarUnidadesCnes(ibgeCode) {
+    if (!ibgeCode || !ibgeCode.trim()) return
+    setCarregandoUnidades(true)
+    try {
+      const res = await fetch(`/api/cnes/municipio?ibge=${ibgeCode}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.resultados) {
+          let excluidos = []
+          try {
+            const saved = localStorage.getItem('sms_excluded_cnes')
+            if (saved) excluidos = JSON.parse(saved)
+          } catch (e) {}
+          setUnidadesSolicitantes(data.resultados.filter(u => !excluidos.includes(u.cnes)))
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar unidades CNES:', err)
+    } finally {
+      setCarregandoUnidades(false)
+    }
+  }
+
+  // Carrega estabelecimentos iniciais no mount
+  useEffect(() => {
+    carregarUnidadesCnes(ibgeConsulta)
+  }, [])
+
+  const handleSelectEstabelecimento = (e) => {
+    const cnes = e.target.value
+    if (!cnes) {
+      setFormData(prev => ({
+        ...prev,
+        cnesUnidade: '',
+        unidadeSaude: ''
+      }))
+      return
+    }
+    const unidade = unidadesSolicitantes.find(u => u.cnes === cnes)
+    if (unidade) {
+      setFormData(prev => ({
+        ...prev,
+        cnesUnidade: cnes,
+        unidadeSaude: unidade.nome
+      }))
+      // Puxa profissionais do CNES selecionado
+      buscarProfissionaisCNES('', cnes)
+    }
+  }
+
+  const excluirEstabelecimento = (cnes) => {
+    if (!cnes) return
+    const unidade = unidadesSolicitantes.find(u => u.cnes === cnes)
+    const nomeUnidade = unidade ? unidade.nome : cnes
+    if (confirm(`Deseja ocultar/excluir o estabelecimento "${nomeUnidade}" (CNES: ${cnes}) desta lista?`)) {
+      const novaListaExcluidos = [...excluidosCnes, cnes]
+      setExcluidosCnes(novaListaExcluidos)
+      localStorage.setItem('sms_excluded_cnes', JSON.stringify(novaListaExcluidos))
+      setUnidadesSolicitantes(prev => prev.filter(u => u.cnes !== cnes))
+      if (formData.cnesUnidade === cnes) {
+        setFormData(prev => ({
+          ...prev,
+          cnesUnidade: '',
+          unidadeSaude: ''
+        }))
+      }
+    }
+  }
+
+  async function buscarProfissionaisCNES(val, customCnes = null) {
+    const termo = String(val || '').trim()
+    const targetCnes = customCnes || formData.cnesUnidade
+    
+    if (termo.length < 3 && !targetCnes) {
+      setSugestoesProfissionais([])
+      return
+    }
+
+    setBuscandoProfissionais(true)
+    try {
+      let resultados = []
+      
+      if (targetCnes) {
+        const res = await fetch(`/api/cnes/profissionais?cnes=${targetCnes}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.ok && data.resultados) {
+            if (termo.length >= 3) {
+              resultados = data.resultados.filter((p) => 
+                p.nome.toUpperCase().includes(termo.toUpperCase()) || 
+                (p.crm && p.crm.includes(termo))
+              )
+            } else {
+              resultados = data.resultados
+            }
+          }
+        }
+      }
+
+      if (resultados.length === 0) {
+        let query = supabase
+          .from('especialidades_profissionais')
+          .select('nome')
+          .eq('ativo', true)
+          .order('nome')
+          .limit(10)
+
+        if (termo.length >= 3) {
+          query = query.ilike('nome', `%${termo}%`)
+        }
+
+        const { data, error } = await query
+        if (!error && data) {
+          resultados = data.map(p => ({
+            nome: p.nome,
+            crm: '',
+            cpf: ''
+          }))
+        }
+      }
+
+      setSugestoesProfissionais(resultados)
+    } catch (e) {
+      console.error('Erro ao buscar profissionais:', e)
+    } finally {
+      setBuscandoProfissionais(false)
+    }
+  }
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
@@ -235,7 +375,7 @@ export default function CitopatologicoForm() {
           <Search size={18} style={{ color: '#10b981' }} />
           Buscar Paciente Cadastrado
         </h2>
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
           <input
             type="text"
             placeholder="Comece a digitar o Nome, CPF ou CNS do paciente..."
@@ -301,13 +441,121 @@ export default function CitopatologicoForm() {
 
       {/* Formulário Principal */}
       <form onSubmit={handleGerarPdf} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        
-        {/* 1. CABEÇALHO & UNIDADE */}
         <div className="card" style={{ padding: '28px' }}>
           <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '15px', fontWeight: '700', color: '#172554', margin: '0 0 20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Building size={18} style={{ color: '#10b981' }} />
             IDENTIFICAÇÃO DA UNIDADE DE SAÚDE SOLICITANTE
           </h3>
+
+          {/* Campo e botão de consulta IBGE */}
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+            <h4 style={{ fontFamily: 'Sora, sans-serif', fontSize: '13px', fontWeight: '700', color: '#334155', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Search size={14} style={{ color: '#10b981' }} />
+              Carregar Estabelecimentos por Município (IBGE)
+            </h4>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ flexGrow: 1, minWidth: '200px' }}>
+                <input
+                  type="text"
+                  value={ibgeConsulta}
+                  onChange={e => setIbgeConsulta(e.target.value)}
+                  placeholder="Insira o código IBGE do Município (ex: 1705607)"
+                  className="input-modern"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => carregarUnidadesCnes(ibgeConsulta)}
+                disabled={carregandoUnidades}
+                className="btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 18px' }}
+              >
+                {carregandoUnidades ? (
+                  <>
+                    <RefreshCw className="animate-spin" size={14} />
+                    Carregando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw size={14} />
+                    Buscar Unidades
+                  </>
+                )}
+              </button>
+            </div>
+            
+            {/* Dropdown de Unidades */}
+            {unidadesSolicitantes.length > 0 && (
+              <div style={{ marginTop: '16px' }}>
+                <label className="label-modern">Selecione uma Unidade de Saúde</label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <select
+                    onChange={handleSelectEstabelecimento}
+                    value={formData.cnesUnidade}
+                    className="input-modern"
+                    style={{ cursor: 'pointer', flexGrow: 1 }}
+                  >
+                    <option value="">-- Clique aqui para escolher --</option>
+                    {unidadesSolicitantes.map(u => (
+                      <option key={u.cnes} value={u.cnes}>
+                        {u.nome} (CNES: {u.cnes})
+                      </option>
+                    ))}
+                  </select>
+                  {formData.cnesUnidade && (
+                    <button
+                      type="button"
+                      onClick={() => excluirEstabelecimento(formData.cnesUnidade)}
+                      style={{
+                        background: '#fee2e2',
+                        color: '#dc2626',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '10px 14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#fca5a5'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#fee2e2'}
+                      title="Excluir/Ocultar este estabelecimento desta lista"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {excluidosCnes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Deseja restaurar todos os estabelecimentos excluídos para a lista?')) {
+                    setExcluidosCnes([])
+                    localStorage.removeItem('sms_excluded_cnes')
+                    carregarUnidadesCnes(ibgeConsulta)
+                  }
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  marginTop: '12px',
+                  textDecoration: 'underline',
+                  display: 'block'
+                }}
+              >
+                Restaurar estabelecimentos ocultados
+              </button>
+            )}
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div>
               <label className="label-modern">CNES da Unidade *</label>
@@ -578,7 +826,8 @@ export default function CitopatologicoForm() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '20px' }}>
             <div>
               <label className="label-modern">11. Inspeção do colo *</label>
-              <select name="inspecaoColo" value={formData.inspecaoColo} onChange={handleChange} className="input-modern">
+              <select name="inspecaoColo" value={formData.inspecaoColo} onChange={handleChange} required className="input-modern">
+                <option value="">-- Selecione --</option>
                 <option value="Normal">Normal</option>
                 <option value="Ausente">Ausente (retirado ou congênito)</option>
                 <option value="Alterado">Alterado</option>
@@ -601,7 +850,64 @@ export default function CitopatologicoForm() {
             </div>
             <div>
               <label className="label-modern">Profissional Responsável *</label>
-              <input type="text" name="responsavel" value={formData.responsavel} onChange={handleChange} required className="input-modern" />
+              <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+                <input
+                  type="text"
+                  name="responsavel"
+                  value={formData.responsavel}
+                  onChange={(e) => {
+                    handleChange(e)
+                    buscarProfissionaisCNES(e.target.value)
+                  }}
+                  onFocus={(e) => {
+                    buscarProfissionaisCNES(e.target.value)
+                  }}
+                  required
+                  placeholder="Nome do profissional regulador/coletor..."
+                  className="input-modern"
+                  autoComplete="off"
+                />
+                
+                {sugestoesProfissionais.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    boxShadow: '0 -10px 15px -3px rgba(0,0,0,0.1), 0 -4px 6px -2px rgba(0,0,0,0.05)',
+                    zIndex: 50,
+                    maxHeight: '180px',
+                    overflowY: 'auto',
+                    marginBottom: '4px'
+                  }}>
+                    {sugestoesProfissionais.map((prof, i) => (
+                      <div
+                        key={i}
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, responsavel: prof.nome }))
+                          setSugestoesProfissionais([])
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #f1f5f9',
+                          fontSize: '12.5px',
+                          color: '#1e293b',
+                          transition: 'background-color 0.15s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <div style={{ fontWeight: '600' }}>{prof.nome}</div>
+                        {prof.crm && <div style={{ fontSize: '10px', color: '#64748b' }}>SCNES: {prof.crm}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
