@@ -764,7 +764,7 @@ export default function Especialidades() {
           if (p.tipo_exame) {
             mapa[String(p.tipo_exame).trim().toUpperCase()] = p.instrucoes
           }
-          if (p.especialidade_slug) {
+          if (p.especialidade_slug && String(p.especialidade_slug).toLowerCase() !== 'usg') {
             mapa[String(p.especialidade_slug).trim().toUpperCase()] = p.instrucoes
           }
         })
