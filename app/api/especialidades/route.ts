@@ -211,6 +211,9 @@ export async function PATCH(request: NextRequest) {
       update.periodo = body.periodo || null
       update.data_atendimento = body.data_atendimento || null
       update.justificativa_cota = body.justificativa_cota || null
+      if (body.profissional_nome) {
+        update.profissional_nome = body.profissional_nome
+      }
     }
 
     const { data, error } = await supabase

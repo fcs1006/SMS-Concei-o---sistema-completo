@@ -1103,11 +1103,27 @@ export default function Especialidades() {
       const res = await fetch('/api/especialidades', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: 'autorizado', autorizado_por: usuario?.nome || null, periodo: periodoAutorizar || null, data_atendimento: dataAtendimentoAutorizar, justificativa_cota: (cotaEsgotada && isAdmin) ? justificativaCota.trim() : null })
+        body: JSON.stringify({ 
+          id, 
+          status: 'autorizado', 
+          autorizado_por: usuario?.nome || null, 
+          periodo: periodoAutorizar || null, 
+          data_atendimento: dataAtendimentoAutorizar, 
+          profissional_nome: escalaValida.profissional_nome || null,
+          justificativa_cota: (cotaEsgotada && isAdmin) ? justificativaCota.trim() : null 
+        })
       })
       const json = await res.json()
       if (!json.ok) throw new Error(json.error)
-      const registroAtualizado = { ...modalAutorizar, status: 'autorizado', motivo_cancelamento: null, autorizado_por: usuario?.nome || null, periodo: periodoAutorizar || null, data_atendimento: dataAtendimentoAutorizar }
+      const registroAtualizado = { 
+        ...modalAutorizar, 
+        status: 'autorizado', 
+        motivo_cancelamento: null, 
+        autorizado_por: usuario?.nome || null, 
+        periodo: periodoAutorizar || null, 
+        data_atendimento: dataAtendimentoAutorizar,
+        profissional_nome: escalaValida.profissional_nome || null
+      }
       setAgendamentos(prev => prev.map(a => a.id === id ? registroAtualizado : a))
       setModalAutorizar(null)
       setPeriodoAutorizar('')
