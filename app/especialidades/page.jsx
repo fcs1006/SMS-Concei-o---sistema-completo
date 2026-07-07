@@ -1712,7 +1712,17 @@ export default function Especialidades() {
         </div>
 
         {msg.txt && (
-          <div className={msg.ok ? 'status-ok' : 'status-err'} style={{ marginBottom: '16px' }}>{msg.txt}</div>
+          <div className={msg.ok ? 'status-ok' : 'status-err'} style={{
+            position: 'fixed',
+            top: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            minWidth: '320px',
+            maxWidth: '90%',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15)',
+            textAlign: 'center'
+          }}>{msg.txt}</div>
         )}
 
         {/* ── ABA: AGENDAMENTO ── */}
