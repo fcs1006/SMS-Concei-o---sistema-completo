@@ -332,10 +332,11 @@ export default function CitopatologicoForm() {
     }
   }
 
-  // Função para buscar a solicitação no SISREG
+  // Função para buscar a solicitação no SISREG por CPF ou CNS
   async function buscarSolicitacao() {
-    if (!codigoBusca.trim()) {
-      setErroBusca('Por favor, digite o número da solicitação.')
+    const docClean = codigoBusca.replace(/\D/g, '')
+    if (!docClean || docClean.length < 11) {
+      setErroBusca('Por favor, digite um CPF (11 dígitos) ou CNS (15 dígitos) válido.')
       return
     }
 
@@ -344,11 +345,11 @@ export default function CitopatologicoForm() {
     setSucessoBusca(false)
 
     try {
-      const res = await fetch(`/api/sisreg/buscar?codigo=${codigoBusca}`)
+      const res = await fetch(`/api/sisreg/buscar?documento=${docClean}`)
       const resData = await res.json()
 
       if (!res.ok) {
-        throw new Error(resData.error || 'Erro ao buscar solicitação.')
+        throw new Error(resData.error || 'Erro ao buscar dados do paciente no SISREG.')
       }
 
       const s = resData.data
@@ -443,14 +444,14 @@ export default function CitopatologicoForm() {
       <div className="card" style={{ padding: '28px', marginBottom: '24px' }}>
         <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '15px', fontWeight: '700', color: '#172554', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Search size={18} style={{ color: '#10b981' }} />
-          Buscar Solicitação no SISREG
+          Buscar Dados da Paciente no SISREG (por CPF ou CNS)
         </h2>
         
         <div style={{ display: 'flex', gap: '12px' }}>
           <div style={{ position: 'relative', flexGrow: 1 }}>
             <input
               type="text"
-              placeholder="Insira o número da solicitação do SISREG (ex: 374928372)"
+              placeholder="Insira o CPF (11 dígitos) ou CNS (15 dígitos) da paciente..."
               value={codigoBusca}
               onChange={(e) => setCodigoBusca(e.target.value)}
               className="input-modern"
