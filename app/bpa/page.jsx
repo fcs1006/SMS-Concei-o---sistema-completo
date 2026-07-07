@@ -366,33 +366,33 @@ function BPAContent() {
         </div>
 
         {/* Abas */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px', width: '100%' }}>
           <button 
-            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'importacao' ? corPerfil : '#64748b', borderBottom: aba === 'importacao' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif' }}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: 'none', border: 'none', fontSize: '14px', fontWeight: '700', cursor: 'pointer', color: aba === 'importacao' ? corPerfil : '#64748b', borderBottom: aba === 'importacao' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap' }}
             onClick={() => router.replace('/bpa', { scroll: false })}
           >
-            <Upload size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />Nova Importação
+            <Upload size={14} />Nova Importação
           </button>
           <button
-            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'historico' ? corPerfil : '#64748b', borderBottom: aba === 'historico' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: 'none', border: 'none', fontSize: '14px', fontWeight: '700', cursor: 'pointer', color: aba === 'historico' ? corPerfil : '#64748b', borderBottom: aba === 'historico' ? `3px solid ${corPerfil}` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap' }}
             onClick={() => router.replace('/bpa?tab=historico', { scroll: false })}
           >
             <BarChart2 size={14} /> Relatório Histórico
           </button>
           <button
-            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'apac' ? '#10b981' : '#64748b', borderBottom: aba === 'apac' ? `3px solid #10b981` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: 'none', border: 'none', fontSize: '14px', fontWeight: '700', cursor: 'pointer', color: aba === 'apac' ? '#10b981' : '#64748b', borderBottom: aba === 'apac' ? `3px solid #10b981` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap' }}
             onClick={() => router.replace('/bpa?tab=apac', { scroll: false })}
           >
             <FileText size={14} /> Laudo APAC
           </button>
           <button
-            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'encaminhamento' ? '#3b82f6' : '#64748b', borderBottom: aba === 'encaminhamento' ? `3px solid #3b82f6` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: 'none', border: 'none', fontSize: '14px', fontWeight: '700', cursor: 'pointer', color: aba === 'encaminhamento' ? '#3b82f6' : '#64748b', borderBottom: aba === 'encaminhamento' ? `3px solid #3b82f6` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap' }}
             onClick={() => router.replace('/bpa?tab=encaminhamento', { scroll: false })}
           >
             <FileText size={14} /> Encaminhamento
           </button>
           <button
-            style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', color: aba === 'citopatologico' ? '#10b981' : '#64748b', borderBottom: aba === 'citopatologico' ? `3px solid #10b981` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: 'none', border: 'none', fontSize: '14px', fontWeight: '700', cursor: 'pointer', color: aba === 'citopatologico' ? '#10b981' : '#64748b', borderBottom: aba === 'citopatologico' ? `3px solid #10b981` : 'none', paddingBottom: '10px', marginBottom: '-10px', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap' }}
             onClick={() => router.replace('/bpa?tab=citopatologico', { scroll: false })}
           >
             <FileText size={14} /> Colo do Útero
