@@ -2802,31 +2802,35 @@ export default function Especialidades() {
             {/* Bloqueia os campos se não-admin com cota cheia */}
             {(!cotaEsgotada || isAdmin) && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-                  <div>
-                    <label className="label-modern">Data de atendimento *</label>
-                    <input className="input-modern" type="date" value={dataAtendimentoAutorizar}
-                      onChange={e => setDataAtendimentoAutorizar(e.target.value)} style={{ width: '100%' }} />
-                  </div>
-                  <div>
-                    <label className="label-modern">Período</label>
-                    <select className="input-modern" value={periodoAutorizar} onChange={e => {
-                      const novoPeriodo = e.target.value
-                      setPeriodoAutorizar(novoPeriodo)
-                      const hoje = new Date().toISOString().slice(0, 10)
-                      const escalaFutura = escala.filter(en => en.data_atendimento >= hoje)
-                      const base = escalaFutura.length ? escalaFutura : escala
-                      const entrada = novoPeriodo
-                        ? base.find(en => en.periodo === novoPeriodo) || base[0]
-                        : base[0]
-                      if (entrada?.data_atendimento) setDataAtendimentoAutorizar(entrada.data_atendimento)
-                    }} style={{ width: '100%' }}>
-                      <option value="">— Selecione —</option>
-                      {periodosDisponiveis.map(p => (
-                        <option key={p.id} value={p.nome}>{p.nome}{p.horario ? ` (${p.horario})` : ''}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div style={{ marginBottom: '14px' }}>
+                  <label className="label-modern">Data e Período de Atendimento (da Escala) *</label>
+                  <select 
+                    className="input-modern" 
+                    value={dataAtendimentoAutorizar && periodoAutorizar ? `${dataAtendimentoAutorizar}|${periodoAutorizar}` : ''}
+                    onChange={e => {
+                      const val = e.target.value
+                      if (val) {
+                        const [dt, per] = val.split('|')
+                        setDataAtendimentoAutorizar(dt)
+                        setPeriodoAutorizar(per)
+                      } else {
+                        setDataAtendimentoAutorizar('')
+                        setPeriodoAutorizar('')
+                      }
+                    }}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">— Selecione uma data/período da escala —</option>
+                    {escala.map(e => {
+                      const formatDt = e.data_atendimento ? fmtData(e.data_atendimento) : 'Data não informada'
+                      const val = `${e.data_atendimento}|${e.periodo}`
+                      return (
+                        <option key={e.id} value={val}>
+                          {formatDt} — {e.periodo ? e.periodo.toUpperCase() : 'SEM PERÍODO'} ({e.profissional_nome || 'Sem profissional'})
+                        </option>
+                      )
+                    })}
+                  </select>
                 </div>
 
                 {/* Justificativa — obrigatória apenas quando cota esgotada e admin */}
