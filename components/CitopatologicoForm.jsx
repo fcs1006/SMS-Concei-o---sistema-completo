@@ -32,6 +32,17 @@ function calcularIdadeCompleta(dataNasc) {
   return `${anos} ano${anos !== 1 ? 's' : ''}`
 }
 
+function normalizarRaca(racaStr) {
+  if (!racaStr) return '03' // parda default
+  const r = String(racaStr).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+  if (r.includes('BRANCA') || r === '1' || r === '01') return '01'
+  if (r.includes('PRETA') || r === '2' || r === '02') return '02'
+  if (r.includes('PARDA') || r === '3' || r === '03') return '03'
+  if (r.includes('AMARELA') || r === '4' || r === '04') return '04'
+  if (r.includes('INDIGENA') || r.includes('ETNIA') || r === '5' || r === '05') return '05'
+  return '03' // parda default
+}
+
 export default function CitopatologicoForm() {
   const router = useRouter()
   const [usuario, setUsuario] = useState(null)
@@ -189,7 +200,8 @@ export default function CitopatologicoForm() {
       nomeMae: pac.mae || '',
       logradouro: pac.endereco || '',
       bairro: pac.bairro || '',
-      cep: pac.cep || '77305000'
+      cep: pac.cep || '77305000',
+      raca: normalizarRaca(pac.raca)
     }))
     setSugestoesPacientes([])
   }
@@ -358,12 +370,15 @@ export default function CitopatologicoForm() {
         sexo: s.sexo_usuario === 'F' || s.sexo_usuario === 'FEMININO' ? 'F' : 'M',
         nomeMae: s.no_mae_usuario || '',
         telefone: s.telefone || '',
-        logradouro: s.endereco_paciente || '',
-        cep: s.cep_paciente || '',
+        logradouro: s.endereco_paciente_residencia || '',
+        numero: s.numero_paciente_residencia || '',
+        bairro: s.bairro_paciente_residencia || '',
+        cep: s.cep_paciente_residencia || '',
         codigoMunicipio: s.codigo_ibge_paciente || prev.codigoMunicipio,
         municipio: s.municipio_paciente_residencia || prev.municipio,
         ufResidencia: s.uf_paciente || prev.ufResidencia,
-        idade: s.dt_nascimento_usuario ? calcularIdadeCompleta(s.dt_nascimento_usuario.split('T')[0]) : ''
+        idade: s.dt_nascimento_usuario ? calcularIdadeCompleta(s.dt_nascimento_usuario.split('T')[0]) : '',
+        raca: normalizarRaca(s.raca_usuario)
       }))
 
       // Atualiza dropdown de unidades
