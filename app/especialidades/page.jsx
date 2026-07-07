@@ -202,10 +202,27 @@ function imprimirComprovante(ag, espLabel, municipio = `${clientConfig.municipal
   const hoje = new Date()
   const dataEmissao = hoje.toLocaleDateString('pt-BR')
   const horaEmissao = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  const isUsg = ag.tipo_exame && !['1º vez', 'Retorno', 'Outro'].includes(ag.tipo_exame)
-  const tipoDoc = isUsg ? 'EXAME' : 'CONSULTA'
+  const cleanTipoExame = ag.tipo_exame ? String(ag.tipo_exame).trim().toUpperCase() : ''
+  const cleanEspecialidade = ag.especialidade ? String(ag.especialidade).trim().toUpperCase() : ''
+  const cleanEspLabel = espLabel ? String(espLabel).trim().toUpperCase() : ''
+
+  const isExame = (ag.tipo_exame && !['1º VEZ', 'RETORNO', 'OUTRO'].includes(cleanTipoExame)) || 
+                  cleanEspecialidade === 'PSA' || 
+                  cleanEspLabel === 'PSA'
+
+  const tipoDoc = isExame ? 'EXAME' : 'CONSULTA'
   const numComp = String(ag.id).slice(-8).toUpperCase()
-  const preparo = isUsg ? (preparos[ag.tipo_exame] || null) : null
+
+  let preparo = null
+  if (preparos) {
+    if (cleanTipoExame && preparos[cleanTipoExame] && !['1º VEZ', 'RETORNO', 'OUTRO'].includes(cleanTipoExame)) {
+      preparo = preparos[cleanTipoExame]
+    } else if (cleanEspecialidade && preparos[cleanEspecialidade]) {
+      preparo = preparos[cleanEspecialidade]
+    } else if (cleanEspLabel && preparos[cleanEspLabel]) {
+      preparo = preparos[cleanEspLabel]
+    }
+  }
 
   // Usa data_atendimento salva no agendamento (data real do médico na escala)
   const dataAtendimento = ag.data_atendimento || ag.data_consulta
@@ -743,7 +760,14 @@ export default function Especialidades() {
       if (Array.isArray(dataPre) && dataPre.length > 0) {
         setPreparosList(dataPre)
         const mapa = {}
-        dataPre.filter(p => p.ativo).forEach(p => { mapa[p.tipo_exame] = p.instrucoes })
+        dataPre.filter(p => p.ativo).forEach(p => {
+          if (p.tipo_exame) {
+            mapa[String(p.tipo_exame).trim().toUpperCase()] = p.instrucoes
+          }
+          if (p.especialidade_slug) {
+            mapa[String(p.especialidade_slug).trim().toUpperCase()] = p.instrucoes
+          }
+        })
         setPreparosDb(mapa)
       }
 
