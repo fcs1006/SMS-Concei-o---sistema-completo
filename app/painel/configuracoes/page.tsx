@@ -194,6 +194,7 @@ export default function ConfiguracoesPainel() {
     cep: clientConfig.cep,
     email: clientConfig.email,
     modoLembrete: 'automatico',
+    tfd_bloquear_duplicados: true,
     template_esp_auto: DEFAULT_TEMPLATES.template_esp_auto,
     template_sis_auto: DEFAULT_TEMPLATES.template_sis_auto,
     template_esp_vesp: DEFAULT_TEMPLATES.template_esp_vesp,
@@ -1656,6 +1657,37 @@ export default function ConfiguracoesPainel() {
                     <div>
                       <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#1e293b', margin: '0 0 4px' }}>Destinos de Viagens TFD</h3>
                       <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Configure as rotas municipais oficiais para viagens de Tratamento Fora do Domicílio.</p>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#334155', margin: '0 0 4px' }}>🔒 Bloqueio de Agendamentos Duplicados</h4>
+                        <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Impedir que um paciente seja agendado em mais de uma viagem no mesmo dia.</p>
+                      </div>
+                      <div>
+                        <label className="switch" style={{ position: 'relative', display: 'inline-block', width: '48px', height: '24px' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={!!(municipio as any).tfd_bloquear_duplicados} 
+                            onChange={e => {
+                              const val = e.target.checked
+                              setMunicipio(prev => ({ ...prev, tfd_bloquear_duplicados: val }))
+                            }}
+                            style={{ opacity: 0, width: 0, height: 0 }}
+                          />
+                          <span style={{
+                            position: 'absolute', cursor: 'pointer', inset: 0,
+                            backgroundColor: (municipio as any).tfd_bloquear_duplicados ? '#10b981' : '#ccc',
+                            transition: '.3s', borderRadius: '24px'
+                          }}>
+                            <span style={{
+                              position: 'absolute', content: '""', height: '18px', width: '18px',
+                              left: (municipio as any).tfd_bloquear_duplicados ? '26px' : '3px', bottom: '3px',
+                              backgroundColor: 'white', transition: '.3s', borderRadius: '50%'
+                            }} />
+                          </span>
+                        </label>
+                      </div>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '8px', maxHeight: '300px', overflowY: 'auto', padding: '4px' }}>

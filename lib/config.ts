@@ -20,6 +20,7 @@ export const clientConfig = {
   phone: process.env.NEXT_PUBLIC_MUNICIPALITY_PHONE || '(63) 99132-5537',
   email: process.env.NEXT_PUBLIC_MUNICIPALITY_EMAIL || 'conceicaodotocantins170560@gmail.com',
   modoLembrete: process.env.NEXT_PUBLIC_MODO_LEMBRETE || 'automatico', // 'automatico' ou 'manual'
+  tfd_bloquear_duplicados: true,
   template_esp_auto: '',
   template_sis_auto: '',
   template_esp_vesp: '',

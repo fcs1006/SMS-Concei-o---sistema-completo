@@ -172,6 +172,7 @@ export default function Agendamento() {
 
   // Destinos dinâmicos
   const [destinos, setDestinos] = useState([])
+  const [bloquearDuplicados, setBloquearDuplicados] = useState(true)
 
   // Reimprimir
   const [modalReimprimir, setModalReimprimir] = useState(false)
@@ -220,7 +221,24 @@ export default function Agendamento() {
         console.error('Erro ao carregar destinos:', err)
       }
     }
+
+    async function carregarConfigs() {
+      try {
+        const { data } = await supabase
+          .from('configuracoes')
+          .select('valor')
+          .eq('chave', 'client_config')
+          .maybeSingle()
+        if (data?.valor && data.valor.hasOwnProperty('tfd_bloquear_duplicados')) {
+          setBloquearDuplicados(!!data.valor.tfd_bloquear_duplicados)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar configs:', err)
+      }
+    }
+
     carregarDestinos()
+    carregarConfigs()
   }, [])
 
   useEffect(() => {
@@ -415,6 +433,27 @@ export default function Agendamento() {
     setSalvando(true)
     setStatus({ msg: '', tipo: '' })
     setUltimoAgendamento(null)
+
+    if (bloquearDuplicados) {
+      let query = supabase.from('viagens').select('hora, destino, paciente_nome').eq('data_viagem', form.data)
+      if (form.cpf) {
+        query = query.eq('paciente_cpf', form.cpf)
+      } else {
+        query = query.eq('paciente_nome', form.nome)
+      }
+      const { data: jaAgendados, error: checkError } = await query
+
+      if (checkError) {
+        console.error('Erro ao verificar duplicidade de viagem:', checkError.message)
+      } else if (jaAgendados && jaAgendados.length > 0) {
+        setStatus({
+          msg: `Este paciente (${jaAgendados[0].paciente_nome}) já possui uma viagem agendada para este dia (${form.data.split('-').reverse().join('/')}) para o destino ${jaAgendados[0].destino} às ${jaAgendados[0].hora}.`,
+          tipo: 'erro'
+        })
+        setSalvando(false)
+        return
+      }
+    }
     const { error } = await supabase.from('viagens').insert([{
       data_viagem: form.data, hora: form.hora,
       paciente_nome: form.nome, paciente_cpf: form.cpf,

@@ -217,10 +217,24 @@ function imprimirComprovante(ag, espLabel, municipio = `${clientConfig.municipal
   if (preparos) {
     if (cleanTipoExame && preparos[cleanTipoExame] && !['1º VEZ', 'RETORNO', 'OUTRO'].includes(cleanTipoExame)) {
       preparo = preparos[cleanTipoExame]
-    } else if (cleanEspecialidade && preparos[cleanEspecialidade]) {
-      preparo = preparos[cleanEspecialidade]
-    } else if (cleanEspLabel && preparos[cleanEspLabel]) {
-      preparo = preparos[cleanEspLabel]
+    } else if (cleanTipoExame) {
+      const sortedKeys = Object.keys(preparos).sort((a, b) => b.length - a.length)
+      const matchKey = sortedKeys.find(key => {
+        if (['1º VEZ', 'RETORNO', 'OUTRO'].includes(key)) return false
+        if (key.length < 3) return false
+        return cleanTipoExame.includes(key) || key.includes(cleanTipoExame)
+      })
+      if (matchKey) {
+        preparo = preparos[matchKey]
+      }
+    }
+    
+    if (!preparo) {
+      if (cleanEspecialidade && preparos[cleanEspecialidade]) {
+        preparo = preparos[cleanEspecialidade]
+      } else if (cleanEspLabel && preparos[cleanEspLabel]) {
+        preparo = preparos[cleanEspLabel]
+      }
     }
   }
 
@@ -305,7 +319,7 @@ function imprimirComprovante(ag, espLabel, municipio = `${clientConfig.municipal
 
     ${preparo ? `
     <div style="background:#fff7ed;border:1px solid #fb923c;border-radius:4px;padding:10px 14px;margin-top:10px;font-size:11px;color:#7c2d12;">
-      <strong>🧪 PREPARO PARA O EXAME:</strong><br/>${preparo}
+      <strong>🧪 ORIENTAÇÕES PARA O ATENDIMENTO:</strong><br/>${preparo}
     </div>` : ''}
 
     <div class="aviso">
@@ -638,8 +652,8 @@ export default function Especialidades() {
   const [form, setForm] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', endereco: '', bairro: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '', data_atendimento: '', prioridade: '' })
   const [salvando, setSalvando] = useState(false)
 
-  // Modal profissionais
-  const [modalProf, setModalProf] = useState(false)
+  // Modal Gestão Unificado ('escala' | 'profissionais' | 'config' | null)
+  const [modalGestao, setModalGestao] = useState(null)
   const [formProf, setFormProf] = useState({ nome: '', conselho_tipo: 'CRM', conselho_numero: '' })
   const [salvandoProf, setSalvandoProf] = useState(false)
 
@@ -647,7 +661,6 @@ export default function Especialidades() {
   const [profissionalAtivo, setProfissionalAtivo] = useState(null) // { id, profissional_nome, data_atendimento }
 
   // Modal escala
-  const [modalEscala, setModalEscala] = useState(false)
   const [salvandoEscala, setSalvandoEscala] = useState(false)
   const [profEscalaSel, setProfEscalaSel] = useState('')
   const [dataEscala, setDataEscala] = useState('')
@@ -712,7 +725,6 @@ export default function Especialidades() {
   const [especialidadesConfig, setEspecialidadesConfig] = useState([])
   const [preparosDb, setPreparosDb] = useState(PREPARO_USG)
   const [preparosList, setPreparosList] = useState([])
-  const [modalConfig, setModalConfig] = useState(false)
   const [abaConfig, setAbaConfig] = useState('especialidades')
   // form nova especialidade
   const [formEsp, setFormEsp] = useState({ label: '', icon: '', cota: '30' })
@@ -1242,17 +1254,17 @@ export default function Especialidades() {
       if (json.error) throw new Error(json.error)
       setFormPreparo({ especialidade_slug: formPreparo.especialidade_slug, tipo_exame: '', instrucoes: '' })
       setEditandoPreparo(null)
-      mostrarMsg('Preparo salvo')
+      mostrarMsg('Orientação salva')
       await carregarConfig()
     } catch (e) { mostrarMsg('' + e.message, false) }
     setSalvandoPreparo(false)
   }
 
   async function excluirPreparo(id) {
-    if (!confirm('Remover este preparo?')) return
+    if (!confirm('Remover esta orientação?')) return
     try {
       await fetch('/api/config/preparos?id=' + id, { method: 'DELETE' })
-      mostrarMsg('Preparo removido')
+      mostrarMsg('Orientação removida')
       await carregarConfig()
     } catch (e) { mostrarMsg('' + e.message, false) }
   }
@@ -1464,230 +1476,7 @@ export default function Especialidades() {
     <Layout usuario={usuario}>
       <div style={{ padding: '28px 32px', maxWidth: '1400px', margin: '0 auto' }}>
 
-        {/* Modal Configurações */}
-        <AnimatePresence>
-        {modalConfig && (
-          <Modal titulo="Configurações de Especialidades" onClose={() => { setModalConfig(false); setEditandoEsp(null); setFormEsp({ label: '', icon: '', cota: '30' }) }} largura="640px">
-            {/* Abas */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', flexWrap: 'wrap' }}>
-              {[
-                ['especialidades', <><Stethoscope size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Especialidades</>],
-                ['preparos', <><FlaskConical size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Preparos</>],
-                ['periodos', <><Clock size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Períodos</>],
-                ['tipos_usg', <><Settings size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Tipos de USG</>]
-              ].map(([id, lbl]) => (
-                <button key={id} onClick={() => setAbaConfig(id)} style={{
-                  background: abaConfig === id ? '#d97706' : 'none',
-                  color: abaConfig === id ? 'white' : '#64748b',
-                  border: abaConfig === id ? 'none' : '1px solid #e2e8f0',
-                  borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600',
-                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
-                }}>{lbl}</button>
-              ))}
-            </div>
 
-            {abaConfig === 'especialidades' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {/* Lista */}
-                <div>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especialidades cadastradas</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
-                    {especialidadesConfig.map(e => (
-                      <div key={e.slug} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: e.ativo ? '#f0fdf4' : '#f8fafc', borderRadius: '8px', border: `1px solid ${e.ativo ? '#bbf7d0' : '#e2e8f0'}` }}>
-                        <span style={{ fontSize: '18px' }}>{e.icon}</span>
-                        <span style={{ flex: 1, fontWeight: '600', fontSize: '13px', color: e.ativo ? '#166534' : '#94a3b8' }}>{e.label}</span>
-                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>cota {e.cota}</span>
-                        
-                        <button onClick={() => {
-                          setEditandoEsp(e.slug)
-                          setFormEsp({ label: e.label, icon: e.icon, cota: String(e.cota) })
-                        }} style={{
-                          background: '#eff6ff', border: 'none', borderRadius: '6px',
-                          padding: '4px 8px', fontSize: '11px', cursor: 'pointer',
-                          color: '#1d4ed8', display: 'inline-flex', alignItems: 'center', gap: '4px'
-                        }} title="Editar">
-                          <Pencil size={11} />
-                        </button>
-
-                        <button onClick={() => toggleEspecialidade(e.slug, e.ativo)} style={{
-                          background: e.ativo ? '#fee2e2' : '#dcfce7', border: 'none', borderRadius: '6px',
-                          padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
-                          color: e.ativo ? '#991b1b' : '#166534'
-                        }}>{e.ativo ? 'Desativar' : 'Reativar'}</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {/* Nova especialidade / Editar especialidade */}
-                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {editandoEsp ? 'Editar especialidade' : 'Nova especialidade'}
-                  </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px auto', gap: '8px', alignItems: 'end' }}>
-                    <div><label className="label-modern">Nome</label><input className="input-modern" placeholder="Ex.: Cardiologia" value={formEsp.label} onChange={e => setFormEsp(f => ({ ...f, label: e.target.value }))} /></div>
-                    <div><label className="label-modern">Ícone</label><input className="input-modern" value={formEsp.icon || ''} onChange={e => setFormEsp(f => ({ ...f, icon: e.target.value }))} style={{ textAlign: 'center' }} /></div>
-                    <div><label className="label-modern">Cota/mês</label><input className="input-modern" type="number" min="1" value={formEsp.cota} onChange={e => setFormEsp(f => ({ ...f, cota: e.target.value }))} /></div>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      {editandoEsp && (
-                        <button className="btn-secondary" style={{ padding: '9px 14px' }} onClick={() => {
-                          setEditandoEsp(null)
-                          setFormEsp({ label: '', icon: '', cota: '30' })
-                        }}>
-                          Cancelar
-                        </button>
-                      )}
-                      <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={salvarEspecialidade} disabled={salvandoEsp}>
-                        {salvandoEsp ? '...' : editandoEsp ? 'Salvar' : '+ Adicionar'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
-                  Desativar uma especialidade a esconde da lista mas mantém todo o histórico de agendamentos preservado.
-                </p>
-              </div>
-            )}
-
-            {abaConfig === 'preparos' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {/* Lista de preparos */}
-                <div>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Preparos cadastrados</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
-                    {preparosList.length === 0 && <p style={{ fontSize: '12px', color: '#94a3b8' }}>Nenhum preparo cadastrado ainda.</p>}
-                    {preparosList.map(p => (
-                      <div key={p.id} style={{ padding: '8px 12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fde68a' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                          <div style={{ flex: 1 }}>
-                            <span style={{ fontWeight: '700', fontSize: '12px', color: '#b45309', display: 'block' }}>{p.tipo_exame} <span style={{ fontWeight: '400', color: '#d97706' }}>({p.especialidade_slug.toUpperCase()})</span></span>
-                            <span style={{ fontSize: '11px', color: '#92400e', display: 'block', marginTop: '2px' }}>{p.instrucoes}</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                            <button onClick={() => { setEditandoPreparo(p.id); setFormPreparo({ especialidade_slug: p.especialidade_slug, tipo_exame: p.tipo_exame, instrucoes: p.instrucoes }) }} style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#1d4ed8', display: 'flex', alignItems: 'center' }}><Pencil size={11} /></button>
-                            <button onClick={() => excluirPreparo(p.id)} title="Excluir" style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#991b1b', display:'inline-flex', alignItems:'center' }}><Trash2 size={11} /></button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Formulário */}
-                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {editandoPreparo ? 'Editando preparo' : 'Novo preparo'}
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <div>
-                        <label className="label-modern">Especialidade</label>
-                        <select className="input-modern" value={formPreparo.especialidade_slug} onChange={e => setFormPreparo(f => ({ ...f, especialidade_slug: e.target.value }))}>
-                          {especialidades.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="label-modern">Tipo de exame</label>
-                        <input className="input-modern" placeholder="Ex.: ABDOMEN TOTAL" value={formPreparo.tipo_exame} onChange={e => setFormPreparo(f => ({ ...f, tipo_exame: e.target.value.toUpperCase() }))} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="label-modern">Instruções de preparo</label>
-                      <textarea className="input-modern" rows={3} placeholder="Ex.: JEJUM DE 8 HORAS..." value={formPreparo.instrucoes} onChange={e => setFormPreparo(f => ({ ...f, instrucoes: e.target.value }))} style={{ resize: 'vertical' }} />
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      {editandoPreparo && (
-                        <button className="btn-secondary" onClick={() => { setEditandoPreparo(null); setFormPreparo({ especialidade_slug: 'usg', tipo_exame: '', instrucoes: '' }) }}>
-                          Cancelar
-                        </button>
-                      )}
-                      <button className="btn-primary" style={{ background: GRAD }} onClick={salvarPreparo} disabled={salvandoPreparo}>
-                        {salvandoPreparo ? 'Salvando...' : editandoPreparo ? 'Salvar alteração' : '+ Adicionar preparo'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {abaConfig === 'periodos' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Períodos cadastrados</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
-                    {periodos.length === 0 && <p style={{ fontSize: '12px', color: '#94a3b8' }}>Nenhum período cadastrado ainda.</p>}
-                    {periodos.map(p => (
-                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontWeight: '700', fontSize: '13px', color: '#0369a1' }}>{p.nome}</span>
-                          {p.horario && <span style={{ fontSize: '11px', color: '#0ea5e9', marginLeft: '8px' }}>{p.horario}</span>}
-                        </div>
-                        <button onClick={() => excluirPeriodo(p.id)} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#991b1b', display: 'inline-flex', alignItems: 'center' }}>
-                          <Trash2 size={11} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Novo período</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'end' }}>
-                    <div>
-                      <label className="label-modern">Nome *</label>
-                      <input className="input-modern" placeholder="Ex.: Manhã" value={formPeriodo.nome} onChange={e => setFormPeriodo(f => ({ ...f, nome: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label className="label-modern">Horário</label>
-                      <input className="input-modern" placeholder="Ex.: 07:00 - 12:00" value={formPeriodo.horario} onChange={e => setFormPeriodo(f => ({ ...f, horario: e.target.value }))} />
-                    </div>
-                    <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={salvarPeriodo} disabled={salvandoPeriodo}>
-                      {salvandoPeriodo ? '...' : '+ Adicionar'}
-                    </button>
-                  </div>
-                </div>
-                <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
-                  Os períodos cadastrados ficam disponíveis para seleção ao escalar um profissional.
-                </p>
-              </div>
-            )}
-
-            {abaConfig === 'tipos_usg' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tipos de Ultrassom Cadastrados</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
-                    {tiposUsgOrdem.length === 0 && <p style={{ fontSize: '12px', color: '#94a3b8' }}>Nenhum tipo de ultrassom cadastrado ainda.</p>}
-                    {tiposUsgOrdem.map(t => (
-                      <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontWeight: '700', fontSize: '13px', color: '#166534' }}>{t}</span>
-                        </div>
-                        <button onClick={() => handleExcluirTipoUsg(t)} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#991b1b', display: 'inline-flex', alignItems: 'center' }}>
-                          <Trash2 size={11} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Novo Tipo de Ultrassom</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', alignItems: 'end' }}>
-                    <div>
-                      <label className="label-modern">Nome *</label>
-                      <input className="input-modern" placeholder="Ex.: USG OBSTÉTRICA COM DOPPLER" value={novoTipoUsg} onChange={e => setNovoTipoUsg(e.target.value)} />
-                    </div>
-                    <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={handleAdicionarTipoUsg} disabled={salvandoTipoUsg}>
-                      {salvandoTipoUsg ? '...' : '+ Adicionar'}
-                    </button>
-                  </div>
-                </div>
-                <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
-                  Os tipos de ultrassom ficam disponíveis para seleção ao fazer agendamentos e nos filtros de relatórios.
-                </p>
-              </div>
-            )}
-          </Modal>
-        )}
-        </AnimatePresence>
 
         {/* Cabeçalho */}
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
@@ -1698,15 +1487,15 @@ export default function Especialidades() {
           {abaMain === 'agendamento' && (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '6px', alignSelf: 'flex-end', paddingBottom: '1px' }}>
-                <button onClick={() => setModalProf(true)}
+                <button onClick={() => setModalGestao('profissionais')}
                   style={{ padding: '9px 14px', background: GRAD, border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <UserCog size={13} /> Profissionais
                 </button>
-                <button onClick={() => setModalEscala(true)}
+                <button onClick={() => setModalGestao('escala')}
                   style={{ padding: '9px 14px', background: GRAD, border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Calendar size={13} /> Escala
                 </button>
-                <button onClick={() => setModalConfig(true)}
+                <button onClick={() => setModalGestao('config')}
                   style={{ padding: '9px 14px', background: 'linear-gradient(135deg, #374151, #6b7280)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Settings size={13} /> Configurações
                 </button>
@@ -1740,7 +1529,7 @@ export default function Especialidades() {
             top: '24px',
             left: '50%',
             transform: 'translateX(-50%)',
-            zIndex: 9999,
+            zIndex: 999999,
             minWidth: '320px',
             maxWidth: '90%',
             boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15)',
@@ -2498,7 +2287,6 @@ export default function Especialidades() {
             </div>
           </div>
         )}
-      </div>
 
       {/* ── MODAL: CANCELAMENTO ── */}
       <AnimatePresence>
@@ -2929,63 +2717,413 @@ export default function Especialidades() {
           </Modal>
         )
       })()}
-
       </AnimatePresence>
 
       <AnimatePresence>
-      {/* ── MODAL: PROFISSIONAIS ── */}
-      {modalProf && (
-        <Modal titulo={`👨‍⚕️ Profissionais — ${espAtiva.label}`} onClose={() => setModalProf(false)} largura="580px">
-          {/* Formulário */}
-          <div style={{ marginBottom: '20px', padding: '16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-            <p style={{ fontFamily: 'Sora, sans-serif', fontSize: '12px', fontWeight: '700', color: COR, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>Adicionar profissional</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px', alignItems: 'end' }}>
-              <div>
-                <label className="label-modern">Nome *</label>
-                <input className="input-modern" type="text" placeholder="Nome completo"
-                  value={formProf.nome} onChange={e => setFormProf(f => ({ ...f, nome: e.target.value }))} style={{ width: '100%' }} />
-              </div>
-              <div>
-                <label className="label-modern">Conselho</label>
-                <select className="input-modern" value={formProf.conselho_tipo} onChange={e => setFormProf(f => ({ ...f, conselho_tipo: e.target.value }))} style={{ width: '90px' }}>
-                  {CONSELHOS.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label-modern">Número</label>
-                <input className="input-modern" type="text" placeholder="Ex: 12345"
-                  value={formProf.conselho_numero} onChange={e => setFormProf(f => ({ ...f, conselho_numero: e.target.value }))} style={{ width: '100px' }} />
-              </div>
-            </div>
-            <button className="btn-primary" style={{ background: GRAD, marginTop: '12px' }} onClick={salvarProfissional} disabled={salvandoProf}>
-              {salvandoProf ? 'Salvando...' : '+ Adicionar'}
-            </button>
+      {/* ── MODAL UNIFICADO: GESTÃO DA ESPECIALIDADE ── */}
+      {modalGestao && (
+        <Modal 
+          titulo={`Gestão — ${espAtiva.label}`} 
+          onClose={() => {
+            setModalGestao(null)
+            setEditandoEsp(null)
+            setFormEsp({ label: '', icon: '', cota: '30' })
+            setEditandoPreparo(null)
+            setFormPreparo({ especialidade_slug: 'usg', tipo_exame: '', instrucoes: '' })
+          }} 
+          largura={modalGestao === 'config' ? '700px' : '640px'}
+        >
+          {/* Abas Principais */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', flexWrap: 'wrap' }}>
+            {[
+              ['escala', <><Calendar size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Escala (Agenda)</>],
+              ['profissionais', <><UserCog size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Profissionais</>],
+              ['config', <><Settings size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Configurações</>]
+            ].map(([id, lbl]) => (
+              <button key={id} onClick={() => setModalGestao(id)} style={{
+                background: modalGestao === id ? 'linear-gradient(135deg, #166534, #16a34a)' : 'none',
+                color: modalGestao === id ? 'white' : '#64748b',
+                border: modalGestao === id ? 'none' : '1px solid #e2e8f0',
+                borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '700',
+                cursor: 'pointer', fontFamily: 'Sora, sans-serif'
+              }}>{lbl}</button>
+            ))}
           </div>
 
-          {/* Lista */}
-          {profissionais.length === 0
-            ? <p style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>Nenhum profissional cadastrado para {espAtiva.label}.</p>
-            : profissionais.map(p => (
-              <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '8px', marginBottom: '6px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+          {/* ABA: ESCALA */}
+          {modalGestao === 'escala' && (
+            <>
+              {/* Seletor de mês/ano dentro da escala */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', marginBottom: '16px', padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <div>
-                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{p.nome}</span>
-                  {p.conselho_numero && (
-                    <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>{p.conselho_tipo} {p.conselho_numero}</span>
-                  )}
+                  <label className="label-modern">Mês</label>
+                  <select className="input-modern" value={mes} onChange={e => setMes(e.target.value)} style={{ width: '140px' }}>
+                    {MESES.map((n, i) => (
+                      <option key={i} value={String(i + 1).padStart(2, '0')}>{String(i + 1).padStart(2, '0')} — {n}</option>
+                    ))}
+                  </select>
                 </div>
-                <button onClick={() => removerProfissional(p.id)}
-                  style={{ padding: '4px 10px', fontSize: '11px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', cursor: 'pointer', fontWeight: '700' }}>
-                  Remover
+                <div>
+                  <label className="label-modern">Ano</label>
+                  <input className="input-modern" type="number" value={ano} onChange={e => setAno(e.target.value)} min="2020" max="2099" style={{ width: '90px' }} />
+                </div>
+              </div>
+
+              {(() => {
+                const datasEscala = Array.from(new Set(escala.map(item => item.data_atendimento)))
+                const diasEscalaCount = datasEscala.length
+                const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
+                return (
+                  <div style={{ marginBottom: '16px', padding: '12px 16px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '13px', color: '#1e3a8a', fontFamily: 'Sora, sans-serif' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                      <div><strong>Cota Mensal:</strong> {espAtiva.cota}</div>
+                      <div><strong>Dias na Escala:</strong> {diasEscalaCount}</div>
+                      <div><strong>Cota Diária Calculada:</strong> <span style={{ fontWeight: '800', color: '#1d4ed8' }}>{cotaDiaria}</span> por dia</div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {profissionais.length === 0 ? (
+                <p style={{ color: '#64748b', fontSize: '13px', padding: '14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  Nenhum profissional cadastrado. Cadastre profissionais primeiro na aba <strong>Profissionais</strong> acima.
+                </p>
+              ) : (
+                <div style={{ marginBottom: '20px', padding: '14px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
+                  <p style={{ fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Adicionar à escala</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                    <div>
+                      <label className="label-modern">Profissional *</label>
+                      <select className="input-modern" value={profEscalaSel} onChange={e => setProfEscalaSel(e.target.value)} style={{ width: '100%' }}>
+                        <option value="">— Selecione —</option>
+                        {profissionais.map(p => (
+                          <option key={p.id} value={p.id}>{p.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label-modern">Data de Atendimento *</label>
+                      <input className="input-modern" type="date" value={dataEscala} onChange={e => setDataEscala(e.target.value)} style={{ width: '100%' }} />
+                    </div>
+                    <div>
+                      <label className="label-modern">Período</label>
+                      <select className="input-modern" value={periodoEscala} onChange={e => setPeriodoEscala(e.target.value)} style={{ width: '100%' }}>
+                        <option value="">— Selecione —</option>
+                        {periodos.filter(p => p.ativo).map(p => (
+                          <option key={p.id} value={p.nome}>{p.nome}{p.horario ? ` (${p.horario})` : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #065f46, #047857)' }}
+                    onClick={adicionarEscala} disabled={salvandoEscala || !profEscalaSel || !dataEscala}>
+                    {salvandoEscala ? 'Salvando...' : '+ Adicionar à Escala'}
+                  </button>
+                </div>
+              )}
+
+              <p style={{ fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Na escala</p>
+              {escala.length === 0
+                ? <p style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>Nenhum profissional escalado para este período.</p>
+                : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
+                    {escala.map(e => (
+                      <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                        <div>
+                          <span style={{ fontWeight: '700', fontSize: '13px', color: '#166534' }}>👨‍⚕️ {e.profissional_nome}</span>
+                          {e.data_atendimento && (
+                            <span style={{ fontSize: '12px', color: '#047857', marginLeft: '10px', fontWeight: '600' }}>
+                              {fmtData(e.data_atendimento)}
+                            </span>
+                          )}
+                          {e.periodo && (
+                            <span style={{ fontSize: '11px', color: '#0369a1', marginLeft: '8px', background: '#e0f2fe', padding: '1px 7px', borderRadius: '10px', fontWeight: '600' }}>
+                              {e.periodo}
+                            </span>
+                          )}
+                        </div>
+                        <button onClick={() => removerEscala(e.id)}
+                          style={{ padding: '4px 10px', fontSize: '11px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', cursor: 'pointer', fontWeight: '700' }}>
+                          Remover
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+            </>
+          )}
+
+          {/* ABA: PROFISSIONAIS */}
+          {modalGestao === 'profissionais' && (
+            <>
+              {/* Formulário */}
+              <div style={{ marginBottom: '20px', padding: '16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <p style={{ fontFamily: 'Sora, sans-serif', fontSize: '12px', fontWeight: '700', color: COR, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>Adicionar profissional</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px', alignItems: 'end' }}>
+                  <div>
+                    <label className="label-modern">Nome *</label>
+                    <input className="input-modern" type="text" placeholder="Nome completo"
+                      value={formProf.nome} onChange={e => setFormProf(f => ({ ...f, nome: e.target.value }))} style={{ width: '100%' }} />
+                  </div>
+                  <div>
+                    <label className="label-modern">Conselho</label>
+                    <select className="input-modern" value={formProf.conselho_tipo} onChange={e => setFormProf(f => ({ ...f, conselho_tipo: e.target.value }))} style={{ width: '90px' }}>
+                      {CONSELHOS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-modern">Número</label>
+                    <input className="input-modern" type="text" placeholder="Ex: 12345"
+                      value={formProf.conselho_numero} onChange={e => setFormProf(f => ({ ...f, conselho_numero: e.target.value }))} style={{ width: '100px' }} />
+                  </div>
+                </div>
+                <button className="btn-primary" style={{ background: GRAD, marginTop: '12px' }} onClick={salvarProfissional} disabled={salvandoProf}>
+                  {salvandoProf ? 'Salvando...' : '+ Adicionar'}
                 </button>
               </div>
-            ))
-          }
+
+              {/* Lista */}
+              <p style={{ fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Profissionais cadastrados</p>
+              {profissionais.length === 0
+                ? <p style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>Nenhum profissional cadastrado para {espAtiva.label}.</p>
+                : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
+                    {profissionais.map(p => (
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                        <div>
+                          <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{p.nome}</span>
+                          {p.conselho_numero && (
+                            <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>{p.conselho_tipo} {p.conselho_numero}</span>
+                          )}
+                        </div>
+                        <button onClick={() => removerProfissional(p.id)}
+                          style={{ padding: '4px 10px', fontSize: '11px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', cursor: 'pointer', fontWeight: '700' }}>
+                          Remover
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+            </>
+          )}
+
+          {/* ABA: CONFIGURAÇÕES */}
+          {modalGestao === 'config' && (
+            <>
+              {/* Sub-abas de Configuração */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', flexWrap: 'wrap' }}>
+                {[
+                  ['especialidades', <><Stethoscope size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Especialidades</>],
+                  ['preparos', <><FlaskConical size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Orientações</>],
+                  ['periodos', <><Clock size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Períodos</>],
+                  ['tipos_usg', <><Settings size={13} style={{display:'inline',verticalAlign:'middle',marginRight:'5px'}} />Tipos de USG</>]
+                ].map(([id, lbl]) => (
+                  <button key={id} onClick={() => setAbaConfig(id)} style={{
+                    background: abaConfig === id ? '#d97706' : 'none',
+                    color: abaConfig === id ? 'white' : '#64748b',
+                    border: abaConfig === id ? 'none' : '1px solid #e2e8f0',
+                    borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600',
+                    cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
+                  }}>{lbl}</button>
+                ))}
+              </div>
+
+              {abaConfig === 'especialidades' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Lista */}
+                  <div>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especialidades cadastradas</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
+                      {especialidadesConfig.map(e => (
+                        <div key={e.slug} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: e.ativo ? '#f0fdf4' : '#f8fafc', borderRadius: '8px', border: `1px solid ${e.ativo ? '#bbf7d0' : '#e2e8f0'}` }}>
+                          <span style={{ fontSize: '18px' }}>{e.icon}</span>
+                          <span style={{ flex: 1, fontWeight: '600', fontSize: '13px', color: e.ativo ? '#166534' : '#94a3b8' }}>{e.label}</span>
+                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>cota {e.cota}</span>
+                          
+                          <button onClick={() => {
+                            setEditandoEsp(e.slug)
+                            setFormEsp({ label: e.label, icon: e.icon, cota: String(e.cota) })
+                          }} style={{
+                            background: '#eff6ff', border: 'none', borderRadius: '6px',
+                            padding: '4px 8px', fontSize: '11px', cursor: 'pointer',
+                            color: '#1d4ed8', display: 'inline-flex', alignItems: 'center', gap: '4px'
+                          }} title="Editar">
+                            <Pencil size={11} />
+                          </button>
+
+                          <button onClick={() => toggleEspecialidade(e.slug, e.ativo)} style={{
+                            background: e.ativo ? '#fee2e2' : '#dcfce7', border: 'none', borderRadius: '6px',
+                            padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
+                            color: e.ativo ? '#991b1b' : '#166534'
+                          }}>{e.ativo ? 'Desativar' : 'Reativar'}</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Nova especialidade / Editar especialidade */}
+                  <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {editandoEsp ? 'Editar especialidade' : 'Nova especialidade'}
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px auto', gap: '8px', alignItems: 'end' }}>
+                      <div><label className="label-modern">Nome</label><input className="input-modern" placeholder="Ex.: Cardiologia" value={formEsp.label} onChange={e => setFormEsp(f => ({ ...f, label: e.target.value }))} /></div>
+                      <div><label className="label-modern">Ícone</label><input className="input-modern" value={formEsp.icon || ''} onChange={e => setFormEsp(f => ({ ...f, icon: e.target.value }))} style={{ textAlign: 'center' }} /></div>
+                      <div><label className="label-modern">Cota/mês</label><input className="input-modern" type="number" min="1" value={formEsp.cota} onChange={e => setFormEsp(f => ({ ...f, cota: e.target.value }))} /></div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {editandoEsp && (
+                          <button className="btn-secondary" style={{ padding: '9px 14px' }} onClick={() => {
+                            setEditandoEsp(null)
+                            setFormEsp({ label: '', icon: '', cota: '30' })
+                          }}>
+                            Cancelar
+                          </button>
+                        )}
+                        <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={salvarEspecialidade} disabled={salvandoEsp}>
+                          {salvandoEsp ? '...' : editandoEsp ? 'Salvar' : '+ Adicionar'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {abaConfig === 'preparos' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Lista de preparos */}
+                  <div>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Orientações cadastradas</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
+                      {preparosList.length === 0 && <p style={{ fontSize: '12px', color: '#94a3b8' }}>Nenhuma orientação cadastrada ainda.</p>}
+                      {preparosList.map(p => (
+                        <div key={p.id} style={{ padding: '8px 12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                            <div style={{ flex: 1 }}>
+                              <span style={{ fontWeight: '700', fontSize: '12px', color: '#b45309', display: 'block' }}>{p.tipo_exame} <span style={{ fontWeight: '400', color: '#d97706' }}>({p.especialidade_slug.toUpperCase()})</span></span>
+                              <span style={{ fontSize: '11px', color: '#92400e', display: 'block', marginTop: '2px' }}>{p.instrucoes}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                              <button onClick={() => { setEditandoPreparo(p.id); setFormPreparo({ especialidade_slug: p.especialidade_slug, tipo_exame: p.tipo_exame, instrucoes: p.instrucoes }) }} style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#1d4ed8', display: 'flex', alignItems: 'center' }}><Pencil size={11} /></button>
+                              <button onClick={() => excluirPreparo(p.id)} title="Excluir" style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#991b1b', display:'inline-flex', alignItems:'center' }}><Trash2 size={11} /></button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Formulário */}
+                  <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {editandoPreparo ? 'Editando orientação' : 'Nova orientação'}
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <div>
+                          <label className="label-modern">Especialidade</label>
+                          <select className="input-modern" value={formPreparo.especialidade_slug} onChange={e => setFormPreparo(f => ({ ...f, especialidade_slug: e.target.value }))}>
+                            {especialidades.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="label-modern">Tipo de exame</label>
+                          <input className="input-modern" placeholder="Ex.: ABDOMEN TOTAL" value={formPreparo.tipo_exame} onChange={e => setFormPreparo(f => ({ ...f, tipo_exame: e.target.value.toUpperCase() }))} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="label-modern">Instruções de orientação</label>
+                        <textarea className="input-modern" rows={3} placeholder="Ex.: JEJUM DE 8 HORAS..." value={formPreparo.instrucoes} onChange={e => setFormPreparo(f => ({ ...f, instrucoes: e.target.value }))} style={{ resize: 'vertical' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {editandoPreparo && (
+                          <button className="btn-secondary" onClick={() => { setEditandoPreparo(null); setFormPreparo({ especialidade_slug: 'usg', tipo_exame: '', instrucoes: '' }) }}>
+                            Cancelar
+                          </button>
+                        )}
+                        <button className="btn-primary" style={{ background: GRAD }} onClick={salvarPreparo} disabled={salvandoPreparo}>
+                          {salvandoPreparo ? 'Salvando...' : editandoPreparo ? 'Salvar alteração' : '+ Adicionar orientação'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {abaConfig === 'periodos' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Períodos cadastrados</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
+                      {periodos.length === 0 && <p style={{ fontSize: '12px', color: '#94a3b8' }}>Nenhum período cadastrado ainda.</p>}
+                      {periodos.map(p => (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                          <div style={{ flex: 1 }}>
+                            <span style={{ fontWeight: '700', fontSize: '13px', color: '#0369a1' }}>{p.nome}</span>
+                            {p.horario && <span style={{ fontSize: '11px', color: '#0ea5e9', marginLeft: '8px' }}>{p.horario}</span>}
+                          </div>
+                          <button onClick={() => excluirPeriodo(p.id)} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#991b1b', display: 'inline-flex', alignItems: 'center' }}>
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Novo período</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'end' }}>
+                      <div>
+                        <label className="label-modern">Nome *</label>
+                        <input className="input-modern" placeholder="Ex.: Manhã" value={formPeriodo.nome} onChange={e => setFormPeriodo(f => ({ ...f, nome: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="label-modern">Horário</label>
+                        <input className="input-modern" placeholder="Ex.: 07:00 - 12:00" value={formPeriodo.horario} onChange={e => setFormPeriodo(f => ({ ...f, horario: e.target.value }))} />
+                      </div>
+                      <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={salvarPeriodo} disabled={salvandoPeriodo}>
+                        {salvandoPeriodo ? '...' : '+ Adicionar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {abaConfig === 'tipos_usg' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tipos de Ultrassom Cadastrados</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
+                      {tiposUsgOrdem.length === 0 && <p style={{ fontSize: '12px', color: '#94a3b8' }}>Nenhum tipo de ultrassom cadastrado ainda.</p>}
+                      {tiposUsgOrdem.map(t => (
+                        <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                          <div style={{ flex: 1 }}>
+                            <span style={{ fontWeight: '700', fontSize: '13px', color: '#166534' }}>{t}</span>
+                          </div>
+                          <button onClick={() => handleExcluirTipoUsg(t)} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', cursor: 'pointer', color: '#991b1b', display: 'inline-flex', alignItems: 'center' }}>
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Novo Tipo de Ultrassom</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', alignItems: 'end' }}>
+                      <div>
+                        <label className="label-modern">Nome *</label>
+                        <input className="input-modern" placeholder="Ex.: USG OBSTÉTRICA COM DOPPLER" value={novoTipoUsg} onChange={e => setNovoTipoUsg(e.target.value)} />
+                      </div>
+                      <button className="btn-primary" style={{ background: GRAD, padding: '9px 14px' }} onClick={handleAdicionarTipoUsg} disabled={salvandoTipoUsg}>
+                        {salvandoTipoUsg ? '...' : '+ Adicionar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </Modal>
       )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-      {/* ── MODAL: ESCALA ── */}
       </AnimatePresence>
 
       <style dangerouslySetInnerHTML={{
@@ -3001,107 +3139,7 @@ export default function Especialidades() {
           .screen-only { display: none !important; }
         }
       `}} />
-
-      <AnimatePresence>
-      {/* ── MODAL: ESCALA ── */}
-      {modalEscala && (
-        <Modal titulo={`Escala — ${espAtiva.label}`} onClose={() => setModalEscala(false)}>
-          {/* Seletor de mês/ano dentro da escala */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', marginBottom: '16px', padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <div>
-              <label className="label-modern">Mês</label>
-              <select className="input-modern" value={mes} onChange={e => setMes(e.target.value)} style={{ width: '140px' }}>
-                {MESES.map((n, i) => (
-                  <option key={i} value={String(i + 1).padStart(2, '0')}>{String(i + 1).padStart(2, '0')} — {n}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label-modern">Ano</label>
-              <input className="input-modern" type="number" value={ano} onChange={e => setAno(e.target.value)} min="2020" max="2099" style={{ width: '90px' }} />
-            </div>
-          </div>
-
-          {(() => {
-            const datasEscala = Array.from(new Set(escala.map(item => item.data_atendimento)))
-            const diasEscalaCount = datasEscala.length
-            const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
-            return (
-              <div style={{ marginBottom: '16px', padding: '12px 16px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '13px', color: '#1e3a8a', fontFamily: 'Sora, sans-serif' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                  <div><strong>Cota Mensal:</strong> {espAtiva.cota}</div>
-                  <div><strong>Dias na Escala:</strong> {diasEscalaCount}</div>
-                  <div><strong>Cota Diária Calculada:</strong> <span style={{ fontWeight: '800', color: '#1d4ed8' }}>{cotaDiaria}</span> por dia</div>
-                </div>
-              </div>
-            )
-          })()}
-          {profissionais.length === 0 ? (
-            <p style={{ color: '#64748b', fontSize: '13px' }}>
-              Nenhum profissional cadastrado. Cadastre profissionais primeiro em <strong>Profissionais</strong>.
-            </p>
-          ) : (
-            <div style={{ marginBottom: '20px', padding: '14px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
-              <p style={{ fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Adicionar à escala</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                <div>
-                  <label className="label-modern">Profissional *</label>
-                  <select className="input-modern" value={profEscalaSel} onChange={e => setProfEscalaSel(e.target.value)} style={{ width: '100%' }}>
-                    <option value="">— Selecione —</option>
-                    {profissionais.map(p => (
-                      <option key={p.id} value={p.id}>{p.nome}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="label-modern">Data de Atendimento *</label>
-                  <input className="input-modern" type="date" value={dataEscala} onChange={e => setDataEscala(e.target.value)} style={{ width: '100%' }} />
-                </div>
-                <div>
-                  <label className="label-modern">Período</label>
-                  <select className="input-modern" value={periodoEscala} onChange={e => setPeriodoEscala(e.target.value)} style={{ width: '100%' }}>
-                    <option value="">— Selecione —</option>
-                    {periodos.filter(p => p.ativo).map(p => (
-                      <option key={p.id} value={p.nome}>{p.nome}{p.horario ? ` (${p.horario})` : ''}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #065f46, #047857)' }}
-                onClick={adicionarEscala} disabled={salvandoEscala || !profEscalaSel || !dataEscala}>
-                {salvandoEscala ? 'Salvando...' : '+ Adicionar à Escala'}
-              </button>
-            </div>
-          )}
-
-          <p style={{ fontFamily: 'Sora, sans-serif', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Na escala</p>
-          {escala.length === 0
-            ? <p style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>Nenhum profissional escalado para este período.</p>
-            : escala.map(e => (
-              <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '8px', marginBottom: '6px', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                <div>
-                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#166534' }}>👨‍⚕️ {e.profissional_nome}</span>
-                  {e.data_atendimento && (
-                    <span style={{ fontSize: '12px', color: '#047857', marginLeft: '10px', fontWeight: '600' }}>
-                      {fmtData(e.data_atendimento)}
-                    </span>
-                  )}
-                  {e.periodo && (
-                    <span style={{ fontSize: '11px', color: '#0369a1', marginLeft: '8px', background: '#e0f2fe', padding: '1px 7px', borderRadius: '10px', fontWeight: '600' }}>
-                      {e.periodo}
-                    </span>
-                  )}
-                </div>
-                <button onClick={() => removerEscala(e.id)}
-                  style={{ padding: '4px 10px', fontSize: '11px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', cursor: 'pointer', fontWeight: '700' }}>
-                  Remover
-                </button>
-              </div>
-            ))
-          }
-        </Modal>
-      )}
-      </AnimatePresence>
+      </div>
     </Layout>
   )
 }
