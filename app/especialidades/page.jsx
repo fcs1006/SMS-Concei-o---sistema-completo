@@ -2070,7 +2070,7 @@ export default function Especialidades() {
                         <col style={{ width: '90px' }} />
                         <col style={{ width: '100px' }} />
                         <col style={{ width: '70px' }} />
-                        <col style={{ width: '60px' }} />
+                        <col style={{ width: '100px' }} />
                         <col style={{ width: '100px' }} />
                         <col style={{ width: '80px' }} />
                         <col style={{ width: '84px' }} />
