@@ -77,6 +77,10 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
+    if (data && data.paciente_cns && data.telefone) {
+      await syncPhoneAcrossSystem(data.paciente_cns, data.telefone)
+    }
+
     return NextResponse.json({ ok: true, data })
   } catch (error: any) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
@@ -188,6 +192,11 @@ export async function PATCH(request: NextRequest) {
         .single()
 
       if (error) throw error
+
+      if (data && data.paciente_cns && data.telefone) {
+        await syncPhoneAcrossSystem(data.paciente_cns, data.telefone)
+      }
+
       return NextResponse.json({ ok: true, data })
     }
 
@@ -248,4 +257,27 @@ export async function PATCH(request: NextRequest) {
 // DELETE não é mais usado — exclusão via PATCH status='excluido'
 export async function DELETE(request: NextRequest) {
   return NextResponse.json({ ok: false, error: 'Use PATCH com status=excluido' }, { status: 405 })
+}
+
+async function syncPhoneAcrossSystem(cns: string | null, telefone: string | null) {
+  if (!cns || !telefone) return
+  const cleanPhone = String(telefone).replace(/\D/g, '')
+  const cleanCns = String(cns).replace(/\D/g, '')
+  if (!cleanPhone || !cleanCns) return
+
+  try {
+    // 1. Atualiza na tabela de pacientes
+    await supabase
+      .from('pacientes')
+      .update({ telefone: cleanPhone })
+      .eq('cpf_cns', cleanCns)
+
+    // 2. Atualiza em todos os agendamentos de especialidades
+    await supabase
+      .from('especialidades_agendamentos')
+      .update({ telefone: cleanPhone })
+      .eq('paciente_cns', cleanCns)
+  } catch (err) {
+    console.error('Erro ao sincronizar telefone no sistema:', err)
+  }
 }

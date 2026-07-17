@@ -237,6 +237,17 @@ export default function Cadastro() {
     if (error) {
       setStatus({ msg: '❌ Erro ao salvar: ' + error.message, tipo: 'erro' })
     } else {
+      if (editandoId) {
+        // Sincroniza o telefone atualizado com todos os agendamentos do paciente
+        try {
+          await supabase
+            .from('especialidades_agendamentos')
+            .update({ telefone: payload.telefone })
+            .eq('paciente_cns', payload.cpf_cns)
+        } catch (syncErr) {
+          console.error('Erro ao sincronizar telefone:', syncErr)
+        }
+      }
       setStatus({
         msg: editandoId ? '✅ Cadastro do paciente atualizado com sucesso!' : '✅ Paciente cadastrado com sucesso!',
         tipo: 'ok'
