@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabase, accentInsensitivePattern } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { Upload, X } from 'lucide-react'
 
@@ -153,7 +153,7 @@ export default function Cadastro() {
       if (soDigitos.length >= 3 && !/[a-zA-ZÀ-ÿ]/.test(termoBusca)) {
         query = query.ilike('cpf_cns', `%${soDigitos}%`)
       } else {
-        query = query.ilike('nome', `%${termoBusca.toUpperCase()}%`)
+        query = query.filter('nome', 'imatch', accentInsensitivePattern(termoBusca))
       }
     }
 

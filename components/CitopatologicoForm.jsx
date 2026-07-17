@@ -7,7 +7,7 @@ import {
   Search, FileText, User, Stethoscope, Building, 
   AlertCircle, Download, CheckCircle, RefreshCw, Trash2, Heart, Loader2
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabase, accentInsensitivePattern } from '@/lib/supabase'
 
 function calcularIdadeCompleta(dataNasc) {
   if (!dataNasc) return ''
@@ -162,7 +162,7 @@ export default function CitopatologicoForm() {
       if (/[0-9]/.test(termo)) {
         query = query.ilike('cpf_cns', `%${termo.replace(/\D/g, '')}%`)
       } else {
-        query = query.ilike('nome', `%${termo}%`)
+        query = query.filter('nome', 'imatch', accentInsensitivePattern(termo))
       }
 
       const { data, error } = await query

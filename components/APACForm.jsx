@@ -7,7 +7,7 @@ import {
   Search, FileText, User, Stethoscope, Building, 
   AlertCircle, Download, CheckCircle, RefreshCw, Trash2
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabase, accentInsensitivePattern } from '@/lib/supabase'
 
 export default function APACForm() {
   const router = useRouter()
@@ -65,7 +65,7 @@ export default function APACForm() {
       if (/[0-9]/.test(termo)) {
         query = query.ilike('cpf_cns', `%${termo.replace(/\D/g, '')}%`)
       } else {
-        query = query.ilike('nome', `%${termo}%`)
+        query = query.filter('nome', 'imatch', accentInsensitivePattern(termo))
       }
 
       const { data, error } = await query

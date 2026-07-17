@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabase, accentInsensitivePattern } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { clientConfig } from '@/lib/config'
 import { Printer, Calendar, Settings, Pencil, Save, RefreshCw, BarChart2, CalendarDays, Trash2, Stethoscope, FlaskConical, UserCog, Check, X, Clock } from 'lucide-react'
@@ -575,7 +575,7 @@ function BuscaPaciente({ onSelect }) {
       if (soDigitos.length >= 3 && !/[a-zA-ZÀ-ÿ]/.test(v)) {
         query = query.ilike('cpf_cns', `%${soDigitos}%`)
       } else {
-        query = query.ilike('nome', `%${v.toUpperCase()}%`)
+        query = query.filter('nome', 'imatch', accentInsensitivePattern(v))
       }
       const { data } = await query
       setSugestoes(data || [])

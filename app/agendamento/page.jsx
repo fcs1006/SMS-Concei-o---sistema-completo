@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabase, accentInsensitivePattern } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { cabecalhoImpressao } from '@/lib/printHeader'
 import { Printer, UserPlus, User, Users, MapPin } from 'lucide-react'
@@ -250,7 +250,7 @@ export default function Agendamento() {
       if (termoBusca.length >= 3 && termoBusca === busca.replace(/\s/g, '')) {
         query = query.ilike('cpf_cns', `%${termoBusca}%`)
       } else {
-        query = query.ilike('nome', `%${busca.toUpperCase()}%`)
+        query = query.filter('nome', 'imatch', accentInsensitivePattern(busca))
       }
       const { data } = await query
       setPacientes(data || [])
@@ -267,7 +267,7 @@ export default function Agendamento() {
       if (soDigitos.length >= 3 && soDigitos === buscaA1.replace(/\s/g, '')) {
         query = query.ilike('cpf_cns', `%${soDigitos}%`)
       } else {
-        query = query.ilike('nome', `%${buscaA1.toUpperCase()}%`)
+        query = query.filter('nome', 'imatch', accentInsensitivePattern(buscaA1))
       }
       const { data } = await query
       setSugestoesA1(data || [])
@@ -284,7 +284,7 @@ export default function Agendamento() {
       if (soDigitos.length >= 3 && soDigitos === buscaA2.replace(/\s/g, '')) {
         query = query.ilike('cpf_cns', `%${soDigitos}%`)
       } else {
-        query = query.ilike('nome', `%${buscaA2.toUpperCase()}%`)
+        query = query.filter('nome', 'imatch', accentInsensitivePattern(buscaA2))
       }
       const { data } = await query
       setSugestoesA2(data || [])
