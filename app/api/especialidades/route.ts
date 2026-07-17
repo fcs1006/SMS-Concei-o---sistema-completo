@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
     const mes = searchParams.get('mes')
     const ano = searchParams.get('ano')
     const incluirExcluidos = searchParams.get('incluir_excluidos') === '1'
-    const statusFiltro = searchParams.get('status') // para relatório detalhado
+    const statusFiltro = searchParams.get('status')
+    const dataInicio = searchParams.get('data_inicio')
+    const dataFim = searchParams.get('data_fim')
 
     // Busca pacientes do mês/ano de cadastro OU com data_atendimento no mês/ano selecionado
     let query = supabase
@@ -30,9 +32,13 @@ export async function GET(request: NextRequest) {
     if (statusFiltro) query = query.eq('status', statusFiltro)
     if (!incluirExcluidos && !statusFiltro) query = query.neq('status', 'excluido')
 
-    // Filtro de mês/ano apenas para relatório detalhado
-    if (statusFiltro && mes) query = query.eq('mes', mes)
-    if (statusFiltro && ano) query = query.eq('ano', ano)
+    // Filtro de tempo do banco de dados para evitar estourar limites de registros
+    if (mes && ano) {
+      const datePrefix = `${ano}-${mes}`
+      query = query.or(`status.eq.pendente,and(mes.eq.${mes},ano.eq.${ano}),and(data_atendimento.gte.${datePrefix}-01,data_atendimento.lte.${datePrefix}-31)`)
+    } else if (dataInicio && dataFim) {
+      query = query.or(`status.eq.pendente,and(data_consulta.gte.${dataInicio},data_consulta.lte.${dataFim}),and(data_atendimento.gte.${dataInicio},data_atendimento.lte.${dataFim})`)
+    }
 
     const { data, error } = await query
     if (error) throw error

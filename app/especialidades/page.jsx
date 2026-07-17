@@ -864,7 +864,15 @@ export default function Especialidades() {
   async function buscarRelatorio() {
     setRelLoading(true)
     try {
-      const res = await fetch('/api/especialidades?incluir_excluidos=1')
+      let url = '/api/especialidades?incluir_excluidos=1'
+      if (relModoFiltro === 'periodo') {
+        if (relDataInicio) url += `&data_inicio=${relDataInicio}`
+        if (relDataFim) url += `&data_fim=${relDataFim}`
+      } else {
+        if (relMes) url += `&mes=${relMes}`
+        if (relAno) url += `&ano=${relAno}`
+      }
+      const res = await fetch(url)
       const json = await res.json()
       const todos = json.data || []
 
