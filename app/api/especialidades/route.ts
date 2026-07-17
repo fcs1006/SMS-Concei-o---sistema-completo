@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('data_consulta', { ascending: true })
       .order('created_at', { ascending: true })
+      .limit(20000)
 
     if (especialidade) query = query.eq('especialidade', especialidade)
     if (statusFiltro) query = query.eq('status', statusFiltro)
