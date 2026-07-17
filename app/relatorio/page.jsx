@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabase, accentInsensitivePattern } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { abrirJanelaImpressao } from '@/lib/printHeader'
 import { Printer, Pencil, Trash2 } from 'lucide-react'
@@ -53,7 +53,7 @@ export default function Relatorio() {
   const { data } = await supabase
     .from('pacientes')
     .select('nome, cpf_cns')
-    .ilike('nome', `%${texto}%`)
+    .filter('nome', 'imatch', accentInsensitivePattern(texto))
     .limit(8)
   numero === 1 ? setSugestoesAcomp1(data || []) : setSugestoesAcomp2(data || [])
 }

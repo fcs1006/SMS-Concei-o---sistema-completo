@@ -3,6 +3,7 @@ import { GoogleGenerativeAI, FunctionDeclaration, SchemaType } from '@google/gen
 import { createClient } from '@supabase/supabase-js'
 import { buscarSolicitacoesSisreg, SisregSolicitacaoComFila } from '../../../../lib/sisreg'
 import { clientConfig, getDbConfigsMulti, getActiveClientConfig } from '../../../../lib/config'
+import { accentInsensitivePattern } from '../../../../lib/supabase'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
@@ -102,7 +103,7 @@ async function validarAcessoPaciente(telefone: string, busca: string, dataNascim
   if (soDigitos.length >= 6) {
     query = query.ilike('cpf_cns', `%${soDigitos}%`)
   } else {
-    query = query.ilike('nome', `%${busca.toUpperCase()}%`)
+    query = query.filter('nome', 'imatch', accentInsensitivePattern(busca))
   }
   
   const { data: pacienteData, error } = await query
@@ -303,7 +304,7 @@ async function executarFerramenta(nome: string, input: any, telefone: string, ct
       if (soDigitos.length >= 6) {
         query = query.ilike('cpf_cns', `%${soDigitos}%`)
       } else {
-        query = query.ilike('nome', `%${input.busca.toUpperCase()}%`)
+        query = query.filter('nome', 'imatch', accentInsensitivePattern(input.busca))
       }
 
       const { data, error } = await query
