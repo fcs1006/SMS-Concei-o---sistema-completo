@@ -399,10 +399,13 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
     const datas = [...new Set(sorted.map(r => r.data_consulta || r.data_atendimento || '').filter(Boolean))].sort()
 
     if (datas.length > 1) {
-      return datas.map(dKey => {
+      return datas.map((dKey, idx) => {
         const sub = sorted.filter(r => (r.data_consulta || r.data_atendimento || '') === dKey)
         const dFmt = dKey ? dKey.split('-').reverse().join('/') : 'Sem data'
-        const cab = `<tr><td colspan="7" style="padding:9px 7px 4px;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em;color:#92400e;border-top:2px solid #d97706;background:#fffbeb;-webkit-print-color-adjust:exact;print-color-adjust:exact;">DATA: ${dFmt} — ${sub.length} registro${sub.length !== 1 ? 's' : ''}</td></tr>`
+        const isPrimeiro = idx === 0
+        const breakClass = isPrimeiro ? '' : 'page-break'
+        const breakStyle = isPrimeiro ? '' : 'page-break-before:always;break-before:page;'
+        const cab = `<tr class="${breakClass}" style="${breakStyle}"><td colspan="7" style="padding:9px 7px 4px;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em;color:#92400e;border-top:2px solid #d97706;background:#fffbeb;-webkit-print-color-adjust:exact;print-color-adjust:exact;">DATA: ${dFmt} — ${sub.length} registro${sub.length !== 1 ? 's' : ''}</td></tr>`
         let numSub = 0
         const linhas = sub.map(r => {
           numSub++
@@ -448,6 +451,8 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
     })
 
+    let blocoIndex = 0
+
     return presentes.map(periodo => {
       const grupoPer = lista.filter(r => (r.periodo || '') === periodo)
       const datasDoPeriodo = [...new Set(grupoPer.map(r => r.data_atendimento || r.data_consulta || '').filter(Boolean))].sort()
@@ -456,6 +461,9 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
       return datasDoPeriodo.map(dataKey => {
         const subGrupo = sortarLista(grupoPer.filter(r => (r.data_atendimento || r.data_consulta || '') === dataKey))
         if (subGrupo.length === 0) return ''
+
+        const isPrimeiroBloco = blocoIndex === 0
+        blocoIndex++
 
         const dataFmt = dataKey ? dataKey.split('-').reverse().join('/') : null
         const profGrupo = subGrupo[0]?.profissional_nome || null
@@ -472,7 +480,10 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
           titulo = 'Sem período'
         }
 
-        const cab = `<tr><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#1a7a3c;border-top:2px solid #1a7a3c;background:#f0fdf4;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${titulo} — ${subGrupo.length} paciente${subGrupo.length !== 1 ? 's' : ''}</td></tr>`
+        const breakClass = isPrimeiroBloco ? '' : 'page-break'
+        const breakStyle = isPrimeiroBloco ? '' : 'page-break-before:always;break-before:page;'
+
+        const cab = `<tr class="${breakClass}" style="${breakStyle}"><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#1a7a3c;border-top:2px solid #1a7a3c;background:#f0fdf4;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${titulo} — ${subGrupo.length} paciente${subGrupo.length !== 1 ? 's' : ''}</td></tr>`
 
         let numSub = 0
         const linhas = subGrupo.map(r => {
@@ -537,7 +548,11 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
     td { padding: 5px 7px; border-bottom: 1px solid #e2e8f0; font-size: 10px; }
     tr:nth-child(even) td { background: #f8fafc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .rodape { margin-top: 16px; font-size: 10px; color: #555; text-align: right; }
-    @media print { body { padding: 10px; } }
+    tr.page-break { page-break-before: always; break-before: page; }
+    @media print {
+      body { padding: 10px; }
+      tr.page-break { page-break-before: always; break-before: page; }
+    }
   </style>
 </head>
 <body>
