@@ -2445,8 +2445,20 @@ export default function Especialidades() {
               )}
               <div>
                 <label className="label-modern">Profissional</label>
-                <input className="input-modern" type="text" value={formEditar.profissional_nome}
-                  onChange={e => setFormEditar(f => ({ ...f, profissional_nome: e.target.value }))} style={{ width: '100%' }} />
+                <select className="input-modern"
+                  value={formEditar.profissional_nome || ''}
+                  onChange={e => setFormEditar(f => ({ ...f, profissional_nome: e.target.value }))}
+                  style={{ width: '100%' }}>
+                  <option value="">— Nenhum / Selecione —</option>
+                  {(() => {
+                    const nomesEscala = [...new Set(escala.map(e => e.profissional_nome).filter(Boolean))]
+                    const nomesProf = profissionais.map(p => p.nome).filter(Boolean)
+                    const todosUnicos = [...new Set([...nomesEscala, ...nomesProf, formEditar.profissional_nome].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+                    return todosUnicos.map(nome => (
+                      <option key={nome} value={nome}>{nome}</option>
+                    ))
+                  })()}
+                </select>
               </div>
               {registroEditar?.status === 'autorizado' && (
                 <div>
