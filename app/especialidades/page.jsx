@@ -393,139 +393,151 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
     return r.criado_por || '—'
   }
 
-  // Função para gerar linhas simples (pendente/negado/excluído)
-  function linhasSimples(lista) {
-    const sorted = sortarLista(lista)
-    const datas = [...new Set(sorted.map(r => r.data_consulta || r.data_atendimento || '').filter(Boolean))].sort()
+  // Extrai os blocos de data para gerar páginas independentes com cabeçalho repetido
+  function obterBlocosData() {
+    const listaBlocos = []
 
-    if (datas.length > 1) {
-      return datas.map((dKey, idx) => {
-        const sub = sorted.filter(r => (r.data_consulta || r.data_atendimento || '') === dKey)
-        const dFmt = dKey ? dKey.split('-').reverse().join('/') : 'Sem data'
-        const isPrimeiro = idx === 0
-        const breakClass = isPrimeiro ? '' : 'page-break'
-        const breakStyle = isPrimeiro ? '' : 'page-break-before:always;break-before:page;'
-        const cab = `<tr class="${breakClass}" style="${breakStyle}"><td colspan="7" style="padding:9px 7px 4px;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em;color:#92400e;border-top:2px solid #d97706;background:#fffbeb;-webkit-print-color-adjust:exact;print-color-adjust:exact;">DATA: ${dFmt} — ${sub.length} registro${sub.length !== 1 ? 's' : ''}</td></tr>`
-        let numSub = 0
-        const linhas = sub.map(r => {
-          numSub++
-          numGlobal++
-          const dataFmt = dKey ? dKey.split('-').reverse().join('/') : '—'
-          return `<tr>
-            <td>${numSub}</td>
-            <td style="font-weight:700">${r.paciente_nome || '—'}</td>
-            <td>${r.paciente_cns || '—'}</td>
-            <td>${r.telefone || '—'}</td>
-            <td>${r.tipo_exame || '—'}</td>
-            <td style="white-space:nowrap">${dataFmt}</td>
-            <td style="color:#475569">${operadorDo(r)}</td>
-          </tr>`
-        }).join('')
-        return cab + linhas
-      }).join('')
+    function processarStatus(st, lista) {
+      if (lista.length === 0) return
+
+      const modoAgr = st === 'autorizado' || (!st && lista.some(r => r.periodo))
+
+      if (modoAgr) {
+        const presentes = [...new Set(lista.map(r => r.periodo || ''))].sort((a, b) => {
+          if (!a) return 1
+          if (!b) return -1
+          const ia = ordemPeriodos.indexOf(a)
+          const ib = ordemPeriodos.indexOf(b)
+          return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
+        })
+
+        presentes.forEach(periodo => {
+          const grupoPer = lista.filter(r => (r.periodo || '') === periodo)
+          const datasDoPeriodo = [...new Set(grupoPer.map(r => r.data_atendimento || r.data_consulta || '').filter(Boolean))].sort()
+          if (datasDoPeriodo.length === 0) datasDoPeriodo.push('')
+
+          datasDoPeriodo.forEach(dataKey => {
+            const subGrupo = sortarLista(grupoPer.filter(r => (r.data_atendimento || r.data_consulta || '') === dataKey))
+            if (subGrupo.length === 0) return
+
+            const dataFmt = dataKey ? dataKey.split('-').reverse().join('/') : null
+            const profGrupo = subGrupo[0]?.profissional_nome || null
+            const infoData = [dataFmt, profGrupo].filter(Boolean).join(' · ')
+
+            let titulo = ''
+            if (periodo && infoData) {
+              titulo = `${periodo} — ${infoData}`
+            } else if (periodo) {
+              titulo = periodo
+            } else if (infoData) {
+              titulo = infoData
+            } else {
+              titulo = 'Sem período'
+            }
+
+            listaBlocos.push({
+              status: st || subGrupo[0]?.status || 'autorizado',
+              titulo,
+              registros: subGrupo
+            })
+          })
+        })
+      } else {
+        const sorted = sortarLista(lista)
+        const datas = [...new Set(sorted.map(r => r.data_consulta || r.data_atendimento || '').filter(Boolean))].sort()
+
+        if (datas.length > 1) {
+          datas.forEach(dKey => {
+            const subGrupo = sorted.filter(r => (r.data_consulta || r.data_atendimento || '') === dKey)
+            const dFmt = dKey ? dKey.split('-').reverse().join('/') : 'Sem data'
+            listaBlocos.push({
+              status: st || subGrupo[0]?.status || 'pendente',
+              titulo: `DATA: ${dFmt}`,
+              registros: subGrupo
+            })
+          })
+        } else {
+          listaBlocos.push({
+            status: st || sorted[0]?.status || 'pendente',
+            titulo: '',
+            registros: sorted
+          })
+        }
+      }
     }
 
-    return sorted.map(r => {
-      numGlobal++
-      const data = r.data_consulta || r.data_atendimento
-      const dataFmt = data ? data.split('-').reverse().join('/') : '—'
+    if (!statusFiltro) {
+      const ordemStatus = ['autorizado', 'pendente', 'negado', 'excluido']
+      ordemStatus.forEach(st => {
+        const sub = registros.filter(r => r.status === st)
+        if (sub.length > 0) processarStatus(st, sub)
+      })
+    } else {
+      processarStatus(statusFiltro, registros)
+    }
+
+    return listaBlocos
+  }
+
+  const blocosData = obterBlocosData()
+
+  const folhasHtml = blocosData.map((b, bIdx) => {
+    const statusAtual = b.status || statusFiltro || 'autorizado'
+    const statusObj = STATUS_INFO[statusAtual] || STATUS_INFO.autorizado
+
+    const linhasHtml = b.registros.map((r, rIdx) => {
+      const dataR = r.data_atendimento || r.data_consulta
+      const dataRFmt = dataR ? dataR.split('-').reverse().join('/') : '—'
       return `<tr>
-        <td>${numGlobal}</td>
+        <td>${rIdx + 1}</td>
         <td style="font-weight:700">${r.paciente_nome || '—'}</td>
         <td>${r.paciente_cns || '—'}</td>
         <td>${r.telefone || '—'}</td>
         <td>${r.tipo_exame || '—'}</td>
-        <td style="white-space:nowrap">${dataFmt}</td>
+        <td style="white-space:nowrap">${dataRFmt}</td>
         <td style="color:#475569">${operadorDo(r)}</td>
       </tr>`
     }).join('')
-  }
 
-  // Função para gerar blocos agrupados por período e por data (autorizados)
-  function blocosAgrupados(lista) {
-    const presentes = [...new Set(lista.map(r => r.periodo || ''))].sort((a, b) => {
-      if (!a) return 1
-      if (!b) return -1
-      const ia = ordemPeriodos.indexOf(a)
-      const ib = ordemPeriodos.indexOf(b)
-      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
-    })
+    return `<div class="folha-impressao ${bIdx > 0 ? 'quebra-folha' : ''}">
+      <div class="cabecalho">
+        <div class="cab-topo">
+          <img class="cab-logo" src="/logo.jpg" alt="Logo" />
+          <div class="cab-texto">
+            <p>Prefeitura Municipal de ${clientConfig.municipalityName}</p>
+            <p>Fundo Municipal de Saúde</p>
+            <p>Secretaria Municipal de Saúde</p>
+          </div>
+        </div>
+        <div class="cab-titulo">
+          <h2>Lista de ${isUsg ? 'Exames' : 'Consultas'}${espLabel ? ' — ' + espLabel.toUpperCase() : ''}</h2>
+          <p style="font-size:11px;font-weight:700;margin:4px 0 2px;text-transform:uppercase;letter-spacing:0.06em;color:${statusObj.cor}">
+            ${statusObj.label}
+          </p>
+          <small>Competência: ${mesLabel}${anoLabel ? '/' + anoLabel : ''} &nbsp;|&nbsp; Emitido em: ${dataEmissao} às ${horaEmissao} &nbsp;|&nbsp; ${b.registros.length} registro${b.registros.length !== 1 ? 's' : ''}</small>
+        </div>
+      </div>
 
-    let blocoIndex = 0
-
-    return presentes.map(periodo => {
-      const grupoPer = lista.filter(r => (r.periodo || '') === periodo)
-      const datasDoPeriodo = [...new Set(grupoPer.map(r => r.data_atendimento || r.data_consulta || '').filter(Boolean))].sort()
-      if (datasDoPeriodo.length === 0) datasDoPeriodo.push('')
-
-      return datasDoPeriodo.map(dataKey => {
-        const subGrupo = sortarLista(grupoPer.filter(r => (r.data_atendimento || r.data_consulta || '') === dataKey))
-        if (subGrupo.length === 0) return ''
-
-        const isPrimeiroBloco = blocoIndex === 0
-        blocoIndex++
-
-        const dataFmt = dataKey ? dataKey.split('-').reverse().join('/') : null
-        const profGrupo = subGrupo[0]?.profissional_nome || null
-        const infoData = [dataFmt, profGrupo].filter(Boolean).join(' · ')
-
-        let titulo = ''
-        if (periodo && infoData) {
-          titulo = `${periodo} — ${infoData}`
-        } else if (periodo) {
-          titulo = periodo
-        } else if (infoData) {
-          titulo = infoData
-        } else {
-          titulo = 'Sem período'
-        }
-
-        const breakClass = isPrimeiroBloco ? '' : 'page-break'
-        const breakStyle = isPrimeiroBloco ? '' : 'page-break-before:always;break-before:page;'
-
-        const cab = `<tr class="${breakClass}" style="${breakStyle}"><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#1a7a3c;border-top:2px solid #1a7a3c;background:#f0fdf4;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${titulo} — ${subGrupo.length} paciente${subGrupo.length !== 1 ? 's' : ''}</td></tr>`
-
-        let numSub = 0
-        const linhas = subGrupo.map(r => {
-          numSub++
-          const dataR = r.data_atendimento || r.data_consulta
-          const dataRFmt = dataR ? dataR.split('-').reverse().join('/') : '—'
-          return `<tr>
-            <td>${numSub}</td>
-            <td style="font-weight:700">${r.paciente_nome || '—'}</td>
-            <td>${r.paciente_cns || '—'}</td>
-            <td>${r.telefone || '—'}</td>
-            <td>${r.tipo_exame || '—'}</td>
-            <td style="white-space:nowrap">${dataRFmt}</td>
-            <td style="color:#475569">${operadorDo(r)}</td>
-          </tr>`
-        }).join('')
-        return cab + linhas
-      }).join('')
-    }).join('')
-  }
-
-  let numGlobal = 0
-  let blocos = ''
-
-  if (!statusFiltro) {
-    // ── Todos os status: separar por bloco de status ──
-    const ordemStatus = ['autorizado', 'pendente', 'negado', 'excluido']
-    blocos = ordemStatus.map(st => {
-      const grupo = registros.filter(r => r.status === st)
-      if (grupo.length === 0) return ''
-      const info = STATUS_INFO[st]
-      const cabStatus = `<tr><td colspan="7" style="padding:11px 7px 5px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:${info.cor};border-top:3px solid ${info.borda};background:${info.bg};-webkit-print-color-adjust:exact;print-color-adjust:exact;">${info.label} — ${grupo.length} registro${grupo.length !== 1 ? 's' : ''}</td></tr>`
-      const conteudo = st === 'autorizado' ? blocosAgrupados(grupo) : linhasSimples(grupo)
-      return cabStatus + conteudo
-    }).join('')
-  } else if (modoAgrupado) {
-    // ── Autorizados: agrupado por período ──
-    blocos = blocosAgrupados(registros)
-  } else {
-    // ── Pendentes / Negados / Excluídos: lista simples ──
-    blocos = linhasSimples(registros)
-  }
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px">#</th>
+            <th>Paciente</th>
+            <th style="width:115px">CPF/CNS</th>
+            <th style="width:95px">Telefone</th>
+            <th>Tipo</th>
+            <th style="width:90px">${statusAtual === 'autorizado' || modoAgrupado ? 'Data' : 'Data Solicitação'}</th>
+            <th style="width:115px">${statusAtual === 'autorizado' ? 'Autorizado por' : statusAtual === 'pendente' ? 'Cadastrado por' : 'Operador'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${b.titulo ? `<tr><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:${statusObj.cor};border-top:2px solid ${statusObj.borda};background:${statusObj.bg};-webkit-print-color-adjust:exact;print-color-adjust:exact;">${b.titulo} — ${b.registros.length} paciente${b.registros.length !== 1 ? 's' : ''}</td></tr>` : ''}
+          ${linhasHtml}
+        </tbody>
+      </table>
+      <div class="rodape">Total desta folha: ${b.registros.length} paciente${b.registros.length !== 1 ? 's' : ''}</div>
+    </div>`
+  }).join('')
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -535,6 +547,8 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: Arial, sans-serif; font-size: 11px; color: #000; padding: 24px 28px; }
+    .folha-impressao { width: 100%; margin-bottom: 24px; }
+    .folha-impressao.quebra-folha { page-break-before: always; break-before: page; margin-top: 0; padding-top: 0; }
     .cabecalho { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #1a7a3c; }
     .cab-topo { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
     .cab-logo { width: 52px; height: 52px; object-fit: contain; }
@@ -548,43 +562,14 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
     td { padding: 5px 7px; border-bottom: 1px solid #e2e8f0; font-size: 10px; }
     tr:nth-child(even) td { background: #f8fafc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .rodape { margin-top: 16px; font-size: 10px; color: #555; text-align: right; }
-    tr.page-break { page-break-before: always; break-before: page; }
     @media print {
       body { padding: 10px; }
-      tr.page-break { page-break-before: always; break-before: page; }
+      .folha-impressao.quebra-folha { page-break-before: always; break-before: page; }
     }
   </style>
 </head>
 <body>
-  <div class="cabecalho">
-    <div class="cab-topo">
-      <img class="cab-logo" src="/logo.jpg" alt="Logo" />
-      <div class="cab-texto">
-        <p>Prefeitura Municipal de ${clientConfig.municipalityName}</p>
-        <p>Fundo Municipal de Saúde</p>
-        <p>Secretaria Municipal de Saúde</p>
-      </div>
-    </div>
-    <div class="cab-titulo">
-      <h2>Lista de ${isUsg ? 'Exames' : 'Consultas'}${espLabel ? ' — ' + espLabel.toUpperCase() : ''}</h2>
-      <p style="font-size:11px;font-weight:700;margin:4px 0 2px;text-transform:uppercase;letter-spacing:0.06em;color:${statusFiltro === 'autorizado' ? '#166534' : statusFiltro === 'negado' ? '#991b1b' : statusFiltro === 'excluido' ? '#475569' : '#92400e'}">
-        ${{ autorizado: 'Autorizados', pendente: 'Pendentes', negado: 'Negados', excluido: 'Excluídos', '': 'Todos os status' }[statusFiltro] || 'Todos os status'}
-      </p>
-      <small>Competência: ${mesLabel}${anoLabel ? '/' + anoLabel : ''} &nbsp;|&nbsp; Emitido em: ${dataEmissao} às ${horaEmissao} &nbsp;|&nbsp; ${registros.length} registro${registros.length !== 1 ? 's' : ''}</small>
-    </div>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>#</th><th>Paciente</th><th>CPF/CNS</th><th>Telefone</th><th>Tipo</th>
-        <th>${statusFiltro === 'autorizado' || modoAgrupado ? 'Data' : 'Data Solicitação'}</th>
-        <th>${statusFiltro === 'autorizado' ? 'Autorizado por' : statusFiltro === 'pendente' ? 'Cadastrado por' : 'Operador'}</th>
-      </tr>
-    </thead>
-    <tbody>${blocos}</tbody>
-  </table>
-  <div class="rodape">Total: ${registros.length} registro${registros.length !== 1 ? 's' : ''}</div>
+  ${folhasHtml}
   <script>window.onload = () => { window.print(); }</script>
 </body>
 </html>`
