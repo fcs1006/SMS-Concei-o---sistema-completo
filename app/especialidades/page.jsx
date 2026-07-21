@@ -737,7 +737,7 @@ export default function Especialidades() {
 
   // Modal edição
   const [modalEditar, setModalEditar] = useState({ show: false, id: null })
-  const [formEditar, setFormEditar] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '', periodo: '', prioridade: '' })
+  const [formEditar, setFormEditar] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', data_atendimento: '', tipo_exame: '', observacao: '', profissional_nome: '', periodo: '', prioridade: '' })
 
   // Operações em Lote
   const [selecionados, setSelecionados] = useState([])
@@ -2619,6 +2619,21 @@ export default function Especialidades() {
                 <input className="input-modern" type="date" value={formEditar.data_consulta}
                   onChange={e => setFormEditar(f => ({ ...f, data_consulta: e.target.value }))} style={{ width: '100%' }} />
               </div>
+              <div>
+                <label className="label-modern">Data de Atendimento (Escala)</label>
+                <input className="input-modern" type="date" value={formEditar.data_atendimento || ''}
+                  onChange={e => {
+                    const novaData = e.target.value
+                    const itemEscala = escala.find(x => x.data_atendimento === novaData)
+                    const profAuto = itemEscala?.profissional_nome || ''
+                    setFormEditar(f => ({
+                      ...f,
+                      data_atendimento: novaData,
+                      ...(profAuto ? { profissional_nome: profAuto } : {}),
+                      ...(itemEscala?.periodo ? { periodo: itemEscala.periodo } : {})
+                    }))
+                  }} style={{ width: '100%' }} />
+              </div>
               {isUsgEdit && (
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label className="label-modern">Tipo de Exame</label>
@@ -2642,19 +2657,27 @@ export default function Especialidades() {
                 </div>
               )}
               <div>
-                <label className="label-modern">Profissional</label>
+                <label className="label-modern">Profissional (da Escala)</label>
                 <select className="input-modern"
                   value={formEditar.profissional_nome || ''}
                   onChange={e => setFormEditar(f => ({ ...f, profissional_nome: e.target.value }))}
                   style={{ width: '100%' }}>
                   <option value="">— Nenhum / Selecione —</option>
                   {(() => {
+                    const profsNaData = formEditar.data_atendimento
+                      ? escala.filter(e => e.data_atendimento === formEditar.data_atendimento).map(e => e.profissional_nome).filter(Boolean)
+                      : []
                     const nomesEscala = [...new Set(escala.map(e => e.profissional_nome).filter(Boolean))]
                     const nomesProf = profissionais.map(p => p.nome).filter(Boolean)
-                    const todosUnicos = [...new Set([...nomesEscala, ...nomesProf, formEditar.profissional_nome].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-                    return todosUnicos.map(nome => (
-                      <option key={nome} value={nome}>{nome}</option>
-                    ))
+                    const todosUnicos = [...new Set([...profsNaData, ...nomesEscala, ...nomesProf, formEditar.profissional_nome].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+                    return todosUnicos.map(nome => {
+                      const naData = profsNaData.includes(nome)
+                      return (
+                        <option key={nome} value={nome}>
+                          {nome}{naData ? ' ⭐ (Escala na Data)' : ''}
+                        </option>
+                      )
+                    })
                   })()}
                 </select>
               </div>
@@ -2728,7 +2751,17 @@ export default function Especialidades() {
             <div>
               <label className="label-modern">Data de Atendimento</label>
               <input className="input-modern" type="date" value={formLote.data_atendimento}
-                onChange={e => setFormLote(f => ({ ...f, data_atendimento: e.target.value }))} style={{ width: '100%' }} />
+                onChange={e => {
+                  const novaData = e.target.value
+                  const itemEscala = escala.find(x => x.data_atendimento === novaData)
+                  const profAuto = itemEscala?.profissional_nome || ''
+                  setFormLote(f => ({
+                    ...f,
+                    data_atendimento: novaData,
+                    ...(profAuto ? { profissional_nome: profAuto } : {}),
+                    ...(itemEscala?.periodo ? { periodo: itemEscala.periodo } : {})
+                  }))
+                }} style={{ width: '100%' }} />
             </div>
             <div>
               <label className="label-modern">Período</label>
@@ -2744,12 +2777,20 @@ export default function Especialidades() {
               <select className="input-modern" value={formLote.profissional_nome} onChange={e => setFormLote(f => ({ ...f, profissional_nome: e.target.value }))} style={{ width: '100%' }}>
                 <option value="">— Manter atual —</option>
                 {(() => {
+                  const profsNaData = formLote.data_atendimento
+                    ? escala.filter(e => e.data_atendimento === formLote.data_atendimento).map(e => e.profissional_nome).filter(Boolean)
+                    : []
                   const nomesEscala = [...new Set(escala.map(e => e.profissional_nome).filter(Boolean))]
                   const nomesProf = profissionais.map(p => p.nome).filter(Boolean)
-                  const todosUnicos = [...new Set([...nomesEscala, ...nomesProf])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-                  return todosUnicos.map(nome => (
-                    <option key={nome} value={nome}>{nome}</option>
-                  ))
+                  const todosUnicos = [...new Set([...profsNaData, ...nomesEscala, ...nomesProf, formLote.profissional_nome].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+                  return todosUnicos.map(nome => {
+                    const naData = profsNaData.includes(nome)
+                    return (
+                      <option key={nome} value={nome}>
+                        {nome}{naData ? ' ⭐ (Escala na Data)' : ''}
+                      </option>
+                    )
+                  })
                 })()}
               </select>
             </div>
@@ -2803,7 +2844,17 @@ export default function Especialidades() {
             <div>
               <label className="label-modern">Data de Atendimento *</label>
               <input className="input-modern" type="date" value={formLote.data_atendimento}
-                onChange={e => setFormLote(f => ({ ...f, data_atendimento: e.target.value }))} style={{ width: '100%' }} />
+                onChange={e => {
+                  const novaData = e.target.value
+                  const itemEscala = escala.find(x => x.data_atendimento === novaData)
+                  const profAuto = itemEscala?.profissional_nome || ''
+                  setFormLote(f => ({
+                    ...f,
+                    data_atendimento: novaData,
+                    ...(profAuto ? { profissional_nome: profAuto } : {}),
+                    ...(itemEscala?.periodo ? { periodo: itemEscala.periodo } : {})
+                  }))
+                }} style={{ width: '100%' }} />
             </div>
             <div>
               <label className="label-modern">Período *</label>
@@ -2819,12 +2870,20 @@ export default function Especialidades() {
               <select className="input-modern" value={formLote.profissional_nome} onChange={e => setFormLote(f => ({ ...f, profissional_nome: e.target.value }))} style={{ width: '100%' }}>
                 <option value="">— Selecione o profissional —</option>
                 {(() => {
+                  const profsNaData = formLote.data_atendimento
+                    ? escala.filter(e => e.data_atendimento === formLote.data_atendimento).map(e => e.profissional_nome).filter(Boolean)
+                    : []
                   const nomesEscala = [...new Set(escala.map(e => e.profissional_nome).filter(Boolean))]
                   const nomesProf = profissionais.map(p => p.nome).filter(Boolean)
-                  const todosUnicos = [...new Set([...nomesEscala, ...nomesProf])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-                  return todosUnicos.map(nome => (
-                    <option key={nome} value={nome}>{nome}</option>
-                  ))
+                  const todosUnicos = [...new Set([...profsNaData, ...nomesEscala, ...nomesProf, formLote.profissional_nome].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+                  return todosUnicos.map(nome => {
+                    const naData = profsNaData.includes(nome)
+                    return (
+                      <option key={nome} value={nome}>
+                        {nome}{naData ? ' ⭐ (Escala na Data)' : ''}
+                      </option>
+                    )
+                  })
                 })()}
               </select>
             </div>
