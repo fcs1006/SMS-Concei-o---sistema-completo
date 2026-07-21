@@ -739,6 +739,12 @@ export default function Especialidades() {
   const [modalEditar, setModalEditar] = useState({ show: false, id: null })
   const [formEditar, setFormEditar] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', tipo_exame: '', observacao: '', profissional_nome: '', periodo: '', prioridade: '' })
 
+  // Operações em Lote
+  const [selecionados, setSelecionados] = useState([])
+  const [modalLote, setModalLote] = useState(null) // 'editar' | 'autorizar' | 'excluir' | null
+  const [formLote, setFormLote] = useState({ data_atendimento: '', periodo: '', profissional_nome: '', tipo_exame: '', prioridade: '', observacao: '', motivo_exclusao: '' })
+  const [processandoLote, setProcessandoLote] = useState(false)
+
   // Relatório
   const [relatorio, setRelatorio] = useState([])
   const [relDetalhes, setRelDetalhes] = useState([])
@@ -1457,6 +1463,106 @@ export default function Especialidades() {
     } catch (e) { mostrarMsg('' + e.message, false) }
   }
 
+  // ── Operações em Lote ───────────────────────────────────────────────────
+  function toggleSelecaoItem(id) {
+    setSelecionados(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  function toggleSelecionarTodos(listaVisivel) {
+    const idsVisiveis = listaVisivel.map(x => x.id)
+    const todosSelecionados = idsVisiveis.length > 0 && idsVisiveis.every(id => selecionados.includes(id))
+    if (todosSelecionados) {
+      setSelecionados(prev => prev.filter(id => !idsVisiveis.includes(id)))
+    } else {
+      setSelecionados(prev => [...new Set([...prev, ...idsVisiveis])])
+    }
+  }
+
+  async function executarAlteracaoEmLote(tipoAcao) {
+    if (selecionados.length === 0) return
+    setProcessandoLote(true)
+    try {
+      if (tipoAcao === 'editar') {
+        const campos = {}
+        if (formLote.data_atendimento) campos.data_atendimento = formLote.data_atendimento
+        if (formLote.periodo) campos.periodo = formLote.periodo
+        if (formLote.profissional_nome) campos.profissional_nome = formLote.profissional_nome
+        if (formLote.tipo_exame) campos.tipo_exame = formLote.tipo_exame
+        if (formLote.prioridade) campos.prioridade = formLote.prioridade
+        if (formLote.observacao) campos.observacao = formLote.observacao
+
+        if (Object.keys(campos).length === 0) {
+          mostrarMsg('Preencha ao menos um campo para alterar em lote', false)
+          setProcessandoLote(false)
+          return
+        }
+
+        for (const id of selecionados) {
+          await fetch('/api/especialidades', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, campos })
+          })
+        }
+        mostrarMsg(`${selecionados.length} agendamento(s) alterado(s) em lote`)
+      } else if (tipoAcao === 'autorizar') {
+        if (!formLote.data_atendimento || !formLote.periodo) {
+          mostrarMsg('Informe a data e o período para autorizar em lote', false)
+          setProcessandoLote(false)
+          return
+        }
+        for (const id of selecionados) {
+          await fetch('/api/especialidades', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id,
+              status: 'autorizado',
+              autorizado_por: usuario?.nome || null,
+              data_atendimento: formLote.data_atendimento,
+              periodo: formLote.periodo,
+              profissional_nome: formLote.profissional_nome || null
+            })
+          })
+        }
+        mostrarMsg(`${selecionados.length} agendamento(s) autorizado(s) em lote`)
+      } else if (tipoAcao === 'pendente') {
+        for (const id of selecionados) {
+          await fetch('/api/especialidades', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, status: 'pendente' })
+          })
+        }
+        mostrarMsg(`${selecionados.length} agendamento(s) voltaram para pendente`)
+      } else if (tipoAcao === 'excluir') {
+        if (!formLote.motivo_exclusao.trim()) {
+          mostrarMsg('Informe o motivo da exclusão em lote', false)
+          setProcessandoLote(false)
+          return
+        }
+        for (const id of selecionados) {
+          await fetch('/api/especialidades', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, status: 'excluido', motivo_exclusao: formLote.motivo_exclusao.trim() })
+          })
+        }
+        mostrarMsg(`${selecionados.length} agendamento(s) excluído(s) em lote`)
+      }
+
+      setSelecionados([])
+      setModalLote(null)
+      setFormLote({ data_atendimento: '', periodo: '', profissional_nome: '', tipo_exame: '', prioridade: '', observacao: '', motivo_exclusao: '' })
+      await buscarAgendamentos()
+      if (abaMain === 'relatorio') await buscarRelatorio()
+    } catch (e) {
+      mostrarMsg('Erro na alteração em lote: ' + e.message, false)
+    } finally {
+      setProcessandoLote(false)
+    }
+  }
+
   // ── Profissionais ─────────────────────────────────────────────────────────
   async function salvarProfissional() {
     if (!formProf.nome.trim()) { mostrarMsg('Informe o nome', false); return }
@@ -1781,9 +1887,38 @@ export default function Especialidades() {
                 </p>
               ) : (
                 <>
+                  {selecionados.length > 0 && (
+                    <div style={{ background: '#1e293b', color: 'white', padding: '10px 16px', borderRadius: '12px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', boxShadow: '0 10px 25px rgba(0,0,0,0.15)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700' }}>
+                        <span style={{ background: '#3b82f6', color: 'white', padding: '2px 9px', borderRadius: '20px', fontSize: '12px' }}>
+                          {selecionados.length} selecionado{selecionados.length > 1 ? 's' : ''}
+                        </span>
+                        <span>Ações em Lote:</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <button onClick={() => { setFormLote({ data_atendimento: '', periodo: '', profissional_nome: '', tipo_exame: '', prioridade: '', observacao: '', motivo_exclusao: '' }); setModalLote('editar') }}
+                          style={{ padding: '6px 12px', background: '#3b82f6', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Pencil size={13} /> Alterar em Lote
+                        </button>
+                        <button onClick={() => { setFormLote({ data_atendimento: '', periodo: '', profissional_nome: '', tipo_exame: '', prioridade: '', observacao: '', motivo_exclusao: '' }); setModalLote('autorizar') }}
+                          style={{ padding: '6px 12px', background: '#16a34a', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          ✓ Autorizar em Lote
+                        </button>
+                        <button onClick={() => { setFormLote({ data_atendimento: '', periodo: '', profissional_nome: '', tipo_exame: '', prioridade: '', observacao: '', motivo_exclusao: '' }); setModalLote('excluir') }}
+                          style={{ padding: '6px 12px', background: '#dc2626', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Trash2 size={13} /> Excluir em Lote
+                        </button>
+                        <button onClick={() => setSelecionados([])}
+                          style={{ padding: '6px 10px', background: '#475569', border: 'none', borderRadius: '8px', color: 'white', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                          ✕ Desmarcar
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <div className="screen-only" style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: 'Sora, sans-serif', fontSize: '12px' }}>
                       <colgroup>
+                        <col style={{ width: '34px' }} />
                         <col style={{ width: '28px' }} />
                         <col style={{ width: '20%' }} />
                         <col style={{ width: '10%' }} />
@@ -1795,6 +1930,17 @@ export default function Especialidades() {
                       </colgroup>
                       <thead>
                         <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                          <th style={{ padding: '7px 4px', textAlign: 'center' }}>
+                            {(() => {
+                              const pendentesVisiveis = agendamentos.filter(a => a.status === 'pendente')
+                              const todosSel = pendentesVisiveis.length > 0 && pendentesVisiveis.every(a => selecionados.includes(a.id))
+                              return (
+                                <input type="checkbox" checked={todosSel}
+                                  onChange={() => toggleSelecionarTodos(pendentesVisiveis)}
+                                  style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#1d4ed8' }} />
+                              )
+                            })()}
+                          </th>
                           {['#', 'Paciente', 'CPF/CNS', 'Telefone', 'Tipo', 'Data', 'Prioridade', 'Ações'].map(h => (
                             <th key={h} style={{ padding: '7px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                           ))}
@@ -1815,57 +1961,64 @@ export default function Especialidades() {
                               {label}
                             </button>
                           )
-                          return sorted.map((a, i) => (
-                            <tr key={a.id}
-                              style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
-                              onClick={e => { if (!e.target.closest('button')) setModalVer(a) }}
-                              onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                              <td style={{ padding: '8px', color: '#94a3b8', fontSize: '11px' }}>{i + 1}</td>
-                              <td style={{ padding: '8px', fontWeight: '700', color: '#0f172a', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {a.paciente_nome}
-                              </td>
-                              <td style={{ padding: '8px', color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.paciente_cns || '—'}</td>
-                              <td style={{ padding: '8px', color: '#475569', fontSize: '11px' }}>{a.telefone || '—'}</td>
-                              <td style={{ padding: '8px', fontSize: '11px', color: '#0f172a', fontWeight: a.tipo_exame ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.tipo_exame || '—'}</td>
-                              <td style={{ padding: '8px', color: '#475569', fontSize: '11px', whiteSpace: 'nowrap' }}>{fmtData(a.data_consulta)}</td>
-                              <td style={{ padding: '8px', fontSize: '11px' }}>
-                                {(() => {
-                                  const m = MANCHESTER.find(x => x.valor === a.prioridade)
-                                  if (!m) return <span style={{ color: '#cbd5e1' }}>—</span>
-                                  return <span style={{ padding: '3px 8px', borderRadius: '12px', background: m.bg, color: m.cor, border: `1px solid ${m.borda}`, fontWeight: '600', whiteSpace: 'nowrap', fontSize: '10px' }}>{m.label}</span>
-                                })()}
-                              </td>
-                              <td style={{ padding: '6px 8px' }}>
-                                <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexWrap: 'nowrap' }}>
-                                  {btn(async () => {
-                                    // Busca escala sem filtro de mês para pegar entradas futuras
-                                    let escalaDisponivel = escala
-                                    try {
-                                      const res = await fetch(`/api/especialidades/escala?especialidade=${esp}`)
-                                      const json = await res.json()
-                                      if (json.ok && json.data?.length) {
-                                        const hoje = new Date().toISOString().slice(0, 10)
-                                        const futuras = json.data.filter(e => e.data_atendimento >= hoje)
-                                        escalaDisponivel = futuras.length ? futuras : json.data
-                                        setEscala(escalaDisponivel)
-                                      }
-                                    } catch { }
-                                    const periodoInicial = a.periodo || ''
-                                    const entradaEscala = periodoInicial
-                                      ? escalaDisponivel.find(e => e.periodo === periodoInicial) || escalaDisponivel[0]
-                                      : escalaDisponivel[0]
-                                    setModalAutorizar(a)
-                                    setPeriodoAutorizar(periodoInicial)
-                                    setDataAtendimentoAutorizar(entradaEscala?.data_atendimento || '')
-                                  }, 'Autorizar', '#dcfce7', '#86efac', '#166534', <Check size={11} />)}
-                                  {btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', <X size={11} />)}
-                                  {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '', periodo: a.periodo || '', prioridade: a.prioridade || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', <Pencil size={11} />)}
-                                  {btn(() => { setModalExcluir({ show: true, id: a.id }); setMotivoExclusao('') }, 'Excluir', '#f1f5f9', '#cbd5e1', '#64748b', <Trash2 size={11} />)}
-                                </div>
-                              </td>
-                            </tr>
-                          ))
+                          return sorted.map((a, i) => {
+                            const isSel = selecionados.includes(a.id)
+                            return (
+                              <tr key={a.id}
+                                style={{ borderBottom: '1px solid #f1f5f9', background: isSel ? '#eff6ff' : 'transparent', cursor: 'pointer' }}
+                                onClick={e => { if (!e.target.closest('button') && !e.target.closest('input')) setModalVer(a) }}
+                                onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = '#f8fafc' }}
+                                onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent' }}>
+                                <td style={{ padding: '8px 4px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                  <input type="checkbox" checked={isSel}
+                                    onChange={() => toggleSelecaoItem(a.id)}
+                                    style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#1d4ed8' }} />
+                                </td>
+                                <td style={{ padding: '8px', color: '#94a3b8', fontSize: '11px' }}>{i + 1}</td>
+                                <td style={{ padding: '8px', fontWeight: '700', color: '#0f172a', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {a.paciente_nome}
+                                </td>
+                                <td style={{ padding: '8px', color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.paciente_cns || '—'}</td>
+                                <td style={{ padding: '8px', color: '#475569', fontSize: '11px' }}>{a.telefone || '—'}</td>
+                                <td style={{ padding: '8px', fontSize: '11px', color: '#0f172a', fontWeight: a.tipo_exame ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.tipo_exame || '—'}</td>
+                                <td style={{ padding: '8px', color: '#475569', fontSize: '11px', whiteSpace: 'nowrap' }}>{fmtData(a.data_consulta)}</td>
+                                <td style={{ padding: '8px', fontSize: '11px' }}>
+                                  {(() => {
+                                    const m = MANCHESTER.find(x => x.valor === a.prioridade)
+                                    if (!m) return <span style={{ color: '#cbd5e1' }}>—</span>
+                                    return <span style={{ padding: '3px 8px', borderRadius: '12px', background: m.bg, color: m.cor, border: `1px solid ${m.borda}`, fontWeight: '600', whiteSpace: 'nowrap', fontSize: '10px' }}>{m.label}</span>
+                                  })()}
+                                </td>
+                                <td style={{ padding: '6px 8px' }}>
+                                  <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexWrap: 'nowrap' }}>
+                                    {btn(async () => {
+                                      let escalaDisponivel = escala
+                                      try {
+                                        const res = await fetch(`/api/especialidades/escala?especialidade=${esp}`)
+                                        const json = await res.json()
+                                        if (json.ok && json.data?.length) {
+                                          const hoje = new Date().toISOString().slice(0, 10)
+                                          const futuras = json.data.filter(e => e.data_atendimento >= hoje)
+                                          escalaDisponivel = futuras.length ? futuras : json.data
+                                          setEscala(escalaDisponivel)
+                                        }
+                                      } catch { }
+                                      const periodoInicial = a.periodo || ''
+                                      const entradaEscala = periodoInicial
+                                        ? escalaDisponivel.find(e => e.periodo === periodoInicial) || escalaDisponivel[0]
+                                        : escalaDisponivel[0]
+                                      setModalAutorizar(a)
+                                      setPeriodoAutorizar(periodoInicial)
+                                      setDataAtendimentoAutorizar(entradaEscala?.data_atendimento || '')
+                                    }, 'Autorizar', '#dcfce7', '#86efac', '#166534', <Check size={11} />)}
+                                    {btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', <X size={11} />)}
+                                    {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '', periodo: a.periodo || '', prioridade: a.prioridade || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', <Pencil size={11} />)}
+                                    {btn(() => { setModalExcluir({ show: true, id: a.id }); setMotivoExclusao('') }, 'Excluir', '#f1f5f9', '#cbd5e1', '#64748b', <Trash2 size={11} />)}
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })
                         })()}
                       </tbody>
                     </table>
@@ -2130,8 +2283,37 @@ export default function Especialidades() {
                     <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '0 0 12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
                       Detalhamento — {detalhesFiltrados.length} registro{detalhesFiltrados.length !== 1 ? 's' : ''}
                     </h3>
+                    {selecionados.length > 0 && (
+                      <div style={{ background: '#1e293b', color: 'white', padding: '10px 16px', borderRadius: '12px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', boxShadow: '0 10px 25px rgba(0,0,0,0.15)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700' }}>
+                          <span style={{ background: '#3b82f6', color: 'white', padding: '2px 9px', borderRadius: '20px', fontSize: '12px' }}>
+                            {selecionados.length} selecionado{selecionados.length > 1 ? 's' : ''}
+                          </span>
+                          <span>Ações em Lote:</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <button onClick={() => { setFormLote({ data_atendimento: '', periodo: '', profissional_nome: '', tipo_exame: '', prioridade: '', observacao: '', motivo_exclusao: '' }); setModalLote('editar') }}
+                            style={{ padding: '6px 12px', background: '#3b82f6', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Pencil size={13} /> Alterar em Lote
+                          </button>
+                          <button onClick={() => executarAlteracaoEmLote('pendente')} disabled={processandoLote}
+                            style={{ padding: '6px 12px', background: '#ca8a04', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            ↩ Voltar para Pendente
+                          </button>
+                          <button onClick={() => { setFormLote({ data_atendimento: '', periodo: '', profissional_nome: '', tipo_exame: '', prioridade: '', observacao: '', motivo_exclusao: '' }); setModalLote('excluir') }}
+                            style={{ padding: '6px 12px', background: '#dc2626', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Trash2 size={13} /> Excluir em Lote
+                          </button>
+                          <button onClick={() => setSelecionados([])}
+                            style={{ padding: '6px 10px', background: '#475569', border: 'none', borderRadius: '8px', color: 'white', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                            ✕ Desmarcar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed' }}>
                       <colgroup>
+                        <col style={{ width: '34px' }} />
                         <col style={{ width: '32px' }} />
                         {!relFiltroEsp && <col style={{ width: '96px' }} />}
                         <col />
@@ -2147,6 +2329,16 @@ export default function Especialidades() {
                       </colgroup>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                          <th style={{ padding: '7px 4px', textAlign: 'center' }}>
+                            {(() => {
+                              const todosSel = detalhesFiltrados.length > 0 && detalhesFiltrados.every(r => selecionados.includes(r.id))
+                              return (
+                                <input type="checkbox" checked={todosSel}
+                                  onChange={() => toggleSelecionarTodos(detalhesFiltrados)}
+                                  style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#1d4ed8' }} />
+                              )
+                            })()}
+                          </th>
                           {['#', ...(!relFiltroEsp ? ['Especialidade'] : []), 'Paciente', 'Telefone', 'Tipo', 'Data', 'Período', 'Profissional', 'Prioridade', 'Status', 'Operador', 'Ações'].map(h => (
                             <th key={h} style={{ padding: '7px 8px', textAlign: 'left', fontFamily: 'Sora, sans-serif', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden' }}>{h}</th>
                           ))}
@@ -2164,12 +2356,18 @@ export default function Especialidades() {
                               {label}
                             </button>
                           )
+                          const isSel = selecionados.includes(r.id)
                           return (
                             <tr key={r.id}
-                              style={{ borderBottom: '1px solid #f1f5f9', background: r.status === 'excluido' ? '#f8fafc' : 'white', cursor: r.status !== 'excluido' ? 'pointer' : 'default' }}
-                              onClick={e => { if (r.status === 'excluido' || e.target.closest('button')) return; setFormEditar({ paciente_nome: r.paciente_nome || '', paciente_cns: r.paciente_cns || '', telefone: r.telefone || '', sexo: r.sexo || '', data_consulta: r.data_consulta || '', tipo_exame: r.tipo_exame || '', observacao: r.observacao || '', profissional_nome: r.profissional_nome || '', periodo: r.periodo || '', prioridade: r.prioridade || '' }); setModalEditar({ show: true, id: r.id }) }}
-                              onMouseEnter={e => { if (r.status !== 'excluido') e.currentTarget.style.background = '#f8fafc' }}
-                              onMouseLeave={e => { e.currentTarget.style.background = r.status === 'excluido' ? '#f8fafc' : 'white' }}>
+                              style={{ borderBottom: '1px solid #f1f5f9', background: isSel ? '#eff6ff' : r.status === 'excluido' ? '#f8fafc' : 'white', cursor: r.status !== 'excluido' ? 'pointer' : 'default' }}
+                              onClick={e => { if (r.status === 'excluido' || e.target.closest('button') || e.target.closest('input')) return; setFormEditar({ paciente_nome: r.paciente_nome || '', paciente_cns: r.paciente_cns || '', telefone: r.telefone || '', sexo: r.sexo || '', data_consulta: r.data_consulta || '', tipo_exame: r.tipo_exame || '', observacao: r.observacao || '', profissional_nome: r.profissional_nome || '', periodo: r.periodo || '', prioridade: r.prioridade || '' }); setModalEditar({ show: true, id: r.id }) }}
+                              onMouseEnter={e => { if (!isSel && r.status !== 'excluido') e.currentTarget.style.background = '#f8fafc' }}
+                              onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = r.status === 'excluido' ? '#f8fafc' : 'white' }}>
+                              <td style={{ padding: '7px 4px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                <input type="checkbox" checked={isSel}
+                                  onChange={() => toggleSelecaoItem(r.id)}
+                                  style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#1d4ed8' }} />
+                              </td>
                               <td style={{ padding: '7px 8px', color: '#94a3b8', fontSize: '11px' }}>{i + 1}</td>
                               {!relFiltroEsp && <td style={{ padding: '7px 8px', fontSize: '11px', ...trunc }} title={esp2?.label}>{esp2?.icon} {esp2?.label}</td>}
                               <td style={{ padding: '7px 8px', fontWeight: '600', color: '#0f172a', ...trunc }} title={r.paciente_nome}>{r.paciente_nome}</td>
@@ -2517,6 +2715,147 @@ export default function Especialidades() {
           </Modal>
         )
       })()}
+      </AnimatePresence>
+
+      <AnimatePresence>
+      {/* ── MODAIS: OPERAÇÕES EM LOTE ── */}
+      {modalLote === 'editar' && (
+        <Modal titulo={`Alterar Agendamentos em Lote (${selecionados.length} selecionados)`} onClose={() => setModalLote(null)}>
+          <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 14px' }}>
+            Preencha apenas os campos que deseja atualizar nos <strong>{selecionados.length} agendamentos selecionados</strong>. Os campos deixados em branco não serão alterados.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+            <div>
+              <label className="label-modern">Data de Atendimento</label>
+              <input className="input-modern" type="date" value={formLote.data_atendimento}
+                onChange={e => setFormLote(f => ({ ...f, data_atendimento: e.target.value }))} style={{ width: '100%' }} />
+            </div>
+            <div>
+              <label className="label-modern">Período</label>
+              <select className="input-modern" value={formLote.periodo} onChange={e => setFormLote(f => ({ ...f, periodo: e.target.value }))} style={{ width: '100%' }}>
+                <option value="">— Manter atual —</option>
+                {periodos.filter(p => p.ativo).map(p => (
+                  <option key={p.id} value={p.nome}>{p.nome}{p.horario ? ` (${p.horario})` : ''}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label-modern">Profissional (da Escala)</label>
+              <select className="input-modern" value={formLote.profissional_nome} onChange={e => setFormLote(f => ({ ...f, profissional_nome: e.target.value }))} style={{ width: '100%' }}>
+                <option value="">— Manter atual —</option>
+                {(() => {
+                  const nomesEscala = [...new Set(escala.map(e => e.profissional_nome).filter(Boolean))]
+                  const nomesProf = profissionais.map(p => p.nome).filter(Boolean)
+                  const todosUnicos = [...new Set([...nomesEscala, ...nomesProf])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+                  return todosUnicos.map(nome => (
+                    <option key={nome} value={nome}>{nome}</option>
+                  ))
+                })()}
+              </select>
+            </div>
+            <div>
+              <label className="label-modern">{esp === 'usg' ? 'Tipo de Exame' : 'Tipo de Consulta'}</label>
+              <select className="input-modern" value={formLote.tipo_exame} onChange={e => setFormLote(f => ({ ...f, tipo_exame: e.target.value }))} style={{ width: '100%' }}>
+                <option value="">— Manter atual —</option>
+                {(esp === 'usg' ? tiposUsg : TIPOS_CONSULTA).map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label className="label-modern">Prioridade (Manchester)</label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                {MANCHESTER.map(m => (
+                  <button key={m.valor} type="button"
+                    onClick={() => setFormLote(f => ({ ...f, prioridade: f.prioridade === m.valor ? '' : m.valor }))}
+                    style={{
+                      padding: '5px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                      border: `2px solid ${formLote.prioridade === m.valor ? m.borda : '#e2e8f0'}`,
+                      background: formLote.prioridade === m.valor ? m.bg : '#f8fafc',
+                      color: formLote.prioridade === m.valor ? m.cor : '#64748b',
+                    }}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label className="label-modern">Observação</label>
+              <textarea className="input-modern" rows={2} placeholder="Deixe em branco para manter a atual..." value={formLote.observacao}
+                onChange={e => setFormLote(f => ({ ...f, observacao: e.target.value }))} style={{ width: '100%' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+            <button className="btn-primary" style={{ background: GRAD }} onClick={() => executarAlteracaoEmLote('editar')} disabled={processandoLote}>
+              {processandoLote ? 'Salvando...' : `Aplicar Alterações nos ${selecionados.length} Agendamentos`}
+            </button>
+            <button className="btn-secondary" onClick={() => setModalLote(null)}>Cancelar</button>
+          </div>
+        </Modal>
+      )}
+
+      {modalLote === 'autorizar' && (
+        <Modal titulo={`Autorizar ${selecionados.length} Agendamento(s) em Lote`} onClose={() => setModalLote(null)}>
+          <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 14px' }}>
+            Selecione a data de atendimento, o período e o profissional para autorizar todos os <strong>{selecionados.length} registros selecionados</strong>.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div>
+              <label className="label-modern">Data de Atendimento *</label>
+              <input className="input-modern" type="date" value={formLote.data_atendimento}
+                onChange={e => setFormLote(f => ({ ...f, data_atendimento: e.target.value }))} style={{ width: '100%' }} />
+            </div>
+            <div>
+              <label className="label-modern">Período *</label>
+              <select className="input-modern" value={formLote.periodo} onChange={e => setFormLote(f => ({ ...f, periodo: e.target.value }))} style={{ width: '100%' }}>
+                <option value="">— Selecione o período —</option>
+                {periodos.filter(p => p.ativo).map(p => (
+                  <option key={p.id} value={p.nome}>{p.nome}{p.horario ? ` (${p.horario})` : ''}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label-modern">Profissional (da Escala)</label>
+              <select className="input-modern" value={formLote.profissional_nome} onChange={e => setFormLote(f => ({ ...f, profissional_nome: e.target.value }))} style={{ width: '100%' }}>
+                <option value="">— Selecione o profissional —</option>
+                {(() => {
+                  const nomesEscala = [...new Set(escala.map(e => e.profissional_nome).filter(Boolean))]
+                  const nomesProf = profissionais.map(p => p.nome).filter(Boolean)
+                  const todosUnicos = [...new Set([...nomesEscala, ...nomesProf])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+                  return todosUnicos.map(nome => (
+                    <option key={nome} value={nome}>{nome}</option>
+                  ))
+                })()}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+            <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)' }} onClick={() => executarAlteracaoEmLote('autorizar')} disabled={processandoLote || !formLote.data_atendimento || !formLote.periodo}>
+              {processandoLote ? 'Autorizando...' : `Autorizar ${selecionados.length} Agendamento(s)`}
+            </button>
+            <button className="btn-secondary" onClick={() => setModalLote(null)}>Cancelar</button>
+          </div>
+        </Modal>
+      )}
+
+      {modalLote === 'excluir' && (
+        <Modal titulo={`Excluir ${selecionados.length} Agendamento(s) em Lote`} onClose={() => setModalLote(null)}>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 14px' }}>
+            Informe o motivo da exclusão em lote dos <strong>{selecionados.length} registros selecionados</strong>. Este campo é obrigatório.
+          </p>
+          <label className="label-modern">Motivo da Exclusão em Lote *</label>
+          <textarea className="input-modern" rows={3} placeholder="Ex: Cancelamento de escala, solicitação duplicada..."
+            value={formLote.motivo_exclusao}
+            onChange={e => setFormLote(f => ({ ...f, motivo_exclusao: e.target.value.toUpperCase() }))}
+            style={{ width: '100%', resize: 'vertical' }} />
+          <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+            <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #dc2626, #ef4444)' }} onClick={() => executarAlteracaoEmLote('excluir')} disabled={processandoLote || !formLote.motivo_exclusao.trim()}>
+              {processandoLote ? 'Excluindo...' : `Excluir ${selecionados.length} Agendamentos`}
+            </button>
+            <button className="btn-secondary" onClick={() => setModalLote(null)}>Cancelar</button>
+          </div>
+        </Modal>
+      )}
       </AnimatePresence>
 
       <AnimatePresence>
