@@ -523,6 +523,106 @@ export default function Frequencia() {
     abrirImpressao(montarJanela(titulo, blocos), titulo)
   }
 
+  function imprimirListaFuncionarios() {
+    const ativos = servidores.filter(s => !isInativo(s)).sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'))
+    if (!ativos.length) {
+      mostrarMsg('Nenhum servidor ativo encontrado', false)
+      return
+    }
+
+    const dataHoje = new Date().toLocaleDateString('pt-BR')
+    const logoUrl = `${window.location.origin}/logo.jpg`
+
+    const linhasTabela = ativos.map((s, i) => {
+      const estaNaEscala = escalaIds.some(mat => mat === s.matricula)
+      const badgeEscala = estaNaEscala
+        ? '<span style="color:#0284c7;font-weight:bold;">ESCALA</span>'
+        : '<span style="color:#64748b;">NORMAL</span>'
+
+      return `
+        <tr style="background: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+          <td style="text-align:center;font-weight:bold;color:#64748b;padding:6px 8px;">${i + 1}</td>
+          <td style="font-weight:bold;color:#0f172a;padding:6px 8px;">${s.nome}</td>
+          <td style="color:#334155;padding:6px 8px;">${s.funcao || '—'}</td>
+          <td style="font-family:monospace;text-align:center;padding:6px 8px;">${s.matricula || '—'}</td>
+          <td style="text-align:center;font-size:10px;padding:6px 8px;">${s.nivel || 'EFETIVO'}</td>
+          <td style="text-align:center;font-size:10px;padding:6px 8px;">${badgeEscala}</td>
+        </tr>
+      `
+    }).join('')
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Lista de Funcionários — Secretaria de Saúde</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 11px; margin: 6mm 10mm; color: #000; }
+    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-left img { height: 55px; }
+    .header-title p { margin: 1px 0; font-size: 10px; }
+    .header-title h2 { margin: 3px 0 0; font-size: 13px; font-weight: bold; text-transform: uppercase; }
+    .header-right { text-align: right; font-size: 10px; }
+    
+    .stats-bar { display: flex; justify-content: space-between; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 12px; margin-bottom: 12px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; }
+    th { background: #0284c7; color: white; border: 1px solid #0284c7; padding: 6px 8px; text-align: left; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+    td { border: 1px solid #cbd5e1; }
+    
+    .assinatura-box { margin-top: 40px; text-align: center; }
+    .linha-ass { border-top: 1px solid #000; width: 280px; margin: 0 auto; padding-top: 4px; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+    
+    @page { size: A4 portrait; margin: 8mm; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <img src="${logoUrl}" onerror="this.style.display='none'" />
+      <div class="header-title">
+        <p><strong>SECRETARIA MUNICIPAL DE SAÚDE</strong></p>
+        <p>FUNDO MUNICIPAL DE SAÚDE DE ${clientConfig.municipalityName.toUpperCase()} - ${clientConfig.municipalityUF}</p>
+        <h2>Relação Geral de Servidores da Saúde</h2>
+      </div>
+    </div>
+    <div class="header-right">
+      <p><strong>Data de Emissão:</strong> ${dataHoje}</p>
+      <p><strong>CNPJ:</strong> ${clientConfig.cnpj}</p>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <span>TOTAL DE SERVIDORES ATIVOS: ${ativos.length}</span>
+    <span>ESCALA: ${escalaIds.length} | NORMAL: ${ativos.length - escalaIds.length}</span>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 4%; text-align: center;">#</th>
+        <th style="width: 38%;">Nome do Servidor</th>
+        <th style="width: 28%;">Função / Cargo</th>
+        <th style="width: 12%; text-align: center;">Matrícula</th>
+        <th style="width: 10%; text-align: center;">Vínculo</th>
+        <th style="width: 8%; text-align: center;">Tipo</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${linhasTabela}
+    </tbody>
+  </table>
+
+  <div class="assinatura-box">
+    <div class="linha-ass">Assinatura e Carimbo da Direção / Gestão</div>
+  </div>
+</body>
+</html>`
+
+    abrirImpressao(html, 'Relação Geral de Servidores da Saúde')
+  }
+
   function imprimirRelatorioMensal() {
     const temMatricula = (s) => s.matricula && String(s.matricula).trim() !== ''
     const base = servidores.filter(s => !isInativo(s))
@@ -792,6 +892,11 @@ export default function Frequencia() {
               style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
               onClick={imprimirNormal}>
               Normal
+            </button>
+            <button className="btn-primary"
+              style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)', display: 'flex', alignItems: 'center', gap: '5px' }}
+              onClick={imprimirListaFuncionarios}>
+              <Printer size={13} /> Lista de Funcionários
             </button>
             <button className="btn-primary"
               style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
