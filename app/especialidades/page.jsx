@@ -395,7 +395,34 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
 
   // Função para gerar linhas simples (pendente/negado/excluído)
   function linhasSimples(lista) {
-    return sortarLista(lista).map(r => {
+    const sorted = sortarLista(lista)
+    const datas = [...new Set(sorted.map(r => r.data_consulta || r.data_atendimento || '').filter(Boolean))].sort()
+
+    if (datas.length > 1) {
+      return datas.map(dKey => {
+        const sub = sorted.filter(r => (r.data_consulta || r.data_atendimento || '') === dKey)
+        const dFmt = dKey ? dKey.split('-').reverse().join('/') : 'Sem data'
+        const cab = `<tr><td colspan="7" style="padding:9px 7px 4px;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em;color:#92400e;border-top:2px solid #d97706;background:#fffbeb;-webkit-print-color-adjust:exact;print-color-adjust:exact;">DATA: ${dFmt} — ${sub.length} registro${sub.length !== 1 ? 's' : ''}</td></tr>`
+        let numSub = 0
+        const linhas = sub.map(r => {
+          numSub++
+          numGlobal++
+          const dataFmt = dKey ? dKey.split('-').reverse().join('/') : '—'
+          return `<tr>
+            <td>${numSub}</td>
+            <td style="font-weight:700">${r.paciente_nome || '—'}</td>
+            <td>${r.paciente_cns || '—'}</td>
+            <td>${r.telefone || '—'}</td>
+            <td>${r.tipo_exame || '—'}</td>
+            <td style="white-space:nowrap">${dataFmt}</td>
+            <td style="color:#475569">${operadorDo(r)}</td>
+          </tr>`
+        }).join('')
+        return cab + linhas
+      }).join('')
+    }
+
+    return sorted.map(r => {
       numGlobal++
       const data = r.data_consulta || r.data_atendimento
       const dataFmt = data ? data.split('-').reverse().join('/') : '—'
@@ -411,7 +438,7 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
     }).join('')
   }
 
-  // Função para gerar blocos agrupados por período (autorizados)
+  // Função para gerar blocos agrupados por período e por data (autorizados)
   function blocosAgrupados(lista) {
     const presentes = [...new Set(lista.map(r => r.periodo || ''))].sort((a, b) => {
       if (!a) return 1
@@ -420,33 +447,50 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
       const ib = ordemPeriodos.indexOf(b)
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
     })
+
     return presentes.map(periodo => {
-      const grupo = sortarLista(lista.filter(r => (r.periodo || '') === periodo))
-      const datasNoGrupo = [...new Set(grupo.map(r => r.data_atendimento || r.data_consulta).filter(Boolean))].sort()
-      const datasFmt = datasNoGrupo.map(d => d.split('-').reverse().join('/'))
-      const profGrupo = grupo[0]?.profissional_nome || null
-      const dataTexto = datasFmt.length === 1 ? datasFmt[0] : (datasFmt.length > 1 ? datasFmt.join(', ') : null)
-      const infoPeriodo = [dataTexto, profGrupo].filter(Boolean).join(' · ')
-      const cab = periodo
-        ? `<tr><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#1a7a3c;border-top:2px solid #1a7a3c;background:#f0fdf4;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${periodo} — ${grupo.length} paciente${grupo.length !== 1 ? 's' : ''}${infoPeriodo ? `<span style="font-weight:400;font-size:10px;margin-left:10px;color:#166534;">${infoPeriodo}</span>` : ''}</td></tr>`
-        : `<tr><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;border-top:2px solid #e2e8f0;">Sem período — ${grupo.length} paciente${grupo.length !== 1 ? 's' : ''}${infoPeriodo ? `<span style="font-weight:400;font-size:10px;margin-left:10px;">${infoPeriodo}</span>` : ''}</td></tr>`
-      
-      let numPeriodo = 0
-      const linhas = grupo.map(r => {
-        numPeriodo++
-        const dataR = r.data_atendimento || r.data_consulta
-        const dataRFmt = dataR ? dataR.split('-').reverse().join('/') : '—'
-        return `<tr>
-          <td>${numPeriodo}</td>
-          <td style="font-weight:700">${r.paciente_nome || '—'}</td>
-          <td>${r.paciente_cns || '—'}</td>
-          <td>${r.telefone || '—'}</td>
-          <td>${r.tipo_exame || '—'}</td>
-          <td style="white-space:nowrap">${dataRFmt}</td>
-          <td style="color:#475569">${operadorDo(r)}</td>
-        </tr>`
+      const grupoPer = lista.filter(r => (r.periodo || '') === periodo)
+      const datasDoPeriodo = [...new Set(grupoPer.map(r => r.data_atendimento || r.data_consulta || '').filter(Boolean))].sort()
+      if (datasDoPeriodo.length === 0) datasDoPeriodo.push('')
+
+      return datasDoPeriodo.map(dataKey => {
+        const subGrupo = sortarLista(grupoPer.filter(r => (r.data_atendimento || r.data_consulta || '') === dataKey))
+        if (subGrupo.length === 0) return ''
+
+        const dataFmt = dataKey ? dataKey.split('-').reverse().join('/') : null
+        const profGrupo = subGrupo[0]?.profissional_nome || null
+        const infoData = [dataFmt, profGrupo].filter(Boolean).join(' · ')
+
+        let titulo = ''
+        if (periodo && infoData) {
+          titulo = `${periodo} — ${infoData}`
+        } else if (periodo) {
+          titulo = periodo
+        } else if (infoData) {
+          titulo = infoData
+        } else {
+          titulo = 'Sem período'
+        }
+
+        const cab = `<tr><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#1a7a3c;border-top:2px solid #1a7a3c;background:#f0fdf4;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${titulo} — ${subGrupo.length} paciente${subGrupo.length !== 1 ? 's' : ''}</td></tr>`
+
+        let numSub = 0
+        const linhas = subGrupo.map(r => {
+          numSub++
+          const dataR = r.data_atendimento || r.data_consulta
+          const dataRFmt = dataR ? dataR.split('-').reverse().join('/') : '—'
+          return `<tr>
+            <td>${numSub}</td>
+            <td style="font-weight:700">${r.paciente_nome || '—'}</td>
+            <td>${r.paciente_cns || '—'}</td>
+            <td>${r.telefone || '—'}</td>
+            <td>${r.tipo_exame || '—'}</td>
+            <td style="white-space:nowrap">${dataRFmt}</td>
+            <td style="color:#475569">${operadorDo(r)}</td>
+          </tr>`
+        }).join('')
+        return cab + linhas
       }).join('')
-      return cab + linhas
     }).join('')
   }
 
