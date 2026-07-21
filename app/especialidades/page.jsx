@@ -349,7 +349,7 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
   // Modo agrupado por período: apenas para autorizados (ou quando não há filtro de status)
   const modoAgrupado = statusFiltro === 'autorizado' || (!statusFiltro && registros.some(r => r.periodo))
 
-  // Ordena por tiposUsgOrdem (USG) ou por data de solicitação (demais)
+  // Ordena por tiposUsgOrdem (USG), por data (atendimento/solicitação) e em ordem alfabética por nome do paciente
   function sortarLista(lista) {
     return [...lista].sort((a, b) => {
       if (isUsg && modoAgrupado) {
@@ -360,7 +360,13 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
       }
       const dA = modoAgrupado ? (a.data_atendimento || a.data_consulta || '') : (a.data_consulta || '')
       const dB = modoAgrupado ? (b.data_atendimento || b.data_consulta || '') : (b.data_consulta || '')
-      return dA.localeCompare(dB) || (a.created_at || '').localeCompare(b.created_at || '')
+      const diffDate = dA.localeCompare(dB)
+      if (diffDate !== 0) return diffDate
+      const nomeA = (a.paciente_nome || '').trim()
+      const nomeB = (b.paciente_nome || '').trim()
+      const diffNome = nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' })
+      if (diffNome !== 0) return diffNome
+      return (a.created_at || '').localeCompare(b.created_at || '')
     })
   }
 
@@ -391,7 +397,7 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
   function linhasSimples(lista) {
     return sortarLista(lista).map(r => {
       numGlobal++
-      const data = r.data_consulta
+      const data = r.data_consulta || r.data_atendimento
       const dataFmt = data ? data.split('-').reverse().join('/') : '—'
       return `<tr>
         <td>${numGlobal}</td>
@@ -416,11 +422,11 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
     })
     return presentes.map(periodo => {
       const grupo = sortarLista(lista.filter(r => (r.periodo || '') === periodo))
-      const primeiroR = grupo[0]
-      const dataGrupo = primeiroR ? (primeiroR.data_atendimento || primeiroR.data_consulta) : null
-      const dataGrupoFmt = dataGrupo ? dataGrupo.split('-').reverse().join('/') : null
-      const profGrupo = primeiroR?.profissional_nome || null
-      const infoPeriodo = [dataGrupoFmt, profGrupo].filter(Boolean).join(' · ')
+      const datasNoGrupo = [...new Set(grupo.map(r => r.data_atendimento || r.data_consulta).filter(Boolean))].sort()
+      const datasFmt = datasNoGrupo.map(d => d.split('-').reverse().join('/'))
+      const profGrupo = grupo[0]?.profissional_nome || null
+      const dataTexto = datasFmt.length === 1 ? datasFmt[0] : (datasFmt.length > 1 ? datasFmt.join(', ') : null)
+      const infoPeriodo = [dataTexto, profGrupo].filter(Boolean).join(' · ')
       const cab = periodo
         ? `<tr><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#1a7a3c;border-top:2px solid #1a7a3c;background:#f0fdf4;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${periodo} — ${grupo.length} paciente${grupo.length !== 1 ? 's' : ''}${infoPeriodo ? `<span style="font-weight:400;font-size:10px;margin-left:10px;color:#166534;">${infoPeriodo}</span>` : ''}</td></tr>`
         : `<tr><td colspan="7" style="padding:10px 7px 4px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;border-top:2px solid #e2e8f0;">Sem período — ${grupo.length} paciente${grupo.length !== 1 ? 's' : ''}${infoPeriodo ? `<span style="font-weight:400;font-size:10px;margin-left:10px;">${infoPeriodo}</span>` : ''}</td></tr>`
@@ -428,13 +434,15 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
       let numPeriodo = 0
       const linhas = grupo.map(r => {
         numPeriodo++
+        const dataR = r.data_atendimento || r.data_consulta
+        const dataRFmt = dataR ? dataR.split('-').reverse().join('/') : '—'
         return `<tr>
           <td>${numPeriodo}</td>
           <td style="font-weight:700">${r.paciente_nome || '—'}</td>
           <td>${r.paciente_cns || '—'}</td>
           <td>${r.telefone || '—'}</td>
           <td>${r.tipo_exame || '—'}</td>
-          <td>—</td>
+          <td style="white-space:nowrap">${dataRFmt}</td>
           <td style="color:#475569">${operadorDo(r)}</td>
         </tr>`
       }).join('')
@@ -511,7 +519,7 @@ function imprimirRelatorio(registros, mesLabel, anoLabel, espLabel, periodosConf
     <thead>
       <tr>
         <th>#</th><th>Paciente</th><th>CPF/CNS</th><th>Telefone</th><th>Tipo</th>
-        <th>${modoAgrupado && statusFiltro === 'autorizado' ? '' : 'Data Solicitação'}</th>
+        <th>${statusFiltro === 'autorizado' || modoAgrupado ? 'Data' : 'Data Solicitação'}</th>
         <th>${statusFiltro === 'autorizado' ? 'Autorizado por' : statusFiltro === 'pendente' ? 'Cadastrado por' : 'Operador'}</th>
       </tr>
     </thead>
@@ -1873,6 +1881,14 @@ export default function Especialidades() {
           const detalhesFiltrados = detalhesSemTipoUsg.filter(r => {
             if (relFiltroEsp === 'usg' && relFiltroTipoUsg && r.tipo_exame !== relFiltroTipoUsg) return false
             return true
+          }).sort((a, b) => {
+            const dA = a.data_atendimento || a.data_consulta || ''
+            const dB = b.data_atendimento || b.data_consulta || ''
+            const diffDate = dA.localeCompare(dB)
+            if (diffDate !== 0) return diffDate
+            const nomeA = (a.paciente_nome || '').trim()
+            const nomeB = (b.paciente_nome || '').trim()
+            return nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' })
           })
 
           // Gera resumo de USG por tipo
