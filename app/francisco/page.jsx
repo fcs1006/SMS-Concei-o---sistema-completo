@@ -29,6 +29,7 @@ export default function Francisco() {
   const [resposta, setResposta] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [statusEnvio, setStatusEnvio] = useState('')
+  const [buscaConversa, setBuscaConversa] = useState('')
   const [vistos, setVistos] = useState({}) // { telefone: timestamp do ultimo visto }
   const [assistantName, setAssistantName] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -401,10 +402,26 @@ export default function Francisco() {
 
           {/* Painel Esquerdo: Lista de Conversas */}
           <div className="card" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p style={{ margin: 0, fontFamily: 'Sora, sans-serif', fontWeight: '750', fontSize: '13px', color: '#1e293b' }}>
-                Conversas Ativas ({conversas.length})
-              </p>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ margin: 0, fontFamily: 'Sora, sans-serif', fontWeight: '750', fontSize: '13px', color: '#1e293b' }}>
+                  Conversas Ativas ({conversas.length})
+                </p>
+              </div>
+              <input 
+                type="text"
+                value={buscaConversa}
+                onChange={e => setBuscaConversa(e.target.value)}
+                placeholder="🔍 Buscar nome ou telefone..."
+                style={{
+                  width: '100%',
+                  padding: '6px 10px',
+                  fontSize: '12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  outline: 'none'
+                }}
+              />
             </div>
             
             <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -413,9 +430,20 @@ export default function Francisco() {
                   <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 8px', color: '#3b82f6' }} />
                   <p style={{ margin: 0, fontSize: '13px' }}>Carregando atendimentos...</p>
                 </div>
-              ) : conversas.length === 0 ? (
-                <p style={{ padding: '32px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>Nenhum contato recente no WhatsApp.</p>
-              ) : conversas.map(c => {
+              ) : (() => {
+                const conversasFiltradas = conversas.filter(c => {
+                  if (!buscaConversa.trim()) return true
+                  const q = buscaConversa.toLowerCase().trim()
+                  const nomeMatch = (c.nome || '').toLowerCase().includes(q)
+                  const telMatch = (c.telefone || '').includes(q.replace(/\D/g, ''))
+                  return nomeMatch || telMatch
+                })
+
+                if (conversasFiltradas.length === 0) {
+                  return <p style={{ padding: '32px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>Nenhum contato encontrado.</p>
+                }
+
+                return conversasFiltradas.map(c => {
                 const isSelected = selecionado === c.telefone
                 const isHuman = c.estado === 'aguardando_humano'
                 return (
@@ -552,7 +580,7 @@ export default function Francisco() {
                     </div>
                   </div>
                 )
-              })}
+              })()}
             </div>
           </div>
 
@@ -775,6 +803,39 @@ export default function Francisco() {
 
                 {/* Caixa de Resposta e Input */}
                 <div style={{ padding: '14px 20px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
+                  {/* Respostas Rápidas */}
+                  <div style={{ marginBottom: '8px', display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', alignSelf: 'center', flexShrink: 0 }}>⚡ Respostas Rápidas:</span>
+                    {[
+                      { label: '📍 Endereço/Horário', texto: `📍 A Secretaria Municipal de Saúde de ${municipalityName} funciona de segunda a sexta-feira, das 07h às 11h e das 13h às 17h.` },
+                      { label: '📋 Retirar Autorização', texto: `📋 Para retirar sua autorização de consulta ou exame, compareça à Secretaria Municipal de Saúde munido de Documento de Identidade (RG/CPF) e Cartão SUS.` },
+                      { label: '🚗 Viagem TFD', texto: `🚗 Para informações ou agendamento de viagem TFD, compareça à Secretaria com a solicitação médica original e documentos pessoais.` },
+                      { label: '🏥 Consulta UBS', texto: `🏥 Para consultas com clínico geral, pediatra ou dentista na UBS, procure a sua unidade de saúde de referência.` }
+                    ].map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setResposta(item.texto)}
+                        style={{
+                          fontSize: '11px',
+                          color: '#0284c7',
+                          background: '#e0f2fe',
+                          border: '1px solid #bae6fd',
+                          borderRadius: '12px',
+                          padding: '3px 9px',
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          flexShrink: 0,
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#bae6fd'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#e0f2fe'}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+
                   {statusEnvio && (
                     <p style={{ 
                       margin: '0 0 8px', 

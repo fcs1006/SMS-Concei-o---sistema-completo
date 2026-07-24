@@ -58,7 +58,7 @@ function mascararNome(nome: string): string {
     return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()
   }
 
-  if (partes.length === 1) return formatarParte(partes[0]) + '...'
+  if (partes.length === 1) return formatarParte(partes[0])
   
   return partes.map((p, idx) => {
     if (idx === 0 || idx === partes.length - 1) return formatarParte(p)
@@ -482,11 +482,18 @@ async function enviarMensagem(numero: string, texto: string) {
     return
   }
 
-  await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_KEY },
-    body: JSON.stringify({ number: numero, text: texto })
-  })
+  try {
+    const res = await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_KEY },
+      body: JSON.stringify({ number: numero, text: texto })
+    })
+    if (!res.ok) {
+      console.error(`[Evolution API Error ${res.status}] ao enviar para ${numero}: ${res.statusText}`)
+    }
+  } catch (err: any) {
+    console.error(`[Evolution API Network Error] ao enviar mensagem para ${numero}:`, err.message)
+  }
 }
 
 // ── Envia botões via Evolution API com fallback ─────────────────────────────
@@ -754,6 +761,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const isAudio = Boolean(msgObj?.audioMessage)
+    const isMediaOnly = Boolean(
+      msgObj?.audioMessage ||
+      (msgObj?.imageMessage && !msgObj?.imageMessage?.caption) ||
+      msgObj?.stickerMessage ||
+      msgObj?.documentMessage ||
+      msgObj?.videoMessage
+    )
+
     const texto: string =
       buttonId ||
       templateButtonId ||
@@ -766,6 +782,21 @@ export async function POST(request: NextRequest) {
       msgObj?.listResponseMessage?.title ||
       msgObj?.buttonsResponseMessage?.selectedDisplayText ||
       msgObj?.imageMessage?.caption || ''
+
+    // Se for mensagem de áudio ou mídia avulsa fora dos fluxos de foto do pedido
+    if (isAudio || (isMediaOnly && !texto.trim())) {
+      const { estado: estadoAtualCheck } = await getEstadoInfo(telefone)
+      if (!['opcao_marcar_particular_foto', 'opcao_marcar_particular_consulta_foto', 'aguardando_humano'].includes(estadoAtualCheck)) {
+        const respMidia = isAudio
+          ? `🎙️ *Mensagem de Áudio recebida*\n\nOlá! No momento ainda não consigo ouvir áudios. Por favor, envie sua dúvida em mensagem de texto ou digite *0* para ver as opções do menu principal.`
+          : `📸 *Arquivo de Mídia recebido*\n\nOlá! No momento não consigo interpretar imagens ou documentos avulsos. Por favor, descreva sua dúvida por texto ou digite *0* para ver o menu principal.`
+
+        await salvarMensagem(telefone, 'user', isAudio ? '[Áudio enviado]' : '[Mídia/Imagem enviada]')
+        await salvarMensagem(telefone, 'assistant', respMidia)
+        await enviarMensagem(telefone, respMidia)
+        return NextResponse.json({ ok: true })
+      }
+    }
 
     if (!texto.trim()) return NextResponse.json({ ok: true })
 
@@ -856,6 +887,7 @@ export async function POST(request: NextRequest) {
         const ultimaAtualizacao = new Date(atualizado_em).getTime()
         if (Date.now() - ultimaAtualizacao > TIMEOUT_HUMANO) {
           await setEstado(telefone, 'menu')
+          await salvarMensagem(telefone, 'sistema', '⏱️ Atendimento humano finalizado automaticamente por inatividade (2h). Assistente virtual reativado.')
           // Continua para o bot normal
         } else {
           // Ainda está sob controle humano
