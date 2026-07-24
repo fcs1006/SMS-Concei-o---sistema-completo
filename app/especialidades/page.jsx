@@ -1170,11 +1170,31 @@ export default function Especialidades() {
     const datasEscala = Array.from(new Set(escala.map(item => item.data_atendimento)))
     const diasEscalaCount = datasEscala.length
     const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
+
+    // Cálculo da cota por período
+    const escalaDoDia = escala.filter(e => e.data_atendimento === dataAtendimentoAutorizar)
+    const periodosDoDia = Array.from(new Set(escalaDoDia.map(e => String(e.periodo || '').trim()).filter(Boolean)))
+    const numPeriodosNoDia = periodosDoDia.length || 1
+    const cotaPeriodo = Math.floor(cotaDiaria / numPeriodosNoDia)
+
     const usadosNoDia = agendamentos.filter(a => a.status === 'autorizado' && a.data_atendimento === dataAtendimentoAutorizar).reduce((acc, a) => acc + pesoCota(a), 0)
-    const cotaEsgotada = usadosNoDia >= cotaDiaria
+
+    const usadosNoPeriodo = periodoAutorizar
+      ? agendamentos.filter(a => a.status === 'autorizado' && a.data_atendimento === dataAtendimentoAutorizar && String(a.periodo || '').trim().toLowerCase() === String(periodoAutorizar || '').trim().toLowerCase()).reduce((acc, a) => acc + pesoCota(a), 0)
+      : 0
+
+    const cotaPeriodoEsgotada = periodoAutorizar ? (usadosNoPeriodo >= cotaPeriodo) : false
+    const cotaDiaEsgotada = usadosNoDia >= cotaDiaria
+    const cotaEsgotada = cotaPeriodoEsgotada || cotaDiaEsgotada
 
     const isAdmin = usuario?.perfil === 'admin'
-    if (cotaEsgotada && !isAdmin) { mostrarMsg('Cota diária para esta data esgotada. Apenas o administrador pode autorizar.', false); return }
+    if (cotaEsgotada && !isAdmin) {
+      const msgErro = cotaPeriodoEsgotada
+        ? `Cota do período ${periodoAutorizar ? periodoAutorizar.toUpperCase() : ''} para esta data esgotada (${usadosNoPeriodo}/${cotaPeriodo}). Apenas o administrador pode autorizar.`
+        : `Cota diária para esta data esgotada (${usadosNoDia}/${cotaDiaria}). Apenas o administrador pode autorizar.`
+      mostrarMsg(msgErro, false)
+      return
+    }
     if (cotaEsgotada && isAdmin && !justificativaCota.trim()) { mostrarMsg('Informe a justificativa para autorizar além da cota', false); return }
     const id = modalAutorizar.id
     try {
@@ -2956,11 +2976,24 @@ export default function Especialidades() {
         const diasEscalaCount = datasEscala.length
         const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
         
+        // Cota por período para a data selecionada
+        const escalaDoDia = dataAtendimentoAutorizar ? escala.filter(e => e.data_atendimento === dataAtendimentoAutorizar) : []
+        const periodosDoDia = Array.from(new Set(escalaDoDia.map(e => String(e.periodo || '').trim()).filter(Boolean)))
+        const numPeriodosNoDia = periodosDoDia.length || 1
+        const cotaPeriodo = Math.floor(cotaDiaria / numPeriodosNoDia)
+
         const usadosNoDia = dataAtendimentoAutorizar 
           ? agendamentos.filter(a => a.status === 'autorizado' && a.data_atendimento === dataAtendimentoAutorizar).reduce((acc, a) => acc + pesoCota(a), 0)
           : 0
-        
-        const cotaEsgotada = usadosNoDia >= cotaDiaria
+
+        const usadosNoPeriodo = (dataAtendimentoAutorizar && periodoAutorizar)
+          ? agendamentos.filter(a => a.status === 'autorizado' && a.data_atendimento === dataAtendimentoAutorizar && String(a.periodo || '').trim().toLowerCase() === String(periodoAutorizar || '').trim().toLowerCase()).reduce((acc, a) => acc + pesoCota(a), 0)
+          : 0
+
+        const cotaPeriodoEsgotada = (dataAtendimentoAutorizar && periodoAutorizar) ? (usadosNoPeriodo >= cotaPeriodo) : false
+        const cotaDiaEsgotada = dataAtendimentoAutorizar ? (usadosNoDia >= cotaDiaria) : false
+        const cotaEsgotada = cotaPeriodoEsgotada || cotaDiaEsgotada
+
         const isAdmin = usuario?.perfil === 'admin'
         const fecharModal = () => { setModalAutorizar(null); setPeriodoAutorizar(''); setDataAtendimentoAutorizar(''); setJustificativaCota('') }
         return (
@@ -2983,6 +3016,17 @@ export default function Especialidades() {
                   {escalaFiltrada.map(e => {
                     const formatDt = e.data_atendimento ? fmtData(e.data_atendimento) : 'Data não informada'
                     const isSelected = dataAtendimentoAutorizar === e.data_atendimento && periodoAutorizar === e.periodo
+                    
+                    // Cálculo da cota para o item da escala
+                    const escDiaItem = escala.filter(item => item.data_atendimento === e.data_atendimento)
+                    const perDiaItem = Array.from(new Set(escDiaItem.map(item => String(item.periodo || '').trim()).filter(Boolean)))
+                    const numPerItem = perDiaItem.length || 1
+                    const cotaPerItem = Math.floor(cotaDiaria / numPerItem)
+                    const usadosPerItem = e.periodo 
+                      ? agendamentos.filter(a => a.status === 'autorizado' && a.data_atendimento === e.data_atendimento && String(a.periodo || '').trim().toLowerCase() === String(e.periodo || '').trim().toLowerCase()).reduce((acc, a) => acc + pesoCota(a), 0)
+                      : 0
+                    const itemFull = e.periodo && usadosPerItem >= cotaPerItem
+
                     return (
                       <div 
                         key={e.id} 
@@ -2995,17 +3039,17 @@ export default function Especialidades() {
                           justifyContent: 'space-between',
                           alignItems: 'center',
                           padding: '8px 10px',
-                          background: isSelected ? '#dcfce7' : '#ffffff',
-                          border: isSelected ? '1px solid #22c55e' : '1px solid #e2e8f0',
+                          background: isSelected ? '#dcfce7' : itemFull ? '#fef2f2' : '#ffffff',
+                          border: isSelected ? '1px solid #22c55e' : itemFull ? '1px solid #fca5a5' : '1px solid #e2e8f0',
                           borderRadius: '6px',
                           cursor: 'pointer',
                           transition: 'all 0.15s ease'
                         }}
                         onMouseEnter={ev => {
-                          if (!isSelected) ev.currentTarget.style.backgroundColor = '#f1f5f9'
+                          if (!isSelected) ev.currentTarget.style.backgroundColor = itemFull ? '#fee2e2' : '#f1f5f9'
                         }}
                         onMouseLeave={ev => {
-                          if (!isSelected) ev.currentTarget.style.backgroundColor = '#ffffff'
+                          if (!isSelected) ev.currentTarget.style.backgroundColor = itemFull ? '#fef2f2' : '#ffffff'
                         }}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -3017,8 +3061,15 @@ export default function Especialidades() {
                           </span>
                         </div>
                         {e.periodo && (
-                          <span style={{ fontSize: '10px', color: '#0369a1', background: '#e0f2fe', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
-                            {e.periodo.toUpperCase()}
+                          <span style={{ 
+                            fontSize: '10px', 
+                            color: itemFull ? '#991b1b' : '#0369a1', 
+                            background: itemFull ? '#fee2e2' : '#e0f2fe', 
+                            padding: '2px 8px', 
+                            borderRadius: '12px', 
+                            fontWeight: '700' 
+                          }}>
+                            {e.periodo.toUpperCase()} ({usadosPerItem}/{cotaPerItem}{itemFull ? ' - CHEIO' : ''})
                           </span>
                         )}
                       </div>
@@ -3031,42 +3082,80 @@ export default function Especialidades() {
               </p>
             </div>
 
-            {/* Cota e Saldo do Dia */}
+            {/* Cota e Saldo do Dia/Período */}
             {dataAtendimentoAutorizar && (
               (() => {
-                const saldo = cotaDiaria - usadosNoDia
-                const isVermelho = saldo <= 0
+                const saldoDia = cotaDiaria - usadosNoDia
+                const isVermelhoDia = saldoDia <= 0
+                const saldoPeriodo = cotaPeriodo - usadosNoPeriodo
+                const isVermelhoPeriodo = periodoAutorizar ? saldoPeriodo <= 0 : false
+
                 return (
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 1fr',
-                    gap: '10px',
-                    background: isVermelho ? '#fef2f2' : '#f0fdf4',
-                    border: isVermelho ? '1px solid #fca5a5' : '1px solid #bbf7d0',
-                    borderRadius: '8px',
-                    padding: '10px 14px',
-                    marginBottom: '14px',
-                    textAlign: 'center'
-                  }}>
-                    <div>
-                      <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cota do Dia</span>
-                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', display: 'block', marginTop: '2px' }}>{cotaDiaria}</span>
-                    </div>
-                    <div>
-                      <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agendados</span>
-                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', display: 'block', marginTop: '2px' }}>{usadosNoDia}</span>
-                    </div>
-                    <div>
-                      <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Saldo do Dia</span>
-                      <span style={{ 
-                        fontSize: '15px', 
-                        fontWeight: '800', 
-                        color: isVermelho ? '#dc2626' : '#16a34a',
-                        display: 'block',
-                        marginTop: '2px'
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                    {periodoAutorizar && (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr 1fr',
+                        gap: '10px',
+                        background: isVermelhoPeriodo ? '#fef2f2' : '#eff6ff',
+                        border: isVermelhoPeriodo ? '1px solid #fca5a5' : '1px solid #bfdbfe',
+                        borderRadius: '8px',
+                        padding: '10px 14px',
+                        textAlign: 'center'
                       }}>
-                        {saldo}
-                      </span>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cota {periodoAutorizar.toUpperCase()}</span>
+                          <span style={{ fontSize: '15px', fontWeight: '800', color: '#1e3a8a', display: 'block', marginTop: '2px' }}>{cotaPeriodo}</span>
+                        </div>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agendados Período</span>
+                          <span style={{ fontSize: '15px', fontWeight: '800', color: '#1e3a8a', display: 'block', marginTop: '2px' }}>{usadosNoPeriodo}</span>
+                        </div>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Saldo Período</span>
+                          <span style={{ 
+                            fontSize: '15px', 
+                            fontWeight: '800', 
+                            color: isVermelhoPeriodo ? '#dc2626' : '#1d4ed8',
+                            display: 'block',
+                            marginTop: '2px'
+                          }}>
+                            {saldoPeriodo}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr 1fr',
+                      gap: '10px',
+                      background: isVermelhoDia ? '#fef2f2' : '#f0fdf4',
+                      border: isVermelhoDia ? '1px solid #fca5a5' : '1px solid #bbf7d0',
+                      borderRadius: '8px',
+                      padding: '8px 14px',
+                      textAlign: 'center'
+                    }}>
+                      <div>
+                        <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cota Total do Dia</span>
+                        <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', display: 'block', marginTop: '2px' }}>{cotaDiaria}</span>
+                      </div>
+                      <div>
+                        <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total no Dia</span>
+                        <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', display: 'block', marginTop: '2px' }}>{usadosNoDia}</span>
+                      </div>
+                      <div>
+                        <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Saldo Total Dia</span>
+                        <span style={{ 
+                          fontSize: '14px', 
+                          fontWeight: '800', 
+                          color: isVermelhoDia ? '#dc2626' : '#16a34a',
+                          display: 'block',
+                          marginTop: '2px'
+                        }}>
+                          {saldoDia}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )
@@ -3076,12 +3165,16 @@ export default function Especialidades() {
             {/* Aviso de cota esgotada */}
             {cotaEsgotada && !isAdmin && (
               <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: '#991b1b', fontWeight: '600' }}>
-                Cota diária para esta data esgotada ({usadosNoDia}/{cotaDiaria}). Somente o administrador pode autorizar novos agendamentos nesta data.
+                {cotaPeriodoEsgotada 
+                  ? `Cota do período ${periodoAutorizar ? periodoAutorizar.toUpperCase() : ''} para esta data esgotada (${usadosNoPeriodo}/${cotaPeriodo}). Somente o administrador pode autorizar novos agendamentos neste período.`
+                  : `Cota diária para esta data esgotada (${usadosNoDia}/${cotaDiaria}). Somente o administrador pode autorizar novos agendamentos nesta data.`}
               </div>
             )}
             {cotaEsgotada && isAdmin && (
               <div style={{ background: '#fff7ed', border: '1px solid #fb923c', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: '#7c2d12', fontWeight: '600' }}>
-                Cota diária para esta data esgotada ({usadosNoDia}/{cotaDiaria}). Como administrador você pode autorizar, mas é necessário justificar.
+                {cotaPeriodoEsgotada
+                  ? `Cota do período ${periodoAutorizar ? periodoAutorizar.toUpperCase() : ''} para esta data esgotada (${usadosNoPeriodo}/${cotaPeriodo}). Como administrador você pode autorizar, mas é necessário justificar.`
+                  : `Cota diária para esta data esgotada (${usadosNoDia}/${cotaDiaria}). Como administrador você pode autorizar, mas é necessário justificar.`}
               </div>
             )}
 
@@ -3256,7 +3349,7 @@ export default function Especialidades() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                       <div><strong>Cota Mensal:</strong> {espAtiva.cota}</div>
                       <div><strong>Dias na Escala:</strong> {diasEscalaCount}</div>
-                      <div><strong>Cota Diária Calculada:</strong> <span style={{ fontWeight: '800', color: '#1d4ed8' }}>{cotaDiaria}</span> por dia</div>
+                      <div><strong>Cota Diária Calculada:</strong> <span style={{ fontWeight: '800', color: '#1d4ed8' }}>{cotaDiaria}</span> por dia (dividida por período se houver múltiplos no dia)</div>
                     </div>
                   </div>
                 )
