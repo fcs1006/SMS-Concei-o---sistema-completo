@@ -473,6 +473,54 @@ async function executarFerramenta(nome: string, input: any, telefone: string, ct
   }
 }
 
+// ── Baixa Base64 da mídia via Evolution API ─────────────────────────────────
+async function obterBase64Midia(msgBodyData: any): Promise<{ base64: string, mimetype: string } | null> {
+  if (!EVOLUTION_URL || !EVOLUTION_KEY || !EVOLUTION_INSTANCE || !msgBodyData) return null
+
+  try {
+    const res = await fetch(`${EVOLUTION_URL}/chat/getBase64FromMediaMessage/${EVOLUTION_INSTANCE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_KEY },
+      body: JSON.stringify({ message: msgBodyData })
+    })
+
+    if (!res.ok) return null
+    const json = await res.json()
+    const base64Str = json.base64 || json.data?.base64 || json.response?.base64 || json.media
+    const mimetype = json.mimetype || json.data?.mimetype || json.response?.mimetype || 'audio/ogg'
+
+    if (base64Str) {
+      return { base64: base64Str, mimetype }
+    }
+    return null
+  } catch (err: any) {
+    console.error('[Evolution API getBase64] Erro ao baixar mídia:', err.message)
+    return null
+  }
+}
+
+// ── Transcreve áudio com Gemini 2.5 Flash Multimodal ──────────────────────
+async function transcreverAudio(base64Data: string, mimeType: string = 'audio/ogg'): Promise<string | null> {
+  try {
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL })
+    const cleanBase64 = base64Data.replace(/^data:\w+\/\w+;base64,/, '')
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType: mimeType || 'audio/ogg',
+          data: cleanBase64
+        }
+      },
+      { text: 'Transcreva com precisão o que a pessoa falou neste áudio em português do Brasil. Retorne APENAS o texto exato da transcrição, sem introduções ou explicações.' }
+    ])
+    const textoTranscrito = result.response.text().trim()
+    return textoTranscrito || null
+  } catch (err: any) {
+    console.error('[Gemini Transcrição] Erro ao transcrever áudio:', err.message)
+    return null
+  }
+}
+
 // ── Envia mensagem de texto via Evolution API ────────────────────────────────
 async function enviarMensagem(numero: string, texto: string) {
   if (numero === TELEFONE_TESTE) return
@@ -770,7 +818,7 @@ export async function POST(request: NextRequest) {
       msgObj?.videoMessage
     )
 
-    const texto: string =
+    let texto: string =
       buttonId ||
       templateButtonId ||
       listRowId ||
@@ -783,15 +831,37 @@ export async function POST(request: NextRequest) {
       msgObj?.buttonsResponseMessage?.selectedDisplayText ||
       msgObj?.imageMessage?.caption || ''
 
-    // Se for mensagem de áudio ou mídia avulsa fora dos fluxos de foto do pedido
-    if (isAudio || (isMediaOnly && !texto.trim())) {
+    // Tenta transcrição de áudio via Gemini Multimodal
+    if (isAudio && !texto.trim()) {
+      let base64Audio = msgObj?.base64 || msgObj?.audioMessage?.base64 || msgObj?.media
+      let mimeTypeAudio = msgObj?.mimetype || msgObj?.audioMessage?.mimetype || 'audio/ogg'
+
+      if (!base64Audio) {
+        const mediaRes = await obterBase64Midia(body?.data)
+        if (mediaRes) {
+          base64Audio = mediaRes.base64
+          mimeTypeAudio = mediaRes.mimetype
+        }
+      }
+
+      if (base64Audio) {
+        const transcricao = await transcreverAudio(base64Audio, mimeTypeAudio)
+        if (transcricao) {
+          texto = transcricao
+          console.log(`[Transcrição Áudio] Sucesso (+${telefone}): "${transcricao}"`)
+        }
+      }
+    }
+
+    // Se for mensagem de mídia avulsa ou se a transcrição de áudio não foi possível
+    if ((isAudio && !texto.trim()) || (isMediaOnly && !texto.trim())) {
       const { estado: estadoAtualCheck } = await getEstadoInfo(telefone)
       if (!['opcao_marcar_particular_foto', 'opcao_marcar_particular_consulta_foto', 'aguardando_humano'].includes(estadoAtualCheck)) {
         const respMidia = isAudio
-          ? `🎙️ *Mensagem de Áudio recebida*\n\nOlá! No momento ainda não consigo ouvir áudios. Por favor, envie sua dúvida em mensagem de texto ou digite *0* para ver as opções do menu principal.`
+          ? `🎙️ *Mensagem de Áudio recebida*\n\nNão consegui transcrever o áudio no momento. Por favor, envie sua dúvida por texto ou digite *0* para ver as opções do menu principal.`
           : `📸 *Arquivo de Mídia recebido*\n\nOlá! No momento não consigo interpretar imagens ou documentos avulsos. Por favor, descreva sua dúvida por texto ou digite *0* para ver o menu principal.`
 
-        await salvarMensagem(telefone, 'user', isAudio ? '[Áudio enviado]' : '[Mídia/Imagem enviada]')
+        await salvarMensagem(telefone, 'user', isAudio ? '[Áudio recebido (não transcrito)]' : '[Mídia/Imagem enviada]')
         await salvarMensagem(telefone, 'assistant', respMidia)
         await enviarMensagem(telefone, respMidia)
         return NextResponse.json({ ok: true })
