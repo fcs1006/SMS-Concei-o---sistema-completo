@@ -59,6 +59,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Campos obrigatórios ausentes (nome, telefone, data)' }, { status: 400 })
     }
 
+    // Validação de duplicidade: impede adicionar paciente com registro pendente ou autorizado para o mesmo procedimento
+    const cleanCns = paciente_cns ? String(paciente_cns).replace(/\D/g, '') : null
+    const cleanNome = String(paciente_nome).trim().toUpperCase()
+    const cleanTipoExame = tipo_exame ? String(tipo_exame).trim().toUpperCase() : null
+
+    let dupQuery = supabase
+      .from('especialidades_agendamentos')
+      .select('id, paciente_nome, status, tipo_exame')
+      .eq('especialidade', especialidade)
+      .in('status', ['pendente', 'autorizado'])
+
+    if (cleanTipoExame) {
+      dupQuery = dupQuery.eq('tipo_exame', cleanTipoExame)
+    } else {
+      dupQuery = dupQuery.is('tipo_exame', null)
+    }
+
+    if (cleanCns && cleanCns.length >= 6) {
+      dupQuery = dupQuery.or(`paciente_cns.eq.${cleanCns},paciente_nome.ilike.${cleanNome}`)
+    } else {
+      dupQuery = dupQuery.ilike('paciente_nome', cleanNome)
+    }
+
+    const { data: existentes, error: dupErr } = await dupQuery
+    if (dupErr) console.warn('Erro ao verificar duplicidade:', dupErr.message)
+
+    if (existentes && existentes.length > 0) {
+      const dup = existentes[0]
+      const statusLabel = dup.status === 'autorizado' ? 'autorizado' : 'pendente'
+      const procInfo = cleanTipoExame ? ` (${cleanTipoExame})` : ''
+      return NextResponse.json({
+        ok: false,
+        error: `Duplicidade detectada: O paciente ${dup.paciente_nome || cleanNome} já possui um registro ${statusLabel.toUpperCase()} para a especialidade "${especialidade.toUpperCase()}"${procInfo}.`
+      }, { status: 400 })
+    }
+
     const { data, error } = await supabase
       .from('especialidades_agendamentos')
       .insert([{

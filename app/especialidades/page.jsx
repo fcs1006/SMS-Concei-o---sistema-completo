@@ -1099,6 +1099,35 @@ export default function Especialidades() {
         mostrarMsg('Exame de Próstata é exclusivo para pacientes do sexo masculino', false); return
       }
     }
+
+    // Validação local de duplicidade na lista de agendamentos carregada
+    const cnsClean = form.paciente_cns.replace(/\D/g, '')
+    const nomeClean = form.paciente_nome.trim().toUpperCase()
+    const tipoExameClean = (form.tipo_exame || '').trim().toUpperCase()
+
+    const duplicadoLocal = agendamentos.find(a => {
+      if (a.status === 'excluido' || a.status === 'negado') return false
+      if (a.especialidade !== esp) return false
+
+      const aTipoExameClean = (a.tipo_exame || '').trim().toUpperCase()
+      if (aTipoExameClean !== tipoExameClean) return false
+
+      const aCnsClean = (a.paciente_cns || '').replace(/\D/g, '')
+      const aNomeClean = (a.paciente_nome || '').trim().toUpperCase()
+
+      const mesmoCns = cnsClean && aCnsClean && cnsClean === aCnsClean
+      const mesmoNome = nomeClean && aNomeClean && nomeClean === aNomeClean
+
+      return mesmoCns || mesmoNome
+    })
+
+    if (duplicadoLocal) {
+      const statusLabel = duplicadoLocal.status === 'autorizado' ? 'já está AUTORIZADO' : 'já consta como PENDENTE'
+      const procInfo = form.tipo_exame ? ` (${form.tipo_exame})` : ''
+      mostrarMsg(`Duplicidade: O paciente ${nomeClean} ${statusLabel} na lista de ${esp.toUpperCase()}${procInfo}.`, false)
+      return
+    }
+
     setSalvando(true)
     try {
       const res = await fetch('/api/especialidades', {
