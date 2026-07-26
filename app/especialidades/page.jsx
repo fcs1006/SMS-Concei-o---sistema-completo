@@ -942,16 +942,27 @@ export default function Especialidades() {
         return r.data_consulta || null
       }
       const pertenceAoMes = (r) => {
-        if (r.status === 'pendente') return true
         const dataRef = getDataRef(r)
         if (relModoFiltro === 'periodo') {
           if (!dataRef) return false
           return dataRef >= relDataInicio && dataRef <= relDataFim
         }
         // modo mês
-        if (!dataRef) return r.mes === relMes && r.ano === relAno
-        const [anoD, mesD] = dataRef.split('-')
-        return mesD === relMes && anoD === relAno
+        const targetMesPadded = String(relMes).padStart(2, '0')
+        const targetAnoStr = String(relAno)
+
+        if (dataRef) {
+          const parts = dataRef.split('-')
+          if (parts.length >= 2) {
+            const anoD = parts[0]
+            const mesD = String(parts[1]).padStart(2, '0')
+            return mesD === targetMesPadded && anoD === targetAnoStr
+          }
+        }
+
+        const rMesPadded = r.mes ? String(r.mes).padStart(2, '0') : ''
+        const rAnoStr = r.ano ? String(r.ano) : ''
+        return rMesPadded === targetMesPadded && rAnoStr === targetAnoStr
       }
 
       const filtrados = todos.filter(pertenceAoMes)

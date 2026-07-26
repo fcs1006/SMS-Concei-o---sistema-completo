@@ -34,8 +34,18 @@ export async function GET(request: NextRequest) {
 
     // Filtro de tempo do banco de dados para evitar estourar limites de registros
     if (mes && ano) {
-      const datePrefix = `${ano}-${mes}`
-      query = query.or(`status.eq.pendente,and(mes.eq.${mes},ano.eq.${ano}),and(data_atendimento.gte.${datePrefix}-01,data_atendimento.lte.${datePrefix}-31)`)
+      const mesNum = parseInt(mes, 10)
+      const anoNum = parseInt(ano, 10)
+      const mesPadded = String(mesNum).padStart(2, '0')
+      
+      // Calcula o número exato de dias no mês (ex: 30 para Junho, 31 para Julho, 28/29 para Fevereiro)
+      const ultimoDiaNum = new Date(anoNum, mesNum, 0).getDate()
+      const ultimoDiaPadded = String(ultimoDiaNum).padStart(2, '0')
+
+      const dateStart = `${anoNum}-${mesPadded}-01`
+      const dateEnd = `${anoNum}-${mesPadded}-${ultimoDiaPadded}`
+
+      query = query.or(`status.eq.pendente,and(mes.in.("${mesPadded}","${mesNum}"),ano.eq.${anoNum}),and(data_consulta.gte.${dateStart},data_consulta.lte.${dateEnd}),and(data_atendimento.gte.${dateStart},data_atendimento.lte.${dateEnd})`)
     } else if (dataInicio && dataFim) {
       query = query.or(`status.eq.pendente,and(data_consulta.gte.${dataInicio},data_consulta.lte.${dataFim}),and(data_atendimento.gte.${dataInicio},data_atendimento.lte.${dataFim})`)
     }
