@@ -42,7 +42,6 @@ export async function POST(request: NextRequest) {
     const sisregUser = sanitize(process.env.SISREG_USER, 'SISREG_USER')
     const sisregPassword = sanitize(process.env.SISREG_PASSWORD, 'SISREG_PASSWORD')
     let url = process.env.SISREG_URL || DEFAULT_SISREG_URL
-    const index = process.env.SISREG_INDEX || DEFAULT_SISREG_INDEX
 
     url = url.replace(/\/$/, '')
     const indicesToRemove = [
@@ -56,32 +55,65 @@ export async function POST(request: NextRequest) {
     }
 
     if (!sisregUser || !sisregPassword) {
-      return NextResponse.json({ ok: false, error: 'Credenciais do SISREG não configuradas no servidor.' }, { status: 500 })
+      return NextResponse.json({ ok: false, error: 'Credenciais do SISREG não configuradas no servidor (SISREG_USER e SISREG_PASSWORD).' }, { status: 500 })
     }
 
     const auth = Buffer.from(`${sisregUser}:${sisregPassword}`).toString('base64')
 
-    const response = await fetch(`${url.replace(/\/$/, '')}/${index}/_search`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Authorization: `Basic ${auth}`,
-      },
-      body: JSON.stringify({
-        query: { match_all: {} },
-        size: 10000,
-        sort: [{ data_solicitacao: { order: 'desc' } }],
-      }),
-    })
+    const indicesToFetch = [
+      'marcacao-ambulatorial-to-conceicao-do-tocantins',
+      'solicitacao-ambulatorial-to-conceicao-do-tocantins'
+    ]
 
-    if (!response.ok) {
-      const errText = await response.text()
-      return NextResponse.json({ ok: false, error: `Erro na API do SISREG: ${response.status}`, details: errText }, { status: 502 })
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Authorization': `Basic ${auth}`,
     }
 
-    const data = await response.json()
-    const hits = data.hits?.hits || []
+    let hits: any[] = []
+    let lastErrorStatus: number | null = null
+    let lastErrorText: string = ''
+
+    for (const idxName of indicesToFetch) {
+      try {
+        const fetchUrl = `${url.replace(/\/$/, '')}/${idxName}/_search`
+        const response = await fetch(fetchUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            query: { match_all: {} },
+            size: 10000,
+            sort: [{ data_solicitacao: { order: 'desc' } }],
+          }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const indexHits = data.hits?.hits || []
+          hits.push(...indexHits)
+        } else {
+          lastErrorStatus = response.status
+          lastErrorText = await response.text()
+          console.warn(`[SISREG Sync] Erro no índice ${idxName}: ${response.status} - ${lastErrorText}`)
+        }
+      } catch (err: any) {
+        console.error(`[SISREG Sync] Exceção ao consultar índice ${idxName}:`, err.message)
+      }
+    }
+
+    if (hits.length === 0 && lastErrorStatus) {
+      if (lastErrorStatus === 403) {
+        return NextResponse.json({
+          ok: false,
+          error: `Erro na API do SISREG: 403 (Acesso Negado/Forbidden). Verifique se as variáveis SISREG_USER e SISREG_PASSWORD no servidor estão corretas ou se a senha expirou no sistema do estado.`,
+          details: lastErrorText
+        }, { status: 502 })
+      }
+      return NextResponse.json({ ok: false, error: `Erro na API do SISREG: ${lastErrorStatus}`, details: lastErrorText }, { status: 502 })
+    }
 
     const todasSolicitacoes = hits.map((hit: any) => {
       const s = hit._source || {}
