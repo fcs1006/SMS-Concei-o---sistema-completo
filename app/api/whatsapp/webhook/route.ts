@@ -950,6 +950,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    if (['#humano', '#atendente', '#suporte'].includes(textoComando)) {
+      await setEstado(telefone, 'aguardando_humano')
+      const respHumano = `👤 *Transferência para Atendimento Humano*\n\nSeu atendimento foi transferido para um atendente da Secretaria Municipal de Saúde. Por favor, aguarde enquanto um profissional visualiza suas mensagens no painel.\n\n_Para reativar o assistente virtual a qualquer momento, digite *#bot*._`
+      await salvarMensagem(telefone, 'assistant', respHumano)
+      await enviarMensagem(telefone, respHumano)
+      return NextResponse.json({ ok: true })
+    }
+
     if (estadoDB === 'aguardando_humano') {
       // Se ficou mais de 2 horas inativo, reseta para o bot para não travar a pessoa para sempre
       const TIMEOUT_HUMANO = 2 * 60 * 60 * 1000 // 2 horas
@@ -992,16 +1000,24 @@ export async function POST(request: NextRequest) {
 
     // ── Primeira mensagem: apresentação + menu ───────────────────────────────
     if (primeiraMsg) {
-      const primeiroNomeRaw = pacienteAtual?.nome ? pacienteAtual.nome.trim().split(/\s+/)[0] : ''
-      const primeiroNome = primeiroNomeRaw ? primeiroNomeRaw.charAt(0).toUpperCase() + primeiroNomeRaw.slice(1).toLowerCase() : ''
-      const saudacaoNome = primeiroNome ? `Olá, ${primeiroNome}! Tudo bem? 👋` : 'Olá! Tudo bem? 👋'
-      const apresentacaoText = `${saudacaoNome} Sou o *${clientConfig.assistantName}*, assistente virtual da *Secretaria Municipal de Saúde de ${clientConfig.municipalityName}*.\n\nEstou aqui para facilitar seu acesso a informações sobre agendamentos, viagens de TFD, status do SISREG e serviços das nossas UBSs.\n\n🚨 *Atenção:* Este canal é exclusivo para informações. Em caso de urgência ou emergência, ligue imediatamente para: 📞 *${contatosSuporte.urgencia}*`
-      
       await setEstado(telefone, 'menu')
-      await salvarMensagem(telefone, 'assistant', apresentacaoText)
-      await enviarMensagem(telefone, apresentacaoText)
-      await enviarMenu(telefone, servicosMunicipio)
-      return NextResponse.json({ ok: true })
+      const inputLower = input.toLowerCase().trim()
+      const ehSaudacaoOuGenerico = !['1','2','3','4','5','6','7','8'].includes(input) && 
+        !inputLower.startsWith('consultar') && 
+        !inputLower.startsWith('estou') && 
+        !inputLower.startsWith('#')
+
+      if (ehSaudacaoOuGenerico) {
+        const primeiroNomeRaw = pacienteAtual?.nome ? pacienteAtual.nome.trim().split(/\s+/)[0] : ''
+        const primeiroNome = primeiroNomeRaw ? primeiroNomeRaw.charAt(0).toUpperCase() + primeiroNomeRaw.slice(1).toLowerCase() : ''
+        const saudacaoNome = primeiroNome ? `Olá, ${primeiroNome}! Tudo bem? 👋` : 'Olá! Tudo bem? 👋'
+        const apresentacaoText = `${saudacaoNome} Sou o *${clientConfig.assistantName}*, assistente virtual da *Secretaria Municipal de Saúde de ${clientConfig.municipalityName}*.\n\nEstou aqui para facilitar seu acesso a informações sobre agendamentos, viagens de TFD, status do SISREG e serviços das nossas UBSs.\n\n🚨 *Atenção:* Este canal é exclusivo para informações. Em caso de urgência ou emergência, ligue imediatamente para: 📞 *${contatosSuporte.urgencia}*`
+        
+        await salvarMensagem(telefone, 'assistant', apresentacaoText)
+        await enviarMensagem(telefone, apresentacaoText)
+        await enviarMenu(telefone, servicosMunicipio)
+        return NextResponse.json({ ok: true })
+      }
     }
 
     // ── Palavra-chave para voltar ao menu ────────────────────────────────────

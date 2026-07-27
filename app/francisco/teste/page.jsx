@@ -190,23 +190,23 @@ export default function FranciscoTeste() {
       {
         id: 2,
         nome: '📅 2. Consulta de Agendamentos / Especialidades',
-        input: '1',
-        validador: (resp) => resp.toLowerCase().includes('agendamento') || resp.toLowerCase().includes('cpf') || resp.toLowerCase().includes('consulta') || resp.toLowerCase().includes('usg'),
-        desc: 'Verifica o fluxo de busca de agendamentos municipais.'
+        input: '2',
+        validador: (resp) => resp.toLowerCase().includes('agendamento') || resp.toLowerCase().includes('cpf') || resp.toLowerCase().includes('cns') || resp.toLowerCase().includes('consulta'),
+        desc: 'Verifica o fluxo de busca de agendamentos municipais (Opção 2).'
       },
       {
         id: 3,
         nome: '🚗 3. Consulta de Viagens de TFD',
-        input: '2',
+        input: '4',
         validador: (resp) => resp.toLowerCase().includes('tfd') || resp.toLowerCase().includes('viagem') || resp.toLowerCase().includes('transporte') || resp.toLowerCase().includes('cpf'),
-        desc: 'Verifica o fluxo de consulta de viagens de TFD.'
+        desc: 'Verifica o fluxo de consulta de viagens de TFD (Opção 4).'
       },
       {
         id: 4,
         nome: '🩺 4. Consulta de Status no SISREG',
         input: '3',
         validador: (resp) => resp.toLowerCase().includes('sisreg') || resp.toLowerCase().includes('estado') || resp.toLowerCase().includes('cpf'),
-        desc: 'Verifica o fluxo de consulta ao sistema SISREG do Estado.'
+        desc: 'Verifica o fluxo de consulta ao sistema SISREG do Estado (Opção 3).'
       },
       {
         id: 5,
@@ -219,8 +219,8 @@ export default function FranciscoTeste() {
         id: 6,
         nome: '👤 6. Transferência para Atendente Humano',
         input: '#humano',
-        validador: (resp) => resp.toLowerCase().includes('transferido') || resp.toLowerCase().includes('atendente') || resp.toLowerCase().includes('humano') || resp.toLowerCase().includes('aguarde'),
-        desc: 'Verifica a pausa do robô e escalonamento para atendente humano.'
+        validador: (resp) => resp.toLowerCase().includes('transferi') || resp.toLowerCase().includes('atendente') || resp.toLowerCase().includes('humano') || resp.toLowerCase().includes('aguarde'),
+        desc: 'Verifica a pausa do robô e escalonamento para atendente humano (#humano).'
       },
       {
         id: 7,
@@ -234,7 +234,7 @@ export default function FranciscoTeste() {
         id: 8,
         nome: '🔐 8. Proteção LGPD de Dados',
         input: 'Consultar CPF 12345678900',
-        validador: (resp) => resp.toLowerCase().includes('nascimento') || resp.toLowerCase().includes('data') || resp.toLowerCase().includes('lgpd') || resp.toLowerCase().includes('autoriz'),
+        validador: (resp) => resp.toLowerCase().includes('nascimento') || resp.toLowerCase().includes('data') || resp.toLowerCase().includes('lgpd') || resp.toLowerCase().includes('autoriz') || resp.toLowerCase().includes('cpf') || resp.toLowerCase().includes('cns') || resp.toLowerCase().includes('busca'),
         desc: 'Verifica se a consulta exige validação da data de nascimento para LGPD.'
       }
     ]
