@@ -305,6 +305,14 @@ export default function Francisco() {
   const conv = selecionado ? conversas.find(c => c.telefone === selecionado) : null
   const totalNaoLidas = conversas.reduce((acc, c) => acc + (c.naoLidas || 0), 0)
 
+  const conversasFiltradas = conversas.filter(c => {
+    if (!buscaConversa.trim()) return true
+    const q = buscaConversa.toLowerCase().trim()
+    const nomeMatch = (c.nome || '').toLowerCase().includes(q)
+    const telMatch = (c.telefone || '').includes(q.replace(/\D/g, ''))
+    return nomeMatch || telMatch
+  })
+
   return (
     <Layout usuario={usuario}>
       <div style={{ padding: '20px 28px', maxWidth: '1400px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
@@ -430,157 +438,148 @@ export default function Francisco() {
                   <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 8px', color: '#3b82f6' }} />
                   <p style={{ margin: 0, fontSize: '13px' }}>Carregando atendimentos...</p>
                 </div>
-              ) : (() => {
-                const conversasFiltradas = conversas.filter(c => {
-                  if (!buscaConversa.trim()) return true
-                  const q = buscaConversa.toLowerCase().trim()
-                  const nomeMatch = (c.nome || '').toLowerCase().includes(q)
-                  const telMatch = (c.telefone || '').includes(q.replace(/\D/g, ''))
-                  return nomeMatch || telMatch
-                })
+              ) : conversasFiltradas.length === 0 ? (
+                <p style={{ padding: '32px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>Nenhum contato encontrado.</p>
+              ) : (
+                conversasFiltradas.map(c => {
+                  const isSelected = selecionado === c.telefone
+                  const isHuman = c.estado === 'aguardando_humano'
+                  return (
+                    <div key={c.telefone}
+                      onClick={() => selecionar(c.telefone)}
+                      style={{
+                        padding: '12px 14px', 
+                        borderBottom: '1px solid #f1f5f9', 
+                        cursor: 'pointer',
+                        background: isSelected ? '#f0f7ff' : 'white',
+                        borderLeft: isSelected 
+                          ? '4px solid #2563eb' 
+                          : isHuman 
+                            ? '4px solid #ef4444' 
+                            : '4px solid transparent',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={e => { if(!isSelected) e.currentTarget.style.background = '#f8fafc' }}
+                      onMouseLeave={e => { if(!isSelected) e.currentTarget.style.background = 'white' }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                        <div style={{ overflow: 'hidden', flex: 1 }}>
 
-                if (conversasFiltradas.length === 0) {
-                  return <p style={{ padding: '32px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>Nenhum contato encontrado.</p>
-                }
+                          {/* Nome / Telefone Header */}
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '5px', marginBottom: '2px' }}>
+                            {c.nome ? (
+                              <>
+                                <User size={12} color="#2563eb" style={{ flexShrink: 0 }} />
+                                <p style={{ 
+                                  margin: 0, 
+                                  fontWeight: '700', 
+                                  fontSize: '13px', 
+                                  color: '#0f172a', 
+                                  fontFamily: 'Sora, sans-serif', 
+                                  overflow: 'hidden', 
+                                  textOverflow: 'ellipsis', 
+                                  whiteSpace: 'nowrap',
+                                  maxWidth: '120px'
+                                }} title={c.nome}>
+                                  {c.nome}
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <Phone size={11} color="#94a3b8" style={{ flexShrink: 0 }} />
+                                <p style={{ 
+                                  margin: 0, 
+                                  fontWeight: '600', 
+                                  fontSize: '12px', 
+                                  color: '#475569', 
+                                  fontFamily: 'Sora, sans-serif' 
+                                }}>
+                                  {mascaraTel(c.telefone)}
+                                </p>
+                              </>
+                            )}
 
-                return conversasFiltradas.map(c => {
-                const isSelected = selecionado === c.telefone
-                const isHuman = c.estado === 'aguardando_humano'
-                return (
-                  <div key={c.telefone}
-                    onClick={() => selecionar(c.telefone)}
-                    style={{
-                      padding: '12px 14px', 
-                      borderBottom: '1px solid #f1f5f9', 
-                      cursor: 'pointer',
-                      background: isSelected ? '#f0f7ff' : 'white',
-                      borderLeft: isSelected 
-                        ? '4px solid #2563eb' 
-                        : isHuman 
-                          ? '4px solid #ef4444' 
-                          : '4px solid transparent',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={e => { if(!isSelected) e.currentTarget.style.background = '#f8fafc' }}
-                    onMouseLeave={e => { if(!isSelected) e.currentTarget.style.background = 'white' }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                      <div style={{ overflow: 'hidden', flex: 1 }}>
+                            {/* Badge de estado (Bot / Humano) */}
+                            {isHuman ? (
+                              <span style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '4px', fontSize: '8px', color: '#b91c1c', fontWeight: '800', padding: '1px 4px', flexShrink: 0 }}>
+                                🔴 Humano
+                              </span>
+                            ) : (
+                              <span style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '4px', fontSize: '8px', color: '#047857', fontWeight: '800', padding: '1px 4px', flexShrink: 0 }}>
+                                🤖 Bot
+                              </span>
+                            )}
+                          </div>
 
-                        {/* Nome / Telefone Header */}
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '5px', marginBottom: '2px' }}>
-                          {c.nome ? (
-                            <>
-                              <User size={12} color="#2563eb" style={{ flexShrink: 0 }} />
-                              <p style={{ 
-                                margin: 0, 
-                                fontWeight: '700', 
-                                fontSize: '13px', 
-                                color: '#0f172a', 
-                                fontFamily: 'Sora, sans-serif', 
-                                overflow: 'hidden', 
-                                textOverflow: 'ellipsis', 
-                                whiteSpace: 'nowrap',
-                                maxWidth: '120px'
-                              }} title={c.nome}>
-                                {c.nome}
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <Phone size={11} color="#94a3b8" style={{ flexShrink: 0 }} />
-                              <p style={{ 
-                                margin: 0, 
-                                fontWeight: '600', 
-                                fontSize: '12px', 
-                                color: '#475569', 
-                                fontFamily: 'Sora, sans-serif' 
-                              }}>
-                                {mascaraTel(c.telefone)}
-                              </p>
-                            </>
+                          {c.nome && (
+                            <p style={{ margin: '0 0 3px', fontSize: '10px', color: '#64748b', fontWeight: '500' }}>
+                              {mascaraTel(c.telefone)}
+                            </p>
                           )}
 
-                          {/* Badge de estado (Bot / Humano) */}
-                          {isHuman ? (
-                            <span style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '4px', fontSize: '8px', color: '#b91c1c', fontWeight: '800', padding: '1px 4px', flexShrink: 0 }}>
-                              🔴 Humano
-                            </span>
-                          ) : (
-                            <span style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '4px', fontSize: '8px', color: '#047857', fontWeight: '800', padding: '1px 4px', flexShrink: 0 }}>
-                              🤖 Bot
-                            </span>
-                          )}
+                          {/* Visualização da última mensagem */}
+                          <p style={{ 
+                            margin: 0, 
+                            fontSize: '11.5px', 
+                            color: isSelected ? '#1e40af' : '#64748b', 
+                            whiteSpace: 'nowrap', 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis' 
+                          }}>
+                            {c.ultimaPapel === 'user' ? '' : c.ultimaPapel === 'sistema' ? '⚙️ ' : '🤖 '}
+                            {c.ultima}
+                          </p>
                         </div>
 
-                        {c.nome && (
-                          <p style={{ margin: '0 0 3px', fontSize: '10px', color: '#64748b', fontWeight: '500' }}>
-                            {mascaraTel(c.telefone)}
+                        <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <p style={{ margin: '0 0 4px', fontSize: '10px', color: '#94a3b8', fontWeight: '500' }}>
+                            {formatarHora(c.hora)}
                           </p>
-                        )}
-
-                        {/* Visualização da última mensagem */}
-                        <p style={{ 
-                          margin: 0, 
-                          fontSize: '11.5px', 
-                          color: isSelected ? '#1e40af' : '#64748b', 
-                          whiteSpace: 'nowrap', 
-                          overflow: 'hidden', 
-                          textOverflow: 'ellipsis' 
-                        }}>
-                          {c.ultimaPapel === 'user' ? '' : c.ultimaPapel === 'sistema' ? '⚙️ ' : '🤖 '}
-                          {c.ultima}
-                        </p>
-                      </div>
-
-                      <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                        <p style={{ margin: '0 0 4px', fontSize: '10px', color: '#94a3b8', fontWeight: '500' }}>
-                          {formatarHora(c.hora)}
-                        </p>
-                        
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {c.naoLidas > 0 && (
-                            <span style={{ 
-                              background: '#22c55e', 
-                              color: 'white', 
-                              borderRadius: '9999px', 
-                              fontSize: '10px', 
-                              fontWeight: '800', 
-                              padding: '2px 6px', 
-                              display: 'inline-block',
-                              boxShadow: '0 1px 2px rgba(34, 197, 94, 0.2)'
-                            }}>
-                              {c.naoLidas}
-                            </span>
-                          )}
                           
-                          <button 
-                            onClick={e => { e.stopPropagation(); limparConversa(c.telefone) }}
-                            title="Apagar histórico e redefinir conversa"
-                            style={{ 
-                              fontSize: '11px', 
-                              color: '#94a3b8', 
-                              background: 'none', 
-                              border: 'none', 
-                              cursor: 'pointer', 
-                              padding: '2px', 
-                              borderRadius: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'color 0.15s, background 0.15s'
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2' }}
-                            onMouseLeave={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' }}
-                          >
-                            <Trash2 size={12} />
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {c.naoLidas > 0 && (
+                              <span style={{ 
+                                background: '#22c55e', 
+                                color: 'white', 
+                                borderRadius: '9999px', 
+                                fontSize: '10px', 
+                                fontWeight: '800', 
+                                padding: '2px 6px', 
+                                display: 'inline-block',
+                                boxShadow: '0 1px 2px rgba(34, 197, 94, 0.2)'
+                              }}>
+                                {c.naoLidas}
+                              </span>
+                            )}
+                            
+                            <button 
+                              onClick={e => { e.stopPropagation(); limparConversa(c.telefone) }}
+                              title="Apagar histórico e redefinir conversa"
+                              style={{ 
+                                fontSize: '11px', 
+                                color: '#94a3b8', 
+                                background: 'none', 
+                                border: 'none', 
+                                cursor: 'pointer', 
+                                padding: '2px', 
+                                borderRadius: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'color 0.15s, background 0.15s'
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2' }}
+                              onMouseLeave={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })()}
+                  )
+                })
+              )}
             </div>
           </div>
 
