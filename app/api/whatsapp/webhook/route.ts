@@ -5,7 +5,8 @@ import { buscarSolicitacoesSisreg, SisregSolicitacaoComFila } from '../../../../
 import { clientConfig, getDbConfigsMulti, getActiveClientConfig } from '../../../../lib/config'
 import { accentInsensitivePattern } from '../../../../lib/supabase'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+const getGeminiKey = () => process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
+const genAI = new GoogleGenerativeAI(getGeminiKey())
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +16,7 @@ const supabase = createClient(
 const EVOLUTION_URL = process.env.EVOLUTION_API_URL!
 const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY!
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE!
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash'
 const TELEFONE_TESTE = '5500000000000'
 
 // ── Verifica horário de funcionamento (configuração dinâmica) ────────────────
@@ -1754,51 +1755,85 @@ Use a ferramenta escalar_para_humano:
 CONTATOS DE EMERGÊNCIA:
 🚨 Urgências: ${contatosSuporte.urgencia} | UBS Urbana: ${contatosSuporte.ubs_urbana} | Lab: ${contatosSuporte.laboratorio} | VISA: ${contatosSuporte.vigilancia}`
 
-    const model = genAI.getGenerativeModel({
-      model: GEMINI_MODEL,
-      systemInstruction: systemPrompt + identificacaoUsuarioPrompt,
-      tools: [{ functionDeclarations: tools }],
-      generationConfig: {
-        temperature: 0.1,
-      }
-    })
-
-    const chat = model.startChat({
-      history: historico,
-    })
-
-    // Loop do agente com ferramentas
     let resposta = ''
-    let tentativas = 0
-    let messageToSend: any = texto
 
-    while (tentativas < 5) {
-      tentativas++
+    try {
+      const model = genAI.getGenerativeModel({
+        model: GEMINI_MODEL,
+        systemInstruction: systemPrompt + identificacaoUsuarioPrompt,
+        tools: [{ functionDeclarations: tools }],
+        generationConfig: {
+          temperature: 0.1,
+        }
+      })
 
-      const responseResult = await chat.sendMessage(messageToSend)
-      const response = responseResult.response
+      const chat = model.startChat({
+        history: historico,
+      })
 
-      const functionCalls = response.functionCalls()
+      let tentativas = 0
+      let messageToSend: any = texto
 
-      if (!functionCalls || functionCalls.length === 0) {
-        resposta = response.text().trim() || 'Desculpe, não consegui processar sua mensagem.'
-        break
+      while (tentativas < 5) {
+        tentativas++
+
+        const responseResult = await chat.sendMessage(messageToSend)
+        const response = responseResult.response
+
+        const functionCalls = response.functionCalls()
+
+        if (!functionCalls || functionCalls.length === 0) {
+          resposta = response.text().trim() || 'Desculpe, não consegui processar sua mensagem.'
+          break
+        }
+
+        const functionResponses = []
+
+        for (const call of functionCalls) {
+          const resultado = await executarFerramenta(call.name, call.args, telefone, ctx)
+          functionResponses.push({
+            functionResponse: {
+              name: call.name,
+              response: { name: call.name, content: resultado }
+            }
+          })
+        }
+
+        messageToSend = functionResponses
       }
+    } catch (geminiErr: any) {
+      console.error('[Gemini AI Call Failed] Fallback acionado:', geminiErr.message)
+      const inputLower = texto.toLowerCase()
 
-      // Executa as ferramentas
-      const functionResponses = []
-
-      for (const call of functionCalls) {
-        const resultado = await executarFerramenta(call.name, call.args, telefone, ctx)
-        functionResponses.push({
-          functionResponse: {
-            name: call.name,
-            response: { name: call.name, content: resultado }
+      // Fallback 1: Alerta de Urgência
+      if (inputLower.includes('mal') || inputLower.includes('dor') || inputLower.includes('peito') || inputLower.includes('urgência') || inputLower.includes('emergência') || inputLower.includes('socorro') || inputLower.includes('febre')) {
+        resposta = `🚨 *Aviso de Urgência & Emergência Médica*\n\nNão sou profissional de saúde e não posso avaliar sintomas. Em caso de mal-estar grave, dor no peito ou urgência, procure a unidade de saúde mais próxima ou ligue imediatamente:\n📞 *${contatosSuporte.urgencia}*`
+        await executarFerramenta('escalar_para_humano', { motivo: 'Alerta de urgência relatado' }, telefone, ctx)
+      } 
+      // Fallback 2: Busca por CPF / Proteção LGPD
+      else if (inputLower.includes('consultar') || inputLower.includes('cpf') || inputLower.includes('cns') || texto.replace(/\D/g, '').length === 11 || texto.replace(/\D/g, '').length === 15) {
+        const soDigitos = texto.replace(/\D/g, '')
+        if (soDigitos.length === 11 || soDigitos.length === 15) {
+          const resultado = await executarFerramenta('buscar_agendamentos', { busca: soDigitos }, telefone, ctx)
+          if (resultado.startsWith('REQUER_VALIDACAO_NASCIMENTO')) {
+            resposta = resultado.replace('REQUER_VALIDACAO_NASCIMENTO: ', '')
+            await setEstado(telefone, `validar_nasc|buscar_agendamento|${soDigitos}`)
+          } else {
+            resposta = `📋 *Resultado da busca:*\n\n${resultado}`
           }
-        })
+        } else {
+          resposta = `🔐 *Proteção de Dados (LGPD)*\n\nPor favor, informe a data de nascimento do paciente no formato *DD/MM/AAAA* para autorizar a consulta segura de dados cadastrais.`
+        }
+      } 
+      // Fallback 3: Atendimento Humano
+      else if (inputLower.includes('#humano') || inputLower.includes('atendente') || inputLower.includes('humano')) {
+        resposta = `👤 *Transferência para Atendimento Humano*\n\nSeu atendimento foi transferido para um atendente da Secretaria Municipal de Saúde. Por favor, aguarde enquanto um profissional visualiza suas mensagens no painel.`
+        await setEstado(telefone, 'aguardando_humano')
+      } 
+      // Fallback 4: Geral
+      else {
+        resposta = `Olá! Recebi sua mensagem. Como posso te ajudar hoje? Por favor, escolha uma opção abaixo.`
       }
-
-      messageToSend = functionResponses
     }
 
     if (!resposta) resposta = 'Desculpe, não consegui processar sua mensagem no momento. Tente novamente ou ligue para a secretaria.'
