@@ -26,6 +26,7 @@ export default function FranciscoTeste() {
   const [rodandoBateria, setRodandoBateria] = useState(false)
   const [progressoBateria, setProgressoBateria] = useState([])
   const [mostrarModalBateria, setMostrarModalBateria] = useState(false)
+  const [itemExpandido, setItemExpandido] = useState(null)
 
   const [assistantName, setAssistantName] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -241,6 +242,10 @@ export default function FranciscoTeste() {
     const resultados = []
 
     for (const item of cenarios) {
+      // Limpa a conversa e reseta o estado do banco para isolar cada teste
+      await fetch(`/api/whatsapp/teste?telefone=${telefoneTeste}`, { method: 'DELETE' })
+      setEstadoAtual('menu')
+
       setProgressoBateria(prev => [...prev, { ...item, status: 'rodando' }])
       
       const tStart = performance.now()
@@ -267,6 +272,30 @@ export default function FranciscoTeste() {
     }
 
     setRodandoBateria(false)
+  }
+
+  function copiarLogTestes() {
+    const dataHora = new Date().toLocaleString('pt-BR')
+    let logTxt = `=====================================================\n`
+    logTxt += `  RELATÓRIO DE HOMOLOGAÇÃO & SANIDADE - AGENTE ${assistantName.toUpperCase()}\n`
+    logTxt += `  Data/Hora: ${dataHora}\n`
+    logTxt += `  Perfil Simulado: ${telefoneTeste}\n`
+    logTxt += `=====================================================\n\n`
+
+    progressoBateria.forEach((p) => {
+      const icon = p.status === 'sucesso' ? '✅ PASSOU' : p.status === 'falha' ? '❌ FALHOU' : '⏳ RODANDO'
+      logTxt += `[${icon}] ${p.nome} (${p.tempo || 0}ms)\n`
+      logTxt += `  - Descrição: ${p.desc}\n`
+      logTxt += `  - Entrada Enviada: "${p.input || (p.isAudio ? 'Mensagem de voz simulada' : '')}"\n`
+      logTxt += `  - Resposta do Francisco: ${p.resposta ? JSON.stringify(p.resposta) : 'Sem resposta'}\n`
+      if (p.status === 'falha') {
+        logTxt += `  - Diagnóstico do Erro: A resposta obtida não continha os critérios esperados para homologação.\n`
+      }
+      logTxt += `-----------------------------------------------------\n\n`
+    })
+
+    navigator.clipboard.writeText(logTxt)
+    alert('📋 Relatório detalhado dos testes e erros copiado para a área de transferência!')
   }
 
   function hora(d) {
@@ -518,59 +547,88 @@ export default function FranciscoTeste() {
             </div>
 
             <div style={{ padding: '20px', maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {progressoBateria.map(p => (
-                <div 
-                  key={p.id}
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    border: '1px solid #e2e8f0',
-                    background: p.status === 'sucesso' ? '#f0fdf4' : p.status === 'falha' ? '#fef2f2' : '#f8fafc',
-                    borderColor: p.status === 'sucesso' ? '#bbf7d0' : p.status === 'falha' ? '#fca5a5' : '#cbd5e1',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{p.nome}</span>
-                    
-                    {p.status === 'rodando' && (
-                      <span style={{ fontSize: '11px', color: '#2563eb', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <RefreshCw size={12} className="animate-spin" /> Testando...
-                      </span>
-                    )}
+              {progressoBateria.map(p => {
+                const isExpanded = itemExpandido === p.id
+                return (
+                  <div 
+                    key={p.id}
+                    onClick={() => setItemExpandido(isExpanded ? null : p.id)}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #e2e8f0',
+                      background: p.status === 'sucesso' ? '#f0fdf4' : p.status === 'falha' ? '#fef2f2' : '#f8fafc',
+                      borderColor: p.status === 'sucesso' ? '#bbf7d0' : p.status === 'falha' ? '#fca5a5' : '#cbd5e1',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{p.nome}</span>
+                      
+                      {p.status === 'rodando' && (
+                        <span style={{ fontSize: '11px', color: '#2563eb', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <RefreshCw size={12} className="animate-spin" /> Testando...
+                        </span>
+                      )}
 
-                    {p.status === 'sucesso' && (
-                      <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <CheckCircle2 size={14} /> PASSOU ({p.tempo}ms)
-                      </span>
-                    )}
+                      {p.status === 'sucesso' && (
+                        <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircle2 size={14} /> PASSOU ({p.tempo}ms) {isExpanded ? '▲' : '▼'}
+                        </span>
+                      )}
 
-                    {p.status === 'falha' && (
-                      <span style={{ fontSize: '11px', color: '#b91c1c', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <XCircle size={14} /> FALHOU ({p.tempo}ms)
-                      </span>
+                      {p.status === 'falha' && (
+                        <span style={{ fontSize: '11px', color: '#b91c1c', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <XCircle size={14} /> FALHOU ({p.tempo}ms) {isExpanded ? '▲' : '▼'}
+                        </span>
+                      )}
+                    </div>
+
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>{p.desc}</p>
+
+                    {/* Detalhes expandidos do teste */}
+                    {isExpanded && (
+                      <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.08)', fontSize: '11px', fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ background: 'white', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                          <strong style={{ color: '#475569' }}>📩 Entrada Enviada:</strong>
+                          <pre style={{ margin: '2px 0 0', whiteSpace: 'pre-wrap', color: '#0f172a' }}>{p.input || (p.isAudio ? '[MENSAGEM_DE_VOZ_SIMULADA]' : '—')}</pre>
+                        </div>
+                        <div style={{ background: 'white', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                          <strong style={{ color: '#475569' }}>📤 Resposta do Francisco:</strong>
+                          <pre style={{ margin: '2px 0 0', whiteSpace: 'pre-wrap', color: p.status === 'falha' ? '#b91c1c' : '#15803d' }}>{p.resposta || 'Nenhuma resposta recebida'}</pre>
+                        </div>
+                      </div>
                     )}
                   </div>
-
-                  <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>{p.desc}</p>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
-            <div style={{ padding: '14px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '14px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '12px', fontWeight: '600', color: '#475569' }}>
-                Status: {rodandoBateria ? 'Executando testes...' : 'Bateria concluída!'}
+                Status: {rodandoBateria ? 'Executando testes...' : 'Bateria concluída! Clique no teste para ver detalhes.'}
               </span>
 
               {!rodandoBateria && (
-                <button
-                  onClick={() => setMostrarModalBateria(false)}
-                  style={{ padding: '8px 16px', background: '#0f172a', border: 'none', borderRadius: '8px', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
-                >
-                  Concluir Homologação
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={copiarLogTestes}
+                    style={{ padding: '8px 14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1e40af', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    📋 Copiar Log de Erros
+                  </button>
+
+                  <button
+                    onClick={() => setMostrarModalBateria(false)}
+                    style={{ padding: '8px 16px', background: '#0f172a', border: 'none', borderRadius: '8px', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    Concluir Homologação
+                  </button>
+                </div>
               )}
             </div>
 
