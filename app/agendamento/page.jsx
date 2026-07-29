@@ -441,6 +441,9 @@ export default function Agendamento() {
       } else {
         query = query.eq('paciente_nome', form.nome)
       }
+      if (form.destino) {
+        query = query.eq('destino', form.destino)
+      }
       const { data: jaAgendados, error: checkError } = await query
 
       if (checkError) {
