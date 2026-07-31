@@ -885,6 +885,19 @@ export default function Especialidades() {
     }
   }, [abaMain, sisregFiltroDataInicio, sisregFiltroDataFim, sisregFiltroEsp, sisregFiltroStatus])
 
+  useEffect(() => {
+    if (!modalEditar.show || !modalEditar.id) {
+      return
+    }
+    Promise.all([
+      fetch('/api/especialidades/escala').then(r => r.json()),
+      fetch('/api/especialidades/profissionais').then(r => r.json())
+    ]).then(([jsonEscala, jsonProf]) => {
+      if (jsonEscala?.ok && jsonEscala.data) setEscalaModal(jsonEscala.data)
+      if (jsonProf?.ok && jsonProf.data) setProfissionaisModal(jsonProf.data)
+    }).catch(() => {})
+  }, [modalEditar.show, modalEditar.id])
+
   function mostrarMsg(txt, ok = true) {
     setMsg({ txt, ok })
     setTimeout(() => setMsg({ txt: '', ok: true }), 5000)
@@ -2734,7 +2747,15 @@ export default function Especialidades() {
                 <label className="label-modern">Profissional (da Escala)</label>
                 <select className="input-modern"
                   value={formEditar.profissional_nome || ''}
-                  onChange={e => setFormEditar(f => ({ ...f, profissional_nome: e.target.value }))}
+                  onChange={e => {
+                    const novoProf = e.target.value
+                    const itemEscalaProf = escalaParaUsar.find(x => x.data_atendimento === formEditar.data_atendimento && x.profissional_nome === novoProf)
+                    setFormEditar(f => ({
+                      ...f,
+                      profissional_nome: novoProf,
+                      ...(itemEscalaProf?.periodo ? { periodo: itemEscalaProf.periodo } : {})
+                    }))
+                  }}
                   style={{ width: '100%' }}>
                   <option value="">— Nenhum / Selecione —</option>
                   {(() => {
