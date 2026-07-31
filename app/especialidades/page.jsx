@@ -738,6 +738,8 @@ export default function Especialidades() {
   // Modal edição
   const [modalEditar, setModalEditar] = useState({ show: false, id: null })
   const [formEditar, setFormEditar] = useState({ paciente_nome: '', paciente_cns: '', telefone: '', sexo: '', data_consulta: '', data_atendimento: '', tipo_exame: '', observacao: '', profissional_nome: '', periodo: '', prioridade: '' })
+  const [escalaModal, setEscalaModal] = useState([])
+  const [profissionaisModal, setProfissionaisModal] = useState([])
 
   // Operações em Lote
   const [selecionados, setSelecionados] = useState([])
@@ -2652,8 +2654,10 @@ export default function Especialidades() {
       {/* ── MODAL: EDIÇÃO ── */}
       {modalEditar.show && (() => {
         const registroEditar = agendamentos.find(a => a.id === modalEditar.id) || relDetalhes.find(r => r.id === modalEditar.id)
-        const espId = registroEditar?.especialidade
+        const espId = registroEditar?.especialidade || esp
         const isUsgEdit = espId === 'usg'
+        const escalaParaUsar = escalaModal.length ? escalaModal : escala
+        const profsParaUsar = profissionaisModal.length ? profissionaisModal : profissionais
         return (
           <Modal titulo="Alterar Agendamento" onClose={() => setModalEditar({ show: false, id: null })} largura="560px">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -2693,13 +2697,14 @@ export default function Especialidades() {
                 <input className="input-modern" type="date" value={formEditar.data_atendimento || ''}
                   onChange={e => {
                     const novaData = e.target.value
-                    const itemEscala = escala.find(x => x.data_atendimento === novaData)
-                    const profAuto = itemEscala?.profissional_nome || ''
+                    const itemsNaData = escalaParaUsar.filter(x => x.data_atendimento === novaData)
+                    const profAuto = itemsNaData.length === 1 ? itemsNaData[0].profissional_nome : ''
+                    const periodoAuto = itemsNaData.length === 1 ? itemsNaData[0].periodo : ''
                     setFormEditar(f => ({
                       ...f,
                       data_atendimento: novaData,
                       ...(profAuto ? { profissional_nome: profAuto } : {}),
-                      ...(itemEscala?.periodo ? { periodo: itemEscala.periodo } : {})
+                      ...(periodoAuto ? { periodo: periodoAuto } : {})
                     }))
                   }} style={{ width: '100%' }} />
               </div>
@@ -2734,10 +2739,10 @@ export default function Especialidades() {
                   <option value="">— Nenhum / Selecione —</option>
                   {(() => {
                     const profsNaData = formEditar.data_atendimento
-                      ? escala.filter(e => e.data_atendimento === formEditar.data_atendimento).map(e => e.profissional_nome).filter(Boolean)
+                      ? escalaParaUsar.filter(e => e.data_atendimento === formEditar.data_atendimento).map(e => e.profissional_nome).filter(Boolean)
                       : []
-                    const nomesEscala = [...new Set(escala.map(e => e.profissional_nome).filter(Boolean))]
-                    const nomesProf = profissionais.map(p => p.nome).filter(Boolean)
+                    const nomesEscala = [...new Set(escalaParaUsar.map(e => e.profissional_nome).filter(Boolean))]
+                    const nomesProf = profsParaUsar.map(p => p.nome).filter(Boolean)
                     const todosUnicos = [...new Set([...profsNaData, ...nomesEscala, ...nomesProf, formEditar.profissional_nome].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
                     return todosUnicos.map(nome => {
                       const naData = profsNaData.includes(nome)
