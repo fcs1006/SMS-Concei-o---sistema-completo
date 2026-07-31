@@ -1301,6 +1301,8 @@ export default function Especialidades() {
       if (!json.ok) throw new Error(json.error)
       setAgendamentos(prev => prev.map(a => a.id === id ? { ...a, status: 'pendente', motivo_cancelamento: null, autorizado_por: null, data_atendimento: null, periodo: null } : a))
       mostrarMsg('Solicitação devolvida para pendente')
+      await buscarAgendamentos()
+      if (abaMain === 'relatorio') await buscarRelatorio()
     } catch (e) { mostrarMsg('' + e.message, false) }
   }
 
@@ -1318,6 +1320,8 @@ export default function Especialidades() {
       setModalCancel({ show: false, id: null })
       setMotivoCancel('')
       mostrarMsg('Agendamento cancelado')
+      await buscarAgendamentos()
+      if (abaMain === 'relatorio') await buscarRelatorio()
     } catch (e) { mostrarMsg('' + e.message, false) }
   }
 
@@ -1488,6 +1492,8 @@ export default function Especialidades() {
       setModalExcluir({ show: false, id: null })
       setMotivoExclusao('')
       mostrarMsg('Agendamento excluído')
+      await buscarAgendamentos()
+      if (abaMain === 'relatorio') await buscarRelatorio()
     } catch (e) { mostrarMsg('' + e.message, false) }
   }
 
@@ -1507,6 +1513,7 @@ export default function Especialidades() {
             telefone: formEditar.telefone.replace(/\D/g, ''),
             sexo: formEditar.sexo || null,
             data_consulta: formEditar.data_consulta,
+            data_atendimento: formEditar.data_atendimento || null,
             tipo_exame: formEditar.tipo_exame || null,
             observacao: formEditar.observacao || null,
             profissional_nome: formEditar.profissional_nome || null,
@@ -1520,6 +1527,8 @@ export default function Especialidades() {
       setAgendamentos(prev => prev.map(a => a.id === modalEditar.id ? { ...a, ...json.data } : a))
       setModalEditar({ show: false, id: null })
       mostrarMsg('Agendamento atualizado')
+      await buscarAgendamentos()
+      if (abaMain === 'relatorio') await buscarRelatorio()
     } catch (e) { mostrarMsg('' + e.message, false) }
   }
 
@@ -2072,7 +2081,7 @@ export default function Especialidades() {
                                       setDataAtendimentoAutorizar(entradaEscala?.data_atendimento || '')
                                     }, 'Autorizar', '#dcfce7', '#86efac', '#166534', <Check size={11} />)}
                                     {btn(() => { setModalCancel({ show: true, id: a.id }); setMotivoCancel('') }, 'Negar', '#fee2e2', '#fca5a5', '#991b1b', <X size={11} />)}
-                                    {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '', periodo: a.periodo || '', prioridade: a.prioridade || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', <Pencil size={11} />)}
+                                    {btn(() => { setFormEditar({ paciente_nome: a.paciente_nome || '', paciente_cns: a.paciente_cns || '', telefone: a.telefone || '', sexo: a.sexo || '', data_consulta: a.data_consulta || '', data_atendimento: a.data_atendimento || '', tipo_exame: a.tipo_exame || '', observacao: a.observacao || '', profissional_nome: a.profissional_nome || '', periodo: a.periodo || '', prioridade: a.prioridade || '' }); setModalEditar({ show: true, id: a.id }) }, 'Alterar', '#eff6ff', '#93c5fd', '#1d4ed8', <Pencil size={11} />)}
                                     {btn(() => { setModalExcluir({ show: true, id: a.id }); setMotivoExclusao('') }, 'Excluir', '#f1f5f9', '#cbd5e1', '#64748b', <Trash2 size={11} />)}
                                   </div>
                                 </td>
@@ -2420,7 +2429,7 @@ export default function Especialidades() {
                           return (
                             <tr key={r.id}
                               style={{ borderBottom: '1px solid #f1f5f9', background: isSel ? '#eff6ff' : r.status === 'excluido' ? '#f8fafc' : 'white', cursor: r.status !== 'excluido' ? 'pointer' : 'default' }}
-                              onClick={e => { if (r.status === 'excluido' || e.target.closest('button') || e.target.closest('input')) return; setFormEditar({ paciente_nome: r.paciente_nome || '', paciente_cns: r.paciente_cns || '', telefone: r.telefone || '', sexo: r.sexo || '', data_consulta: r.data_consulta || '', tipo_exame: r.tipo_exame || '', observacao: r.observacao || '', profissional_nome: r.profissional_nome || '', periodo: r.periodo || '', prioridade: r.prioridade || '' }); setModalEditar({ show: true, id: r.id }) }}
+                              onClick={e => { if (r.status === 'excluido' || e.target.closest('button') || e.target.closest('input')) return; setFormEditar({ paciente_nome: r.paciente_nome || '', paciente_cns: r.paciente_cns || '', telefone: r.telefone || '', sexo: r.sexo || '', data_consulta: r.data_consulta || '', data_atendimento: r.data_atendimento || '', tipo_exame: r.tipo_exame || '', observacao: r.observacao || '', profissional_nome: r.profissional_nome || '', periodo: r.periodo || '', prioridade: r.prioridade || '' }); setModalEditar({ show: true, id: r.id }) }}
                               onMouseEnter={e => { if (!isSel && r.status !== 'excluido') e.currentTarget.style.background = '#f8fafc' }}
                               onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = r.status === 'excluido' ? '#f8fafc' : 'white' }}>
                               <td style={{ padding: '7px 4px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
