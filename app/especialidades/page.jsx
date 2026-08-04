@@ -3059,15 +3059,11 @@ export default function Especialidades() {
       {/* ── MODAL: AUTORIZAÇÃO ── */}
       {modalAutorizar && (() => {
         const exigeJejum = EXAMES_JEJUM.includes(modalAutorizar.tipo_exame)
-        const targetMesNum = String(modalAutorizar.mes || mes).padStart(2, '0')
-        const targetAnoStr = String(modalAutorizar.ano || ano)
+        const hojeStr = new Date().toISOString().slice(0, 10)
 
-        const escalaDoMes = escala.filter(e => {
-          if (!e.data_atendimento) return true
-          const parts = e.data_atendimento.split('-')
-          if (parts.length < 2) return true
-          return parts[1] === targetMesNum && parts[0] === targetAnoStr
-        })
+        // Prioriza escalas com datas de atendimento futuras (>= hoje). Se não houver, exibe as escalas cadastradas.
+        const escalasFuturas = escala.filter(e => e.data_atendimento && e.data_atendimento >= hojeStr)
+        const escalaBase = escalasFuturas.length > 0 ? escalasFuturas : escala
 
         const periodosDisponiveis = periodos.filter(p => {
           if (!p.ativo) return false
@@ -3075,9 +3071,9 @@ export default function Especialidades() {
           return true
         })
         const escalaFiltrada = exigeJejum
-          ? escalaDoMes.filter(e => !(e.periodo && String(e.periodo).toLowerCase().includes('tarde')))
-          : escalaDoMes
-        const datasEscala = Array.from(new Set(escalaDoMes.map(item => item.data_atendimento)))
+          ? escalaBase.filter(e => !(e.periodo && String(e.periodo).toLowerCase().includes('tarde')))
+          : escalaBase
+        const datasEscala = Array.from(new Set(escalaBase.map(item => item.data_atendimento)))
         const diasEscalaCount = datasEscala.length
         const cotaDiaria = diasEscalaCount > 0 ? Math.floor(espAtiva.cota / diasEscalaCount) : espAtiva.cota
         
