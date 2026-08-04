@@ -611,14 +611,19 @@ function Modal({ titulo, onClose, children, largura = '520px' }) {
 }
 
 // ── Autocomplete de paciente ──────────────────────────────────────────────────
-function BuscaPaciente({ onSelect }) {
-  const [termo, setTermo] = useState('')
+function BuscaPaciente({ onSelect, value = '', onChangeName, label = "Buscar paciente (nome ou CPF/CNS)", placeholder = "Digite para buscar na base..." }) {
+  const [termo, setTermo] = useState(value)
   const [sugestoes, setSugestoes] = useState([])
   const [aberto, setAberto] = useState(false)
   const timer = useRef(null)
 
+  useEffect(() => {
+    setTermo(value || '')
+  }, [value])
+
   function buscar(v) {
     setTermo(v)
+    if (onChangeName) onChangeName(v)
     clearTimeout(timer.current)
     if (v.trim().length < 2) { setSugestoes([]); setAberto(false); return }
     timer.current = setTimeout(async () => {
@@ -637,7 +642,7 @@ function BuscaPaciente({ onSelect }) {
 
   function selecionar(p) {
     onSelect(p)
-    setTermo('')
+    setTermo(p.nome)
     setSugestoes([])
     setAberto(false)
   }
@@ -651,8 +656,8 @@ function BuscaPaciente({ onSelect }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <label className="label-modern">Buscar paciente (nome ou CPF/CNS)</label>
-      <input className="input-modern" type="text" placeholder="Digite para buscar na base..."
+      {label && <label className="label-modern">{label}</label>}
+      <input className="input-modern" type="text" placeholder={placeholder}
         value={termo} onChange={e => buscar(e.target.value)}
         onBlur={() => setTimeout(() => setAberto(false), 180)}
         style={{ width: '100%' }} />
@@ -2680,9 +2685,19 @@ export default function Especialidades() {
           <Modal titulo="Alterar Agendamento" onClose={() => setModalEditar({ show: false, id: null })} largura="560px">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label className="label-modern">Nome do Paciente *</label>
-                <input className="input-modern" type="text" value={formEditar.paciente_nome}
-                  onChange={e => setFormEditar(f => ({ ...f, paciente_nome: e.target.value }))} style={{ width: '100%' }} />
+                <BuscaPaciente
+                  value={formEditar.paciente_nome}
+                  onChangeName={nome => setFormEditar(f => ({ ...f, paciente_nome: nome }))}
+                  onSelect={p => setFormEditar(f => ({
+                    ...f,
+                    paciente_nome: p.nome,
+                    paciente_cns: p.cpf_cns || f.paciente_cns || '',
+                    telefone: p.telefone ? fmtTelefone(p.telefone) : f.telefone || '',
+                    sexo: p.sexo || f.sexo || ''
+                  }))}
+                  label="Nome do Paciente *"
+                  placeholder="Digite o nome ou CPF/CNS para buscar na base..."
+                />
               </div>
               <div>
                 <label className="label-modern">CNS / CPF</label>
