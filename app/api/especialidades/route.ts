@@ -69,16 +69,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Campos obrigatórios ausentes (nome, telefone, data)' }, { status: 400 })
     }
 
-    // Validação de duplicidade: impede adicionar paciente com registro pendente ou autorizado para o mesmo procedimento
+    // Validação de duplicidade: impede adicionar paciente apenas com solicitação PENDENTE no mesmo mês/ano e procedimento
     const cleanCns = paciente_cns ? String(paciente_cns).replace(/\D/g, '') : null
     const cleanNome = String(paciente_nome).trim().toUpperCase()
     const cleanTipoExame = tipo_exame ? String(tipo_exame).trim().toUpperCase() : null
+
+    const mesNum = parseInt(mes, 10)
+    const mesPadded = String(mesNum).padStart(2, '0')
+    const anoStr = String(ano)
 
     let dupQuery = supabase
       .from('especialidades_agendamentos')
       .select('id, paciente_nome, status, tipo_exame')
       .eq('especialidade', especialidade)
-      .in('status', ['pendente', 'autorizado'])
+      .eq('status', 'pendente')
+      .or(`mes.eq.${mesPadded},mes.eq.${mesNum}`)
+      .eq('ano', parseInt(anoStr, 10))
 
     if (cleanTipoExame) {
       dupQuery = dupQuery.eq('tipo_exame', cleanTipoExame)
@@ -97,11 +103,10 @@ export async function POST(request: NextRequest) {
 
     if (existentes && existentes.length > 0) {
       const dup = existentes[0]
-      const statusLabel = dup.status === 'autorizado' ? 'autorizado' : 'pendente'
       const procInfo = cleanTipoExame ? ` (${cleanTipoExame})` : ''
       return NextResponse.json({
         ok: false,
-        error: `Duplicidade detectada: O paciente ${dup.paciente_nome || cleanNome} já possui um registro ${statusLabel.toUpperCase()} para a especialidade "${especialidade.toUpperCase()}"${procInfo}.`
+        error: `Duplicidade detectada: O paciente ${dup.paciente_nome || cleanNome} já possui uma solicitação PENDENTE no mês ${mesPadded}/${anoStr} para a especialidade "${especialidade.toUpperCase()}"${procInfo}.`
       }, { status: 400 })
     }
 

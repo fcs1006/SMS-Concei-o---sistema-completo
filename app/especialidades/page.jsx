@@ -1126,14 +1126,20 @@ export default function Especialidades() {
       }
     }
 
-    // Validação local de duplicidade na lista de agendamentos carregada
+    // Validação local de duplicidade na lista de agendamentos carregada: apenas solicitações PENDENTES no mesmo mês/ano
     const cnsClean = form.paciente_cns.replace(/\D/g, '')
     const nomeClean = form.paciente_nome.trim().toUpperCase()
     const tipoExameClean = (form.tipo_exame || '').trim().toUpperCase()
+    const targetMesPadded = String(mes).padStart(2, '0')
+    const targetAnoStr = String(ano)
 
     const duplicadoLocal = agendamentos.find(a => {
-      if (a.status === 'excluido' || a.status === 'negado') return false
+      if (a.status !== 'pendente') return false
       if (a.especialidade !== esp) return false
+
+      const aMesPadded = a.mes ? String(a.mes).padStart(2, '0') : ''
+      const aAnoStr = a.ano ? String(a.ano) : ''
+      if (aMesPadded && aAnoStr && (aMesPadded !== targetMesPadded || aAnoStr !== targetAnoStr)) return false
 
       const aTipoExameClean = (a.tipo_exame || '').trim().toUpperCase()
       if (aTipoExameClean !== tipoExameClean) return false
@@ -1148,9 +1154,8 @@ export default function Especialidades() {
     })
 
     if (duplicadoLocal) {
-      const statusLabel = duplicadoLocal.status === 'autorizado' ? 'já está AUTORIZADO' : 'já consta como PENDENTE'
       const procInfo = form.tipo_exame ? ` (${form.tipo_exame})` : ''
-      mostrarMsg(`Duplicidade: O paciente ${nomeClean} ${statusLabel} na lista de ${esp.toUpperCase()}${procInfo}.`, false)
+      mostrarMsg(`Duplicidade: O paciente ${nomeClean} já possui uma solicitação PENDENTE no mês ${targetMesPadded}/${targetAnoStr} para a especialidade ${esp.toUpperCase()}${procInfo}.`, false)
       return
     }
 
