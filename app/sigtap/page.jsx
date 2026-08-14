@@ -194,7 +194,7 @@ export default function Sigtap() {
               🔍 Consultar procedimentos
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '12px', color: '#000000ff', fontFamily: 'DM Sans, sans-serif', marginRight: '2px' }}>Complexidade:</span>
+              <span style={{ fontSize: '12px', color: '#64748b', fontFamily: 'DM Sans, sans-serif', marginRight: '2px', fontWeight: '600' }}>Complexidade:</span>
               {[['AB', 'Atenção Básica'], ['MC', 'Média Complexidade'], ['AC', 'Alta Complexidade'], ['AP', 'Atenção Primária']].map(([sigla, label]) => (
                 <span key={sigla} title={label} style={{
                   fontSize: '12px', fontFamily: 'DM Sans, sans-serif',
@@ -205,6 +205,52 @@ export default function Sigtap() {
                   <strong>{sigla}</strong> = {label}
                 </span>
               ))}
+            </div>
+          </div>
+
+          {/* ── LEGENDA DE VALORES (SH / SA / SP) ── */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)', 
+            border: '1px solid #e2e8f0', 
+            borderRadius: '12px', 
+            padding: '12px 16px', 
+            marginBottom: '18px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', fontFamily: 'Sora, sans-serif' }}>
+                💡 Legenda de Valores do Procedimento:
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+              <div style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px' }}>
+                <span style={{ fontWeight: '700', color: '#0369a1', fontSize: '12px', display: 'inline-block', marginBottom: '2px' }}>
+                  🏥 Valor SH (Serviço Hospitalar)
+                </span>
+                <p style={{ margin: 0, fontSize: '11px', color: '#64748b', lineHeight: '1.4' }}>
+                  Custeio do hospital e internação (leito, centro cirúrgico, hotelaria e insumos).
+                </p>
+              </div>
+
+              <div style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px' }}>
+                <span style={{ fontWeight: '700', color: '#047857', fontSize: '12px', display: 'inline-block', marginBottom: '2px' }}>
+                  🩺 Valor SA (Serviço Ambulatorial)
+                </span>
+                <p style={{ margin: 0, fontSize: '11px', color: '#64748b', lineHeight: '1.4' }}>
+                  Custeio da unidade ambulatorial / posto (consultas, exames diagnósticos e terapias).
+                </p>
+              </div>
+
+              <div style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px' }}>
+                <span style={{ fontWeight: '700', color: '#7c3aed', fontSize: '12px', display: 'inline-block', marginBottom: '2px' }}>
+                  👨‍⚕️ Valor SP (Serviço Profissional)
+                </span>
+                <p style={{ margin: 0, fontSize: '11px', color: '#64748b', lineHeight: '1.4' }}>
+                  Honorários médicos e da equipe de profissionais de saúde pelo procedimento.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -239,9 +285,15 @@ export default function Sigtap() {
                   <table className="table-modern">
                     <thead>
                       <tr style={{ background: GRAD }}>
-                        {['Código', 'Procedimento', 'Complexidade', 'Sexo', 'Idade Mín.', 'Idade Máx.', 'Valor SH', 'Valor SA', 'Valor SP'].map(h => (
-                          <th key={h} style={{ color: '#fff', whiteSpace: 'nowrap' }}>{h}</th>
-                        ))}
+                        <th style={{ color: '#fff', whiteSpace: 'nowrap' }}>Código</th>
+                        <th style={{ color: '#fff', whiteSpace: 'nowrap' }}>Procedimento</th>
+                        <th style={{ color: '#fff', whiteSpace: 'nowrap' }}>Complexidade</th>
+                        <th style={{ color: '#fff', whiteSpace: 'nowrap' }}>Sexo</th>
+                        <th style={{ color: '#fff', whiteSpace: 'nowrap' }}>Idade Mín.</th>
+                        <th style={{ color: '#fff', whiteSpace: 'nowrap' }}>Idade Máx.</th>
+                        <th style={{ color: '#fff', whiteSpace: 'nowrap' }} title="Serviço Hospitalar: Custo de internação e infraestrutura do hospital">Valor SH ℹ️</th>
+                        <th style={{ color: '#fff', whiteSpace: 'nowrap' }} title="Serviço Ambulatorial: Custo de consultas, exames e posto de saúde">Valor SA ℹ️</th>
+                        <th style={{ color: '#fff', whiteSpace: 'nowrap' }} title="Serviço Profissional: Honorários médicos e da equipe de saúde">Valor SP ℹ️</th>
                       </tr>
                     </thead>
                     <tbody>
