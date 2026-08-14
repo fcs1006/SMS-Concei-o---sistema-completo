@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 const DEFAULT_SISREG_URL = 'https://sisreg-es.saude.gov.br'
 
-// Índices ordenados: do mais específico (local) para estadual (TO) e nacional (Brasil todo)
+// Índices ordenados: do mais específico (local) para estadual (TO), nacional e históricos (2024 / anos anteriores)
 const INDICES_BUSCA = [
   'marcacao-ambulatorial-to-conceicao-do-tocantins',
   'solicitacao-ambulatorial-to-conceicao-do-tocantins',
@@ -18,7 +18,12 @@ const INDICES_BUSCA = [
   'solicitacao-hospitalar-*',
   'marcacao-hospitalar-*',
   'solicitacao-*',
-  'marcacao-*'
+  'marcacao-*',
+  '*solicitacao*2024*',
+  '*marcacao*2024*',
+  '*2024*',
+  'historico-solicitacao-*',
+  'historico-marcacao-*'
 ]
 
 function extrairDadosSisreg(s: any, codigoFallback?: number | string): any {
