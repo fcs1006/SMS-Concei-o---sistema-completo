@@ -4,8 +4,85 @@ import { getSupabaseServer } from '@/lib/supabaseServer'
 export const dynamic = 'force-dynamic'
 
 const DEFAULT_SISREG_URL = 'https://sisreg-es.saude.gov.br'
-const INDEX_MARCACAO = 'marcacao-ambulatorial-to-conceicao-do-tocantins'
-const INDEX_SOLICITACAO = 'solicitacao-ambulatorial-to-conceicao-do-tocantins'
+
+// Índices ordenados: do mais específico (local) para estadual (TO) e nacional (Brasil todo)
+const INDICES_BUSCA = [
+  'marcacao-ambulatorial-to-conceicao-do-tocantins',
+  'solicitacao-ambulatorial-to-conceicao-do-tocantins',
+  'marcacao-ambulatorial-to-*',
+  'solicitacao-ambulatorial-to-*',
+  'solicitacao-ambulatorial-to-estadual',
+  'marcacao-ambulatorial-to-estadual',
+  'solicitacao-ambulatorial-*',
+  'marcacao-ambulatorial-*',
+  'solicitacao-hospitalar-*',
+  'marcacao-hospitalar-*',
+  'solicitacao-*',
+  'marcacao-*'
+]
+
+function extrairDadosSisreg(s: any, codigoFallback?: number | string): any {
+  let observacaoSolicitante = null
+  if (Array.isArray(s.laudo)) {
+    const entry = s.laudo.find((l: any) => 
+      l.tipo_perfil?.toLowerCase() === 'solicitante' || 
+      l.tipo_descricao?.toLowerCase()?.includes('observac') ||
+      l.tipo_descricao?.toLowerCase()?.includes('justific')
+    )
+    if (entry) {
+      observacaoSolicitante = entry.observacao || entry.ds_observacao || entry.justificativa
+    }
+  } else if (typeof s.laudo === 'string') {
+    observacaoSolicitante = s.laudo
+  }
+
+  if (!observacaoSolicitante && s.justificativa_clinica) observacaoSolicitante = s.justificativa_clinica
+  if (!observacaoSolicitante && s.ds_justificativa_clinica) observacaoSolicitante = s.ds_justificativa_clinica
+  if (!observacaoSolicitante && s.observacao) observacaoSolicitante = s.observacao
+  if (!observacaoSolicitante && s.ds_observacao) observacaoSolicitante = s.ds_observacao
+
+  return {
+    codigo_solicitacao: s.codigo_solicitacao || s.co_solicitacao || s.nu_solicitacao || codigoFallback || null,
+    data_solicitacao: s.data_solicitacao || s.dt_solicitacao || null,
+    data_aprovacao: s.data_aprovacao || s.dt_aprovacao || s.data_autorizacao || s.dt_autorizacao || null,
+    data_marcacao: s.data_marcacao || s.dt_marcacao || null,
+    data_confirmacao: s.data_confirmacao || s.dt_confirmacao || null,
+    no_usuario: s.no_usuario || s.nome_usuario || s.nome_paciente || null,
+    cns_usuario: s.cns_usuario || s.nu_cns || s.cns || null,
+    cpf_usuario: s.cpf_usuario || s.nu_cpf || s.cpf || null,
+    no_mae_usuario: s.no_mae_usuario || s.nome_mae || s.no_mae || null,
+    dt_nascimento_usuario: s.dt_nascimento_usuario || s.dt_nascimento || s.data_nascimento || null,
+    telefone: s.telefone || s.nu_telefone || s.telefone_usuario || s.nu_telefone_celular || null,
+    sexo_usuario: s.sexo_usuario || s.sg_sexo || s.sexo || null,
+    municipio_paciente_residencia: s.municipio_paciente_residencia || s.no_municipio_residencia || s.municipio_residencia || null,
+    uf_paciente_residencia: s.uf_paciente_residencia || s.sigla_uf_paciente_residencia || s.sg_uf_paciente_residencia || s.uf_residencia || s.sg_uf || null,
+    cep_paciente_residencia: s.cep_paciente_residencia || s.cep_paciente || s.nu_cep || null,
+    tipo_logradouro_paciente_residencia: s.tipo_logradouro_paciente_residencia || s.tp_logradouro_paciente_residencia || s.tp_logradouro || null,
+    endereco_paciente_residencia: s.logradouro_paciente_residencia || s.endereco_paciente_residencia || s.no_logradouro || s.endereco || null,
+    bairro_paciente_residencia: s.bairro_paciente_residencia || s.no_bairro || s.bairro || null,
+    numero_paciente_residencia: s.numero_paciente_residencia || s.nu_numero || s.numero || null,
+    raca_usuario: s.raca_usuario || s.no_raca || s.cor_usuario || s.raca_cor || null,
+    codigo_unidade_solicitante: s.codigo_unidade_solicitante || s.co_unidade_solicitante || s.cnes_solicitante || s.co_cnes_solicitante || null,
+    nome_unidade_solicitante: s.nome_unidade_solicitante || s.no_unidade_solicitante || s.no_estabelecimento_solicitante || null,
+    nome_medico_solicitante: s.nome_medico_solicitante || s.no_profissional_solicitante || s.nome_profissional || null,
+    numero_crm: s.numero_crm || s.nu_crm || s.nu_conselho || s.conselho_numero || null,
+    cpf_profissional_solicitante: s.cpf_profissional_solicitante || s.nu_cpf_profissional || null,
+    sigla_uf_solicitante: s.sigla_uf_solicitante || s.sg_uf_solicitante || null,
+    codigo_interno_procedimento: s.codigo_interno_procedimento || s.co_procedimento_interno || s.co_procedimento || null,
+    codigo_sigtap_procedimento: s.codigo_sigtap_procedimento || s.codigo_sigtap || (s.procedimentos?.[0]?.codigo_sigtap) || s.co_procedimento_sigtap || null,
+    codigo_cid: s.codigo_cid_solicitado || s.codigo_cid_agendado || s.co_cid || s.codigo_cid || null,
+    descricao_cid: s.descricao_cid_solicitado || s.descricao_cid_agendado || s.no_cid || s.descricao_cid || null,
+    descricao_interna_procedimento: s.descricao_interna_procedimento || s.no_procedimento || s.descricao_procedimento || null,
+    codigo_classificacao_risco: s.codigo_classificacao_risco || s.classificacao_risco || s.no_classificacao_risco || null,
+    codigo_tipo_regulacao: s.codigo_tipo_regulacao || s.tipo_regulacao || null,
+    status_solicitacao: s.status_solicitacao || s.no_situacao_solicitacao || s.situacao || null,
+    nome_unidade_executante: s.nome_unidade_executante || s.no_unidade_executante || s.no_estabelecimento_executante || null,
+    logradouro_unidade_executante: s.logradouro_unidade_executante || s.endereco_executante || null,
+    telefone_unidade_executante: s.telefone_unidade_executante || s.nu_telefone_executante || null,
+    justificativa_clinica: observacaoSolicitante || null,
+    atualizado_em: new Date().toISOString()
+  }
+}
 
 async function buscarExterno(codigoNum: number): Promise<any | null> {
   const sanitize = (val: string | undefined, prefix: string): string => {
@@ -41,11 +118,9 @@ async function buscarExterno(codigoNum: number): Promise<any | null> {
   }
 
   const auth = Buffer.from(`${sisregUser}:${sisregPassword}`).toString('base64')
-  
-  // Lista de índices para verificar em ordem
-  const indices = [INDEX_MARCACAO, INDEX_SOLICITACAO]
+  const codigoStr = String(codigoNum)
 
-  for (const index of indices) {
+  for (const index of INDICES_BUSCA) {
     try {
       console.log(`[SISREG Buscar Externo] Consultando índice ${index} para solicitação: ${codigoNum}`)
       const response = await fetch(`${url.replace(/\/$/, '')}/${index}/_search`, {
@@ -60,12 +135,20 @@ async function buscarExterno(codigoNum: number): Promise<any | null> {
             bool: {
               should: [
                 { term: { codigo_solicitacao: codigoNum } },
-                { term: { co_solicitacao: codigoNum } }
+                { term: { co_solicitacao: codigoNum } },
+                { term: { nu_solicitacao: codigoNum } },
+                { term: { 'codigo_solicitacao.keyword': codigoStr } },
+                { term: { 'co_solicitacao.keyword': codigoStr } },
+                { term: { 'nu_solicitacao.keyword': codigoStr } },
+                { match: { codigo_solicitacao: codigoStr } },
+                { match: { co_solicitacao: codigoStr } },
+                { match: { nu_solicitacao: codigoStr } }
               ]
             }
           },
           size: 1
         }),
+        signal: AbortSignal.timeout(5000)
       })
 
       if (response.ok) {
@@ -73,65 +156,15 @@ async function buscarExterno(codigoNum: number): Promise<any | null> {
         const hits = data.hits?.hits || []
         if (hits.length > 0) {
           const s = hits[0]._source || {}
-          let observacaoSolicitante = null
-          if (Array.isArray(s.laudo)) {
-            const entry = s.laudo.find((l: any) => 
-              l.tipo_perfil?.toLowerCase() === 'solicitante' || 
-              l.tipo_descricao?.toLowerCase()?.includes('observac')
-            )
-            if (entry) {
-              observacaoSolicitante = entry.observacao
-            }
-          }
-
-          return {
-            codigo_solicitacao: s.codigo_solicitacao || s.co_solicitacao || codigoNum,
-            data_solicitacao: s.data_solicitacao || null,
-            data_aprovacao: s.data_aprovacao || s.data_autorizacao || null,
-            data_marcacao: s.data_marcacao || null,
-            data_confirmacao: s.data_confirmacao || null,
-            no_usuario: s.no_usuario || null,
-            cns_usuario: s.cns_usuario || null,
-            cpf_usuario: s.cpf_usuario || null,
-            no_mae_usuario: s.no_mae_usuario || null,
-            dt_nascimento_usuario: s.dt_nascimento_usuario || null,
-            telefone: s.telefone || s.nu_telefone || s.telefone_usuario || null,
-            sexo_usuario: s.sexo_usuario || s.sg_sexo || null,
-            municipio_paciente_residencia: s.municipio_paciente_residencia || s.no_municipio_residencia || null,
-            uf_paciente_residencia: s.uf_paciente_residencia || s.sigla_uf_paciente_residencia || s.sg_uf_paciente_residencia || null,
-            cep_paciente_residencia: s.cep_paciente_residencia || s.cep_paciente || s.nu_cep || null,
-            tipo_logradouro_paciente_residencia: s.tipo_logradouro_paciente_residencia || s.tp_logradouro_paciente_residencia || s.tp_logradouro || null,
-            endereco_paciente_residencia: s.logradouro_paciente_residencia || s.endereco_paciente_residencia || null,
-            bairro_paciente_residencia: s.bairro_paciente_residencia || null,
-            numero_paciente_residencia: s.numero_paciente_residencia || null,
-            raca_usuario: s.raca_usuario || s.no_raca || s.cor_usuario || null,
-            codigo_unidade_solicitante: s.codigo_unidade_solicitante || s.co_unidade_solicitante || null,
-            nome_unidade_solicitante: s.nome_unidade_solicitante || s.no_unidade_solicitante || null,
-            nome_medico_solicitante: s.nome_medico_solicitante || s.no_profissional_solicitante || null,
-            numero_crm: s.numero_crm || null,
-            cpf_profissional_solicitante: s.cpf_profissional_solicitante || null,
-            sigla_uf_solicitante: s.sigla_uf_solicitante || null,
-            codigo_interno_procedimento: s.codigo_interno_procedimento || s.co_procedimento_interno || s.co_procedimento || null,
-            codigo_sigtap_procedimento: s.codigo_sigtap_procedimento || s.codigo_sigtap || (s.procedimentos?.[0]?.codigo_sigtap) || null,
-            codigo_cid: s.codigo_cid_solicitado || s.codigo_cid_agendado || s.co_cid || null,
-            descricao_cid: s.descricao_cid_solicitado || s.descricao_cid_agendado || s.no_cid || null,
-            descricao_interna_procedimento: s.descricao_interna_procedimento || s.no_procedimento || null,
-            codigo_classificacao_risco: s.codigo_classificacao_risco || s.classificacao_risco || null,
-            codigo_tipo_regulacao: s.codigo_tipo_regulacao || s.tipo_regulacao || null,
-            status_solicitacao: s.status_solicitacao || s.no_situacao_solicitacao || null,
-            nome_unidade_executante: s.nome_unidade_executante || null,
-            logradouro_unidade_executante: s.logradouro_unidade_executante || null,
-            telefone_unidade_executante: s.telefone_unidade_executante || null,
-            justificativa_clinica: observacaoSolicitante || null,
-            atualizado_em: new Date().toISOString()
-          }
+          console.log(`[SISREG Buscar Externo] Solicitação ${codigoNum} encontrada no índice ${index}!`)
+          return extrairDadosSisreg(s, codigoNum)
         }
       } else {
         const errText = await response.text()
-        console.error(`[SISREG Buscar Externo] Erro na API externa do SISREG no índice ${index}:`, response.status, errText)
+        console.warn(`[SISREG Buscar Externo] Índice ${index} retornou status ${response.status}: ${errText.slice(0, 120)}`)
       }
     } catch (e: any) {
-      console.error(`[SISREG Buscar Externo] Exceção ao buscar no índice ${index}:`, e.message)
+      console.warn(`[SISREG Buscar Externo] Tentativa no índice ${index} falhou:`, e.message)
     }
   }
 
@@ -172,11 +205,9 @@ async function buscarExternoPorDocumento(documento: string): Promise<any | null>
   }
 
   const auth = Buffer.from(`${sisregUser}:${sisregPassword}`).toString('base64')
-  
-  const indices = [INDEX_MARCACAO, INDEX_SOLICITACAO]
   const docLimpo = documento.replace(/\D/g, '')
 
-  for (const index of indices) {
+  for (const index of INDICES_BUSCA) {
     try {
       console.log(`[SISREG Buscar Externo por Documento] Consultando índice ${index} para documento: ${docLimpo}`)
       const response = await fetch(`${url.replace(/\/$/, '')}/${index}/_search`, {
@@ -191,16 +222,23 @@ async function buscarExternoPorDocumento(documento: string): Promise<any | null>
             bool: {
               should: [
                 { term: { cpf_usuario: docLimpo } },
-                { term: { cns_usuario: docLimpo } }
+                { term: { cns_usuario: docLimpo } },
+                { match: { cpf_usuario: docLimpo } },
+                { match: { cns_usuario: docLimpo } },
+                { term: { 'cpf_usuario.keyword': docLimpo } },
+                { term: { 'cns_usuario.keyword': docLimpo } }
               ]
             }
           },
           sort: [
             { dt_solicitacao: { order: 'desc', unmapped_type: 'date' } },
-            { data_solicitacao: { order: 'desc', unmapped_type: 'date' } }
+            { data_solicitacao: { order: 'desc', unmapped_type: 'date' } },
+            { dt_marcacao: { order: 'desc', unmapped_type: 'date' } },
+            { data_marcacao: { order: 'desc', unmapped_type: 'date' } }
           ],
           size: 1
         }),
+        signal: AbortSignal.timeout(5000)
       })
 
       if (response.ok) {
@@ -208,62 +246,12 @@ async function buscarExternoPorDocumento(documento: string): Promise<any | null>
         const hits = data.hits?.hits || []
         if (hits.length > 0) {
           const s = hits[0]._source || {}
-          let observacaoSolicitante = null
-          if (Array.isArray(s.laudo)) {
-            const entry = s.laudo.find((l: any) => 
-              l.tipo_perfil?.toLowerCase() === 'solicitante' || 
-              l.tipo_descricao?.toLowerCase()?.includes('observac')
-            )
-            if (entry) {
-              observacaoSolicitante = entry.observacao
-            }
-          }
-
-          return {
-            codigo_solicitacao: s.codigo_solicitacao || s.co_solicitacao || null,
-            data_solicitacao: s.data_solicitacao || null,
-            data_aprovacao: s.data_aprovacao || s.data_autorizacao || null,
-            data_marcacao: s.data_marcacao || null,
-            data_confirmacao: s.data_confirmacao || null,
-            no_usuario: s.no_usuario || null,
-            cns_usuario: s.cns_usuario || null,
-            cpf_usuario: s.cpf_usuario || null,
-            no_mae_usuario: s.no_mae_usuario || null,
-            dt_nascimento_usuario: s.dt_nascimento_usuario || null,
-            telefone: s.telefone || s.nu_telefone || s.telefone_usuario || null,
-            sexo_usuario: s.sexo_usuario || s.sg_sexo || null,
-            municipio_paciente_residencia: s.municipio_paciente_residencia || s.no_municipio_residencia || null,
-            uf_paciente_residencia: s.uf_paciente_residencia || s.sigla_uf_paciente_residencia || s.sg_uf_paciente_residencia || null,
-            cep_paciente_residencia: s.cep_paciente_residencia || s.cep_paciente || s.nu_cep || null,
-            tipo_logradouro_paciente_residencia: s.tipo_logradouro_paciente_residencia || s.tp_logradouro_paciente_residencia || s.tp_logradouro || null,
-            endereco_paciente_residencia: s.logradouro_paciente_residencia || s.endereco_paciente_residencia || null,
-            bairro_paciente_residencia: s.bairro_paciente_residencia || null,
-            numero_paciente_residencia: s.numero_paciente_residencia || null,
-            raca_usuario: s.raca_usuario || s.no_raca || s.cor_usuario || null,
-            codigo_unidade_solicitante: s.codigo_unidade_solicitante || s.co_unidade_solicitante || null,
-            nome_unidade_solicitante: s.nome_unidade_solicitante || s.no_unidade_solicitante || null,
-            nome_medico_solicitante: s.nome_medico_solicitante || s.no_profissional_solicitante || null,
-            numero_crm: s.numero_crm || null,
-            cpf_profissional_solicitante: s.cpf_profissional_solicitante || null,
-            sigla_uf_solicitante: s.sigla_uf_solicitante || null,
-            codigo_interno_procedimento: s.codigo_interno_procedimento || s.co_procedimento_interno || s.co_procedimento || null,
-            codigo_sigtap_procedimento: s.codigo_sigtap_procedimento || s.codigo_sigtap || (s.procedimentos?.[0]?.codigo_sigtap) || null,
-            codigo_cid: s.codigo_cid_solicitado || s.codigo_cid_agendado || s.co_cid || null,
-            descricao_cid: s.descricao_cid_solicitado || s.descricao_cid_agendado || s.no_cid || null,
-            descricao_interna_procedimento: s.descricao_interna_procedimento || s.no_procedimento || null,
-            codigo_classificacao_risco: s.codigo_classificacao_risco || s.classificacao_risco || null,
-            codigo_tipo_regulacao: s.codigo_tipo_regulacao || s.tipo_regulacao || null,
-            status_solicitacao: s.status_solicitacao || s.no_situacao_solicitacao || null,
-            nome_unidade_executante: s.nome_unidade_executante || null,
-            logradouro_unidade_executante: s.logradouro_unidade_executante || null,
-            telefone_unidade_executante: s.telefone_unidade_executante || null,
-            justificativa_clinica: observacaoSolicitante || null,
-            atualizado_em: new Date().toISOString()
-          }
+          console.log(`[SISREG Buscar Externo por Documento] Documento ${docLimpo} encontrado no índice ${index}!`)
+          return extrairDadosSisreg(s)
         }
       }
     } catch (e: any) {
-      console.error(`[SISREG Buscar Externo por Documento] Exceção no índice ${index}:`, e.message)
+      console.warn(`[SISREG Buscar Externo por Documento] Tentativa no índice ${index} falhou:`, e.message)
     }
   }
   return null
