@@ -45,3 +45,8 @@ next-env.d.ts
 
 # Scratch files
 /scratch
+
+# cloudflare
+.open-next
+.wrangler
+
