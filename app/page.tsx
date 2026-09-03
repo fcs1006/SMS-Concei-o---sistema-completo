@@ -372,12 +372,16 @@ function FormLogin({ irPara, router }: { irPara: (t: Tela) => void; router: any 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuario: usuario.trim(), senha: senha.trim() })
       })
-      const data = await res.json()
-      if (!data?.ok) { setErro('Usuário ou senha incorretos.'); setCarregando(false); return }
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.ok) {
+        setErro(data?.error || 'Usuário ou senha incorretos.')
+        setCarregando(false)
+        return
+      }
       localStorage.setItem('sms_user', JSON.stringify(data))
       router.push('/painel')
-    } catch {
-      setErro('Erro de conexão. Tente novamente.')
+    } catch (err: any) {
+      setErro('Erro de conexão: ' + (err?.message || 'Tente novamente.'))
       setCarregando(false)
     }
   }
