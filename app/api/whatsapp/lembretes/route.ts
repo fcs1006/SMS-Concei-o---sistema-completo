@@ -265,7 +265,7 @@ async function processarLembretes(request: NextRequest) {
     if (!targetTipo || targetTipo === 'consultas') {
       const { data: localAppts, error: localErr } = await supabase
         .from('especialidades_agendamentos')
-        .select('*')
+        .select('id, paciente_nome, paciente_cns, especialidade, tipo_exame, profissional_nome, periodo, hora, telefone, data_atendimento, data_consulta, status')
         .eq('status', 'autorizado')
         .or(`data_atendimento.eq.${tomorrowStr},and(data_atendimento.is.null,data_consulta.eq.${tomorrowStr})`)
 
@@ -464,7 +464,7 @@ async function processarLembretes(request: NextRequest) {
     if (!targetTipo || targetTipo === 'tfd') {
       const { data: travels, error: travelErr } = await supabase
         .from('viagens')
-        .select('*')
+        .select('id, data_viagem, hora, destino, paciente_nome, paciente_cpf, tem_acomp, acomp1_nome, acomp1_cpf, acomp2_nome, acomp2_cpf, motivo, local_destino, status')
         .eq('data_viagem', tomorrowStr)
 
       if (travelErr) {
@@ -592,7 +592,7 @@ async function processarLembretes(request: NextRequest) {
       // 1. Especialidades locais autorizadas para hoje ou depois
       const { data: futureLocalAppts, error: localAuthErr } = await supabase
         .from('especialidades_agendamentos')
-        .select('*')
+        .select('id, paciente_nome, paciente_cns, especialidade, tipo_exame, profissional_nome, periodo, hora, telefone, data_atendimento, data_consulta, status')
         .eq('status', 'autorizado')
         .or(`data_atendimento.gte.${todayStr},and(data_atendimento.is.null,data_consulta.gte.${todayStr})`)
 
@@ -672,7 +672,7 @@ async function processarLembretes(request: NextRequest) {
         const todayStart = `${todayStr}T00:00:00`
         const { data: futureSisregAppts, error: sisregAuthErr } = await supabase
           .from('monitoramento_sisreg')
-          .select('*')
+          .select('id, codigo_solicitacao, no_usuario, cpf_usuario, cns_usuario, data_marcacao, data_agenda, hora_agenda, descricao_interna_procedimento, nome_unidade_executante, nome_unidade_solicitante, telefone, status_solicitacao')
           .gte('data_marcacao', todayStart)
           .not('status_solicitacao', 'ilike', '%cancelado%')
           .not('status_solicitacao', 'ilike', '%excluido%')
@@ -927,7 +927,7 @@ async function processarLembretes(request: NextRequest) {
 
         const { data: sisregAppts5d, error: sisregErr5d } = await supabase
           .from('monitoramento_sisreg')
-          .select('*')
+          .select('id, codigo_solicitacao, no_usuario, cpf_usuario, cns_usuario, data_marcacao, data_agenda, hora_agenda, descricao_interna_procedimento, nome_unidade_executante, nome_unidade_solicitante, telefone, status_solicitacao')
           .gte('data_marcacao', startOfDay)
           .lte('data_marcacao', endOfDay)
           .not('status_solicitacao', 'ilike', '%cancelado%')

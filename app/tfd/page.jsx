@@ -75,7 +75,8 @@ export default function TFD() {
     setGerado(false)
 
     const { data: viagens } = await supabase
-      .from('viagens').select('*')
+      .from('viagens')
+      .select('id, data_viagem, hora, destino, paciente_nome, paciente_cpf, acomp1_nome, acomp1_cpf, acomp2_nome, acomp2_cpf, motivo, local_destino, status, observacao, confirmado, agendado_por')
       .eq('data_viagem', data)
       .order('hora', { ascending: true })
 

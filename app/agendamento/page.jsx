@@ -246,7 +246,7 @@ export default function Agendamento() {
     if (busca.length < 3) { setPacientes([]); return }
     const timer = setTimeout(async () => {
       const termoBusca = busca.replace(/\D/g, '')
-      let query = supabase.from('pacientes').select('*').limit(10)
+      let query = supabase.from('pacientes').select('id, nome, cpf_cns, dt_nasc, sexo, telefone, endereco, bairro, cep').limit(10)
       if (termoBusca.length >= 3 && termoBusca === busca.replace(/\s/g, '')) {
         query = query.ilike('cpf_cns', `%${termoBusca}%`)
       } else {
@@ -263,7 +263,7 @@ export default function Agendamento() {
     if (buscaA1.length < 3) { setSugestoesA1([]); return }
     const timer = setTimeout(async () => {
       const soDigitos = buscaA1.replace(/\D/g, '')
-      let query = supabase.from('pacientes').select('*').limit(8)
+      let query = supabase.from('pacientes').select('id, nome, cpf_cns, dt_nasc, sexo, telefone, endereco, bairro, cep').limit(8)
       if (soDigitos.length >= 3 && soDigitos === buscaA1.replace(/\s/g, '')) {
         query = query.ilike('cpf_cns', `%${soDigitos}%`)
       } else {
@@ -280,7 +280,7 @@ export default function Agendamento() {
     if (buscaA2.length < 3) { setSugestoesA2([]); return }
     const timer = setTimeout(async () => {
       const soDigitos = buscaA2.replace(/\D/g, '')
-      let query = supabase.from('pacientes').select('*').limit(8)
+      let query = supabase.from('pacientes').select('id, nome, cpf_cns, dt_nasc, sexo, telefone, endereco, bairro, cep').limit(8)
       if (soDigitos.length >= 3 && soDigitos === buscaA2.replace(/\s/g, '')) {
         query = query.ilike('cpf_cns', `%${soDigitos}%`)
       } else {
@@ -488,7 +488,7 @@ export default function Agendamento() {
   async function buscarParaReimprimir() {
     if (!buscaRe && !dataRe) return
     setBuscandoRe(true)
-    let query = supabase.from('viagens').select('*').order('data_viagem', { ascending: false }).limit(20)
+    let query = supabase.from('viagens').select('id, data_viagem, hora, paciente_nome, paciente_cpf, acomp1_nome, acomp1_cpf, acomp2_nome, acomp2_cpf, destino, motivo, local_destino, status, observacao, confirmado, agendado_por').order('data_viagem', { ascending: false }).limit(20)
     if (buscaRe) query = query.ilike('paciente_nome', `%${buscaRe.toUpperCase()}%`)
     if (dataRe) query = query.eq('data_viagem', dataRe)
     const { data } = await query
@@ -501,7 +501,7 @@ export default function Agendamento() {
     const cpfs = [viagem.paciente_cpf, viagem.acomp1_cpf, viagem.acomp2_cpf].filter(Boolean)
     let mapa = {}
     if (cpfs.length > 0) {
-      const { data: pacs } = await supabase.from('pacientes').select('*').in('cpf_cns', cpfs)
+      const { data: pacs } = await supabase.from('pacientes').select('id, nome, cpf_cns, dt_nasc, sexo, telefone, endereco, bairro, cep').in('cpf_cns', cpfs)
       if (pacs) pacs.forEach(p => { mapa[p.cpf_cns] = p })
     }
 

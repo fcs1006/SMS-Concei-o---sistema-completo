@@ -76,13 +76,12 @@ export default function Frequencia() {
   }
 
   async function carregarServidores() {
-    const { data } = await supabase.from('servidores').select('*').order('nome')
-    const ativos = (data || []).filter((servidor) => {
-      if (!Object.prototype.hasOwnProperty.call(servidor, 'status')) return true
-      const status = String(servidor.status || '').trim().toUpperCase()
-      return !status || status === 'ATIVO'
-    })
-    setServidores(ativos)
+    const { data } = await supabase
+      .from('servidores')
+      .select('id, nome, funcao, matricula, nivel, situacao, status')
+      .or('status.eq.ATIVO,status.is.null')
+      .order('nome')
+    setServidores(data || [])
   }
 
   async function carregarEscala() {

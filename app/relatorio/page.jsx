@@ -104,9 +104,10 @@ export default function Relatorio() {
   async function carregarViagens() {
     setCarregando(true)
     const { data } = await supabase
-      .from('viagens').select('*')
+      .from('viagens')
+      .select('id, data_viagem, hora, paciente_nome, paciente_cpf, acomp1_nome, acomp1_cpf, acomp2_nome, acomp2_cpf, destino, motivo, local_destino, status, observacao, agendado_por, confirmado, criado_em')
       .order('data_viagem', { ascending: false })
-      .limit(5000)
+      .limit(1500)
 
     const registros = data || []
 

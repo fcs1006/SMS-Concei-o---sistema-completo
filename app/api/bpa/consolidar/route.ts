@@ -105,7 +105,7 @@ async function consolidarUrgencia(competencia: string, fixos: any) {
 
   const { data: viagens, error } = await supabase
     .from('viagens')
-    .select('*')
+    .select('id, data_viagem, destino, paciente_nome, paciente_cpf, acomp1_nome, acomp1_cpf, acomp2_nome, acomp2_cpf, local_destino, motivo')
     .gte('data_viagem', dataInicio)
     .lte('data_viagem', dataFim)
     .order('data_viagem')
@@ -144,7 +144,7 @@ async function consolidarUrgencia(competencia: string, fixos: any) {
     for (let i = 0; i < arr.length; i += LOTE) {
       const lote = arr.slice(i, i + LOTE)
       const formatados = lote.map(c => c.length === 11 ? c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : c)
-      const { data: pacs } = await supabase.from('pacientes').select('*')
+      const { data: pacs } = await supabase.from('pacientes').select('cpf_cns, nome, dt_nasc, sexo, endereco, bairro, cep, telefone, ibge_municipio')
         .or(`cpf_cns.in.(${lote.join(',')}),cpf_cns.in.(${formatados.join(',')})`)
       ;(pacs || []).forEach((p: any) => {
         const doc = String(p.cpf_cns || '').replace(/\D/g, '')
@@ -164,7 +164,7 @@ async function consolidarUrgencia(competencia: string, fixos: any) {
     const arr = Array.from(todosNomes)
     for (let i = 0; i < arr.length; i += LOTE) {
       const lote = arr.slice(i, i + LOTE)
-      const { data: pacs } = await supabase.from('pacientes').select('*').in('nome', lote)
+      const { data: pacs } = await supabase.from('pacientes').select('cpf_cns, nome, dt_nasc, sexo, endereco, bairro, cep, telefone, ibge_municipio').in('nome', lote)
       ;(pacs || []).forEach((p: any) => {
         const doc = String(p.cpf_cns || '').replace(/\D/g, '')
         if (doc && !mapaPorDoc[doc]) mapaPorDoc[doc] = p
@@ -384,7 +384,7 @@ async function consolidarLaboratorio(linhas: any[], competencia: string, fixos: 
     for (let i = 0; i < cpfsArray.length; i += LOTE) {
       const lote = cpfsArray.slice(i, i + LOTE)
       const cpfsFormatados = lote.map(c => c.length === 11 ? c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : c)
-      const { data: pacs } = await supabase.from('pacientes').select('*')
+      const { data: pacs } = await supabase.from('pacientes').select('cpf_cns, nome, dt_nasc, sexo, endereco, bairro, cep, telefone, ibge_municipio')
         .or(`cpf_cns.in.(${lote.join(',')}),cpf_cns.in.(${cpfsFormatados.join(',')})`)
       ;(pacs || []).forEach((p: any) => {
         const doc = String(p.cpf_cns || '').replace(/\D/g, '')
@@ -404,7 +404,7 @@ async function consolidarLaboratorio(linhas: any[], competencia: string, fixos: 
     const nomesArray = Array.from(todosNomes)
     for (let i = 0; i < nomesArray.length; i += LOTE) {
       const lote = nomesArray.slice(i, i + LOTE)
-      const { data: pacs } = await supabase.from('pacientes').select('*').in('nome', lote)
+      const { data: pacs } = await supabase.from('pacientes').select('cpf_cns, nome, dt_nasc, sexo, endereco, bairro, cep, telefone, ibge_municipio').in('nome', lote)
       ;(pacs || []).forEach((p: any) => {
         const doc = String(p.cpf_cns || '').replace(/\D/g, '')
         if (doc && !mapaPorDocLab[doc]) mapaPorDocLab[doc] = p

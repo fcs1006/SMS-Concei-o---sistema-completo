@@ -1023,8 +1023,9 @@ export default function Especialidades() {
     try {
       let query = supabase
         .from('monitoramento_sisreg')
-        .select('*')
+        .select('id, codigo_solicitacao, data_solicitacao, no_usuario, cpf_usuario, cns_usuario, descricao_interna_procedimento, status_solicitacao, nome_unidade_executante, data_agenda, hora_agenda')
         .order('data_solicitacao', { ascending: false })
+        .limit(1000)
 
       if (sisregFiltroDataInicio) {
         query = query.gte('data_solicitacao', `${sisregFiltroDataInicio}T00:00:00`)
