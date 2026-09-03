@@ -193,39 +193,99 @@ export default function Frequencia() {
   }
 
   async function adicionarFacultativo() {
-    if (!novoFacDia || !novoFacDesc) return
-    const resp = await fetch('/api/facultativos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dia: novoFacDia, mes: mesNum, ano: anoNum, descricao: novoFacDesc })
-    })
-    const json = await resp.json()
-    if (!resp.ok) { mostrarMsg('Erro: ' + (json.error || resp.status), false); return }
-    setNovoFacDia(''); setNovoFacDesc('')
-    await carregarFacultativos()
+    if (!novoFacDia || !novoFacDesc) {
+      mostrarMsg('Preencha o dia e a descrição do ponto facultativo', false)
+      return
+    }
+    const d = Number(novoFacDia)
+    if (isNaN(d) || d < 1 || d > 31) {
+      mostrarMsg('Dia inválido (deve ser entre 1 e 31)', false)
+      return
+    }
+    try {
+      const resp = await fetch('/api/facultativos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dia: d, mes: mesNum, ano: anoNum, descricao: novoFacDesc })
+      })
+      const json = await resp.json()
+      if (!resp.ok) {
+        mostrarMsg('Erro: ' + (json.error || resp.statusText || resp.status), false)
+        return
+      }
+      setNovoFacDia('')
+      setNovoFacDesc('')
+      mostrarMsg('✅ Ponto facultativo adicionado com sucesso!')
+      await carregarFacultativos()
+    } catch (err) {
+      mostrarMsg('Erro ao adicionar facultativo: ' + (err.message || 'Falha na requisição'), false)
+    }
   }
 
   async function removerFacultativo(id) {
-    await fetch(`/api/facultativos?id=${id}`, { method: 'DELETE' })
-    await carregarFacultativos()
+    try {
+      const resp = await fetch(`/api/facultativos?id=${id}`, { method: 'DELETE' })
+      const json = await resp.json().catch(() => ({}))
+      if (!resp.ok) {
+        mostrarMsg('Erro ao remover: ' + (json.error || resp.statusText), false)
+        return
+      }
+      mostrarMsg('✅ Ponto facultativo removido')
+      await carregarFacultativos()
+    } catch (err) {
+      mostrarMsg('Erro ao remover facultativo: ' + err.message, false)
+    }
   }
 
   async function adicionarFeriado() {
-    if (!novoFerDia || !novoFerMes || !novoFerDesc) return
-    const resp = await fetch('/api/feriados', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dia: novoFerDia, mes: novoFerMes, ano: anoNum, descricao: novoFerDesc })
-    })
-    const json = await resp.json()
-    if (!resp.ok) { mostrarMsg('Erro: ' + (json.error || resp.status), false); return }
-    setNovoFerDia(''); setNovoFerMes(''); setNovoFerDesc('')
-    await carregarFeriados()
+    if (!novoFerDia || !novoFerMes || !novoFerDesc) {
+      mostrarMsg('Preencha o dia, mês e descrição do feriado local', false)
+      return
+    }
+    const d = Number(novoFerDia)
+    const m = Number(novoFerMes)
+    if (isNaN(d) || d < 1 || d > 31) {
+      mostrarMsg('Dia inválido (deve ser entre 1 e 31)', false)
+      return
+    }
+    if (isNaN(m) || m < 1 || m > 12) {
+      mostrarMsg('Mês inválido (deve ser entre 1 e 12)', false)
+      return
+    }
+    try {
+      const resp = await fetch('/api/feriados', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dia: d, mes: m, ano: anoNum, descricao: novoFerDesc })
+      })
+      const json = await resp.json()
+      if (!resp.ok) {
+        mostrarMsg('Erro: ' + (json.error || resp.statusText || resp.status), false)
+        return
+      }
+      setNovoFerDia('')
+      setNovoFerMes('')
+      setNovoFerDesc('')
+      mostrarMsg('✅ Feriado local adicionado com sucesso!')
+      await carregarFeriados()
+    } catch (err) {
+      mostrarMsg('Erro ao adicionar feriado: ' + (err.message || 'Falha na requisição'), false)
+    }
   }
 
   async function removerFeriado(id) {
-    await fetch(`/api/feriados?id=${id}`, { method: 'DELETE' })
-    await carregarFeriados()
+    try {
+      const resp = await fetch(`/api/feriados?id=${id}`, { method: 'DELETE' })
+      const json = await resp.json().catch(() => ({}))
+      if (!resp.ok) {
+        mostrarMsg('Erro ao remover: ' + (json.error || resp.statusText), false)
+        return
+      }
+      mostrarMsg('✅ Feriado removido')
+      await carregarFeriados()
+    } catch (err) {
+      mostrarMsg('Erro ao remover feriado: ' + err.message, false)
+    }
   }
 
   function abrirModalCadastrar() {
