@@ -488,10 +488,11 @@ export default function Agendamento() {
   async function buscarParaReimprimir() {
     if (!buscaRe && !dataRe) return
     setBuscandoRe(true)
-    let query = supabase.from('viagens').select('id, data_viagem, hora, paciente_nome, paciente_cpf, acomp1_nome, acomp1_cpf, acomp2_nome, acomp2_cpf, destino, motivo, local_destino, status, observacao, confirmado, agendado_por').order('data_viagem', { ascending: false }).limit(20)
+    let query = supabase.from('viagens').select('id, data_viagem, hora, paciente_nome, paciente_cpf, acomp1_nome, acomp1_cpf, acomp2_nome, acomp2_cpf, destino, motivo, local_destino, tipo_viagem, tem_acomp, agendado_por').order('data_viagem', { ascending: false }).limit(20)
     if (buscaRe) query = query.ilike('paciente_nome', `%${buscaRe.toUpperCase()}%`)
     if (dataRe) query = query.eq('data_viagem', dataRe)
-    const { data } = await query
+    const { data, error } = await query
+    if (error) console.error('[Agendamento Reimprimir] Erro:', error)
     setResultadosRe(data || [])
     setBuscandoRe(false)
   }

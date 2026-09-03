@@ -103,21 +103,35 @@ export default function Relatorio() {
 
   async function carregarViagens() {
     setCarregando(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('viagens')
-      .select('id, data_viagem, hora, paciente_nome, paciente_cpf, acomp1_nome, acomp1_cpf, acomp2_nome, acomp2_cpf, destino, motivo, local_destino, status, observacao, agendado_por, confirmado, criado_em')
+      .select('id, data_viagem, hora, paciente_nome, paciente_cpf, acomp1_nome, acomp1_cpf, acomp2_nome, acomp2_cpf, destino, motivo, local_destino, tipo_viagem, tem_acomp, agendado_por, competencia, criado_em')
       .order('data_viagem', { ascending: false })
       .limit(1500)
 
+    if (error) {
+      console.error('[Relatorio] Erro ao buscar viagens:', error)
+    }
+
     const registros = data || []
 
-    // Busca telefones dos pacientes
+    // Busca telefones dos pacientes em lotes para evitar estouro de URL
     const cpfs = [...new Set(registros.map(v => v.paciente_cpf).filter(Boolean))]
     let mapaFone = {}
     if (cpfs.length > 0) {
-      const { data: pacs } = await supabase
-        .from('pacientes').select('cpf_cns, telefone').in('cpf_cns', cpfs)
-      if (pacs) pacs.forEach(p => { mapaFone[p.cpf_cns] = p.telefone })
+      const chunkSize = 100
+      for (let i = 0; i < cpfs.length; i += chunkSize) {
+        const batch = cpfs.slice(i, i + chunkSize)
+        const { data: pacs } = await supabase
+          .from('pacientes')
+          .select('cpf_cns, telefone')
+          .in('cpf_cns', batch)
+        if (pacs) {
+          pacs.forEach(p => {
+            if (p.cpf_cns) mapaFone[p.cpf_cns] = p.telefone
+          })
+        }
+      }
     }
 
     const comFone = registros.map(v => ({
