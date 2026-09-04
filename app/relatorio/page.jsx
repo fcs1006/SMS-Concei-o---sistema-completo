@@ -46,17 +46,17 @@ export default function Relatorio() {
   }
 
   async function buscarAcomp(texto, numero) {
-  if (texto.length < 3) {
-    numero === 1 ? setSugestoesAcomp1([]) : setSugestoesAcomp2([])
-    return
+    if (texto.length < 3) {
+      numero === 1 ? setSugestoesAcomp1([]) : setSugestoesAcomp2([])
+      return
+    }
+    const { data } = await supabase
+      .from('pacientes')
+      .select('nome, cpf_cns')
+      .filter('nome', 'imatch', accentInsensitivePattern(texto))
+      .limit(8)
+    numero === 1 ? setSugestoesAcomp1(data || []) : setSugestoesAcomp2(data || [])
   }
-  const { data } = await supabase
-    .from('pacientes')
-    .select('nome, cpf_cns')
-    .filter('nome', 'imatch', accentInsensitivePattern(texto))
-    .limit(8)
-  numero === 1 ? setSugestoesAcomp1(data || []) : setSugestoesAcomp2(data || [])
-}
 
   async function carregarDestinosConfig() {
     try {
@@ -65,7 +65,7 @@ export default function Relatorio() {
         .select('valor')
         .eq('chave', 'tfd_destinos')
         .maybeSingle()
-      
+
       if (data?.valor && Array.isArray(data.valor)) {
         setDestinosConfig(data.valor)
       } else {
@@ -194,32 +194,32 @@ export default function Relatorio() {
     return acc + q
   }, 0)
 
-async function abrirEditar(v) {
-  // Carrega destinos frescos do banco de dados antes de abrir o modal
-  await carregarDestinosConfig()
+  async function abrirEditar(v) {
+    // Carrega destinos frescos do banco de dados antes de abrir o modal
+    await carregarDestinosConfig()
 
-  const { data: fresco } = await supabase
-    .from('viagens')
-    .select('*')
-    .eq('id', v.id)
-    .single()
+    const { data: fresco } = await supabase
+      .from('viagens')
+      .select('*')
+      .eq('id', v.id)
+      .single()
 
-  const primeiroNome = (usuario?.nome || '').split(' ')[0].toUpperCase()
+    const primeiroNome = (usuario?.nome || '').split(' ')[0].toUpperCase()
 
-  if (fresco) {
-    setViagemEditando({ ...fresco, telefone: v.telefone || '', agendado_por: primeiroNome || fresco.agendado_por || '' })
-  } else {
-    setViagemEditando({ ...v, agendado_por: primeiroNome || v.agendado_por || '' })
+    if (fresco) {
+      setViagemEditando({ ...fresco, telefone: v.telefone || '', agendado_por: primeiroNome || fresco.agendado_por || '' })
+    } else {
+      setViagemEditando({ ...v, agendado_por: primeiroNome || v.agendado_por || '' })
+    }
+
+    setModalEditar(true)
+    setStatusMsg({ msg: '', tipo: '' })
+    // Ao abrir edição, considera acompanhantes existentes como já selecionados
+    setAcomp1Sel(true)
+    setAcomp2Sel(true)
+    setSugestoesAcomp1([])
+    setSugestoesAcomp2([])
   }
-
-  setModalEditar(true)
-  setStatusMsg({ msg: '', tipo: '' })
-  // Ao abrir edição, considera acompanhantes existentes como já selecionados
-  setAcomp1Sel(true)
-  setAcomp2Sel(true)
-  setSugestoesAcomp1([])
-  setSugestoesAcomp2([])
-}
 
   async function salvarEdicao() {
     // Bloquear se digitou no campo mas não selecionou da lista
@@ -239,20 +239,20 @@ async function abrirEditar(v) {
     const tem_acomp = (a1_nome || a2_nome) ? 'SIM' : 'NÃO'
 
     const { error } = await supabase.from('viagens').update({
-      data_viagem:   viagemEditando.data_viagem,
-      hora:          viagemEditando.hora,
-      destino:       viagemEditando.destino,
+      data_viagem: viagemEditando.data_viagem,
+      hora: viagemEditando.hora,
+      destino: viagemEditando.destino,
       local_destino: viagemEditando.local_destino,
-      motivo:        viagemEditando.motivo,
-      tipo_viagem:   viagemEditando.tipo_viagem,
-      agendado_por:  viagemEditando.agendado_por,
-      acomp1_nome:   a1_nome,
-      acomp1_cpf:    a1_cpf,
-      acomp2_nome:   a2_nome,
-      acomp2_cpf:    a2_cpf,
-      tem_acomp:     tem_acomp,
-      competencia:   viagemEditando.data_viagem
-        ? viagemEditando.data_viagem.substring(5,7) + '/' + viagemEditando.data_viagem.substring(0,4) : ''
+      motivo: viagemEditando.motivo,
+      tipo_viagem: viagemEditando.tipo_viagem,
+      agendado_por: viagemEditando.agendado_por,
+      acomp1_nome: a1_nome,
+      acomp1_cpf: a1_cpf,
+      acomp2_nome: a2_nome,
+      acomp2_cpf: a2_cpf,
+      tem_acomp: tem_acomp,
+      competencia: viagemEditando.data_viagem
+        ? viagemEditando.data_viagem.substring(5, 7) + '/' + viagemEditando.data_viagem.substring(0, 4) : ''
     }).eq('id', viagemEditando.id)
 
     if (error) {
@@ -276,7 +276,7 @@ async function abrirEditar(v) {
 
   function imprimirRelatorio() {
     const dataFmt = imprimirData
-      ? (() => { const [a,m,d] = imprimirData.split('-'); return `${d}/${m}/${a}` })()
+      ? (() => { const [a, m, d] = imprimirData.split('-'); return `${d}/${m}/${a}` })()
       : ''
 
     const lista = filtradas.filter(v => {
@@ -478,21 +478,34 @@ async function abrirEditar(v) {
           ) : filtradas.length === 0 ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Nenhum registro encontrado.</div>
           ) : (
-            <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <table className="table-modern" style={{ width: '100%', minWidth: '980px' }}>
+            <div style={{ width: '100%', overflowX: 'hidden' }}>
+              <table className="table-modern" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+                <colgroup>
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '17%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '7%' }} />
+                </colgroup>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #7c3aed, #c084fc)' }}>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '80px' }}>Data</th>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '50px' }}>Hora</th>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px' }}>Paciente</th>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '115px' }}>Telefone</th>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '95px' }}>Status</th>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '140px' }}>Destino</th>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '120px' }}>Local</th>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '100px' }}>Motivo</th>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '85px' }}>Tipo</th>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '140px' }}>Acompanhante(s)</th>
-                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '95px' }}>Agendado por</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 4px', fontSize: '10px', textAlign: 'center' }}>Data</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 4px', fontSize: '10px', textAlign: 'center' }}>Hora</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 6px', fontSize: '10px' }}>Paciente</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 4px', fontSize: '10px' }}>Telefone</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 4px', fontSize: '10px', textAlign: 'center' }}>Status</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 4px', fontSize: '10px' }}>Destino</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 4px', fontSize: '10px' }}>Local</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 4px', fontSize: '10px' }}>Motivo</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 4px', fontSize: '10px' }}>Tipo</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 4px', fontSize: '10px' }}>Acompanhante(s)</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '7px 4px', fontSize: '10px', textAlign: 'center' }}>Agendado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -502,25 +515,25 @@ async function abrirEditar(v) {
                       <tr key={v.id}
                         onClick={() => setLinhaSelecionada(linhaSelecionada?.id === v.id ? null : v)}
                         className={linhaSelecionada?.id === v.id ? 'selected' : ''}>
-                        <td style={{ whiteSpace: 'nowrap', fontWeight: '600', fontSize: '11px', padding: '8px 10px' }}>{formatarData(v.data_viagem)}</td>
-                        <td style={{ whiteSpace: 'nowrap', color: '#64748b', fontSize: '11px', padding: '8px 10px' }}>{v.hora || '-'}</td>
-                        <td style={{ fontWeight: '600', color: '#0f172a', fontSize: '11px', padding: '8px 10px' }}>{v.paciente_nome || '-'}</td>
-                        <td style={{ color: '#64748b', whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>{formatarTelefone(v.telefone)}</td>
-                        <td style={{ whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>
+                        <td style={{ whiteSpace: 'nowrap', fontWeight: '600', fontSize: '10.5px', padding: '6px 4px', textAlign: 'center' }}>{formatarData(v.data_viagem)}</td>
+                        <td style={{ whiteSpace: 'nowrap', color: '#64748b', fontSize: '10.5px', padding: '6px 4px', textAlign: 'center' }}>{v.hora || '-'}</td>
+                        <td style={{ fontWeight: '600', color: '#0f172a', fontSize: '10.5px', padding: '6px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v.paciente_nome || '-'}>{v.paciente_nome || '-'}</td>
+                        <td style={{ color: '#64748b', whiteSpace: 'nowrap', fontSize: '10.5px', padding: '6px 4px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={formatarTelefone(v.telefone)}>{formatarTelefone(v.telefone)}</td>
+                        <td style={{ whiteSpace: 'nowrap', fontSize: '10px', padding: '6px 2px', textAlign: 'center' }}>
                           {v.confirmacao === 'CONFIRMADO' ? (
-                            <span style={{ padding: '2px 8px', borderRadius: '12px', background: '#dcfce7', color: '#15803d', fontWeight: '600', fontSize: '10px' }}>Confirmado</span>
+                            <span style={{ padding: '2px 5px', borderRadius: '10px', background: '#dcfce7', color: '#15803d', fontWeight: '600' }}>Confirmado</span>
                           ) : v.confirmacao === 'DESISTIU' ? (
-                            <span style={{ padding: '2px 8px', borderRadius: '12px', background: '#fee2e2', color: '#b91c1c', fontWeight: '600', fontSize: '10px' }}>Desistiu</span>
+                            <span style={{ padding: '2px 5px', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', fontWeight: '600' }}>Desistiu</span>
                           ) : (
-                            <span style={{ padding: '2px 8px', borderRadius: '12px', background: '#f1f5f9', color: '#64748b', fontWeight: '600', fontSize: '10px' }}>Sem resposta</span>
+                            <span style={{ padding: '2px 5px', borderRadius: '10px', background: '#f1f5f9', color: '#64748b', fontWeight: '600' }}>Sem resposta</span>
                           )}
                         </td>
-                        <td style={{ fontSize: '11px', whiteSpace: 'nowrap', padding: '8px 10px' }} title={v.destino || '-'}>{v.destino || '-'}</td>
-                        <td style={{ color: '#64748b', fontSize: '11px', whiteSpace: 'nowrap', padding: '8px 10px' }}>{v.local_destino || '-'}</td>
-                        <td style={{ fontSize: '11px', whiteSpace: 'nowrap', padding: '8px 10px' }}>{v.motivo || '-'}</td>
-                        <td style={{ whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>{v.tipo_viagem || '-'}</td>
-                        <td style={{ color: '#64748b', fontSize: '11px', padding: '8px 10px' }}>{acomps || '-'}</td>
-                        <td style={{ color: '#64748b', whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>{v.agendado_por || '-'}</td>
+                        <td style={{ fontSize: '10.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '6px 4px' }} title={v.destino || '-'}>{v.destino || '-'}</td>
+                        <td style={{ color: '#64748b', fontSize: '10.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '6px 4px' }} title={v.local_destino || '-'}>{v.local_destino || '-'}</td>
+                        <td style={{ fontSize: '10.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '6px 4px' }} title={v.motivo || '-'}>{v.motivo || '-'}</td>
+                        <td style={{ fontSize: '10.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '6px 4px' }} title={v.tipo_viagem || '-'}>{v.tipo_viagem || '-'}</td>
+                        <td style={{ color: '#64748b', fontSize: '10.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '6px 4px' }} title={acomps || '-'}>{acomps || '-'}</td>
+                        <td style={{ color: '#64748b', fontSize: '10.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '6px 4px', textAlign: 'center' }} title={v.agendado_por || '-'}>{v.agendado_por || '-'}</td>
                       </tr>
                     )
                   })}
@@ -587,7 +600,7 @@ async function abrirEditar(v) {
                   <select className={inp} value={viagemEditando.hora || ''}
                     onChange={e => setViagemEditando(v => ({ ...v, hora: e.target.value }))}>
                     <option value="">--</option>
-                    {selectOpts(['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'])}
+                    {selectOpts(['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'])}
                   </select>
                 </div>
               </div>
@@ -614,7 +627,7 @@ async function abrirEditar(v) {
                   <select className={inp} value={viagemEditando.motivo || ''}
                     onChange={e => setViagemEditando(v => ({ ...v, motivo: e.target.value }))}>
                     <option value="">--</option>
-                    {selectOpts(['CONSULTA','EXAME','CIRURGIA - INTERNAÇÃO','RETORNO CIR. - PÓS OP','PERÍCIA MÉDICA','ALTA HOSPITALAR','CAPACITAÇÃO','ESTUDANTE','SÓ RETORNO'])}
+                    {selectOpts(['CONSULTA', 'EXAME', 'CIRURGIA - INTERNAÇÃO', 'RETORNO CIR. - PÓS OP', 'PERÍCIA MÉDICA', 'ALTA HOSPITALAR', 'CAPACITAÇÃO', 'ESTUDANTE', 'SÓ RETORNO'])}
                   </select>
                 </div>
                 <div>
@@ -622,80 +635,80 @@ async function abrirEditar(v) {
                   <select className={inp} value={viagemEditando.tipo_viagem || ''}
                     onChange={e => setViagemEditando(v => ({ ...v, tipo_viagem: e.target.value }))}>
                     <option value="">--</option>
-                    {selectOpts(['IDA E VOLTA','SÓ IDA','SÓ VOLTA'])}
+                    {selectOpts(['IDA E VOLTA', 'SÓ IDA', 'SÓ VOLTA'])}
                   </select>
                 </div>
               </div>
               {/* Acompanhante 1 */}
-<div style={{ position: 'relative' }}>
-  <label className="label-modern">Acompanhante 1</label>
-  <input className={inp}
-    value={viagemEditando.acomp1_nome || ''}
-    onChange={e => {
-      const v = e.target.value.toUpperCase()
-      setViagemEditando(prev => ({ ...prev, acomp1_nome: v }))
-      setBuscaAcomp1(v)
-      setAcomp1Sel(false)
-      buscarAcomp(v, 1)
-    }}
-    placeholder="Digite para buscar na lista..."
-    style={viagemEditando.acomp1_nome && !acomp1Sel ? { borderColor: '#f97316' } : {}} />
-  {!acomp1Sel && viagemEditando.acomp1_nome && (
-    <p style={{ fontSize: '11px', color: '#f97316', margin: '2px 0 0', fontWeight: '600' }}>⚠️ Selecione um paciente cadastrado na lista</p>
-  )}
-  {sugestoesAcomp1.length > 0 && (
-    <div className="search-dropdown">
-      {sugestoesAcomp1.map((p, i) => (
-        <div key={i} className="search-item"
-          onMouseDown={() => {
-            setViagemEditando(prev => ({ ...prev, acomp1_nome: p.nome, acomp1_cpf: p.cpf_cns }))
-            setSugestoesAcomp1([])
-            setAcomp1Sel(true)
-          }}>
-          {p.nome}
-        </div>
-      ))}
-    </div>
-  )}
-</div>
+              <div style={{ position: 'relative' }}>
+                <label className="label-modern">Acompanhante 1</label>
+                <input className={inp}
+                  value={viagemEditando.acomp1_nome || ''}
+                  onChange={e => {
+                    const v = e.target.value.toUpperCase()
+                    setViagemEditando(prev => ({ ...prev, acomp1_nome: v }))
+                    setBuscaAcomp1(v)
+                    setAcomp1Sel(false)
+                    buscarAcomp(v, 1)
+                  }}
+                  placeholder="Digite para buscar na lista..."
+                  style={viagemEditando.acomp1_nome && !acomp1Sel ? { borderColor: '#f97316' } : {}} />
+                {!acomp1Sel && viagemEditando.acomp1_nome && (
+                  <p style={{ fontSize: '11px', color: '#f97316', margin: '2px 0 0', fontWeight: '600' }}>⚠️ Selecione um paciente cadastrado na lista</p>
+                )}
+                {sugestoesAcomp1.length > 0 && (
+                  <div className="search-dropdown">
+                    {sugestoesAcomp1.map((p, i) => (
+                      <div key={i} className="search-item"
+                        onMouseDown={() => {
+                          setViagemEditando(prev => ({ ...prev, acomp1_nome: p.nome, acomp1_cpf: p.cpf_cns }))
+                          setSugestoesAcomp1([])
+                          setAcomp1Sel(true)
+                        }}>
+                        {p.nome}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-<div style={{ position: 'relative' }}>
-  <label className="label-modern">Acompanhante 2</label>
-  <input className={inp}
-    value={viagemEditando.acomp2_nome || ''}
-    onChange={e => {
-      const v = e.target.value.toUpperCase()
-      setViagemEditando(prev => ({ ...prev, acomp2_nome: v }))
-      setBuscaAcomp2(v)
-      setAcomp2Sel(false)
-      buscarAcomp(v, 2)
-    }}
-    placeholder="Digite para buscar na lista..."
-    style={viagemEditando.acomp2_nome && !acomp2Sel ? { borderColor: '#f97316' } : {}} />
-  {!acomp2Sel && viagemEditando.acomp2_nome && (
-    <p style={{ fontSize: '11px', color: '#f97316', margin: '2px 0 0', fontWeight: '600' }}>⚠️ Selecione um paciente cadastrado na lista</p>
-  )}
-  {sugestoesAcomp2.length > 0 && (
-    <div className="search-dropdown">
-      {sugestoesAcomp2.map((p, i) => (
-        <div key={i} className="search-item"
-          onMouseDown={() => {
-            setViagemEditando(prev => ({ ...prev, acomp2_nome: p.nome, acomp2_cpf: p.cpf_cns }))
-            setSugestoesAcomp2([])
-            setAcomp2Sel(true)
-          }}>
-          {p.nome}
-        </div>
-      ))}
-    </div>
-  )}
-</div>
+              <div style={{ position: 'relative' }}>
+                <label className="label-modern">Acompanhante 2</label>
+                <input className={inp}
+                  value={viagemEditando.acomp2_nome || ''}
+                  onChange={e => {
+                    const v = e.target.value.toUpperCase()
+                    setViagemEditando(prev => ({ ...prev, acomp2_nome: v }))
+                    setBuscaAcomp2(v)
+                    setAcomp2Sel(false)
+                    buscarAcomp(v, 2)
+                  }}
+                  placeholder="Digite para buscar na lista..."
+                  style={viagemEditando.acomp2_nome && !acomp2Sel ? { borderColor: '#f97316' } : {}} />
+                {!acomp2Sel && viagemEditando.acomp2_nome && (
+                  <p style={{ fontSize: '11px', color: '#f97316', margin: '2px 0 0', fontWeight: '600' }}>⚠️ Selecione um paciente cadastrado na lista</p>
+                )}
+                {sugestoesAcomp2.length > 0 && (
+                  <div className="search-dropdown">
+                    {sugestoesAcomp2.map((p, i) => (
+                      <div key={i} className="search-item"
+                        onMouseDown={() => {
+                          setViagemEditando(prev => ({ ...prev, acomp2_nome: p.nome, acomp2_cpf: p.cpf_cns }))
+                          setSugestoesAcomp2([])
+                          setAcomp2Sel(true)
+                        }}>
+                        {p.nome}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div>
                 <label className="label-modern">Agendado por</label>
                 <select className={inp} value={viagemEditando.agendado_por || ''}
                   onChange={e => setViagemEditando(v => ({ ...v, agendado_por: e.target.value }))}>
                   <option value="">--</option>
-                  {selectOpts(['GLEICYANE','FERNANDO','ALSIONY'])}
+                  {selectOpts(['GLEICYANE', 'FERNANDO', 'ALSIONY'])}
                 </select>
               </div>
             </div>
