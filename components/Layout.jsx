@@ -286,8 +286,8 @@ export default function Layout({ children }) {
         </div>
       </motion.aside>
 
-      <main style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <div style={{ flex: 1 }}>
+      <main style={{ flex: 1, minWidth: 0, width: '100%', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
           {children}
         </div>
         <footer style={{

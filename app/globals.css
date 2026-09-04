@@ -277,6 +277,7 @@ input, select, textarea {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-family: 'Plus Jakarta Sans', sans-serif;
+  white-space: nowrap;
 }
 
 .table-modern tbody tr {
