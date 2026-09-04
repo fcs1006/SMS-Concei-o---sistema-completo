@@ -472,47 +472,50 @@ async function abrirEditar(v) {
         </div>
 
         {/* Tabela */}
-        <div className="card" style={{ overflow: 'hidden', width: '100%' }}>
+        <div className="card" style={{ width: '100%', overflow: 'hidden' }}>
           {carregando ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Carregando...</div>
           ) : filtradas.length === 0 ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Nenhum registro encontrado.</div>
           ) : (
             <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <table className="table-modern" style={{ width: '100%', minWidth: '1150px' }}>
+              <table className="table-modern" style={{ width: '100%', minWidth: '980px' }}>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #7c3aed, #c084fc)' }}>
-                    {['Data','Hora','Paciente','Telefone','Confirmação','Destino','Local','Motivo','Tipo','Acomp. 1','Acomp. 2','Agendado por'].map(h => (
-                      <th key={h} style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '10px 12px' }}>{h}</th>))}
+                    {['Data', 'Hora', 'Paciente', 'Telefone', 'Status', 'Destino', 'Local', 'Motivo', 'Tipo', 'Acompanhante(s)', 'Agendado por'].map(h => (
+                      <th key={h} style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px' }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {filtradas.map(v => (
-                    <tr key={v.id}
-                      onClick={() => setLinhaSelecionada(linhaSelecionada?.id === v.id ? null : v)}
-                      className={linhaSelecionada?.id === v.id ? 'selected' : ''}>
-                      <td style={{ whiteSpace: 'nowrap', fontWeight: '600', fontSize: '11px', padding: '10px 12px' }}>{formatarData(v.data_viagem)}</td>
-                      <td style={{ whiteSpace: 'nowrap', color: '#64748b', fontSize: '11px', padding: '10px 12px' }}>{v.hora || '-'}</td>
-                      <td style={{ fontWeight: '600', color: '#0f172a', minWidth: '150px', fontSize: '11px', padding: '10px 12px' }}>{v.paciente_nome || '-'}</td>
-                      <td style={{ color: '#64748b', whiteSpace: 'nowrap', fontSize: '11px', padding: '10px 12px' }}>{formatarTelefone(v.telefone)}</td>
-                      <td style={{ whiteSpace: 'nowrap', fontSize: '11px', padding: '10px 12px' }}>
-                        {v.confirmacao === 'CONFIRMADO' ? (
-                          <span style={{ padding: '3px 8px', borderRadius: '12px', background: '#dcfce7', color: '#15803d', fontWeight: '600' }}>Confirmado</span>
-                        ) : v.confirmacao === 'DESISTIU' ? (
-                          <span style={{ padding: '3px 8px', borderRadius: '12px', background: '#fee2e2', color: '#b91c1c', fontWeight: '600' }}>Desistiu</span>
-                        ) : (
-                          <span style={{ padding: '3px 8px', borderRadius: '12px', background: '#f1f5f9', color: '#64748b', fontWeight: '600' }}>Sem resposta</span>
-                        )}
-                      </td>
-                      <td style={{ fontSize: '11px', whiteSpace: 'nowrap', padding: '10px 12px' }} title={v.destino || '-'}>{v.destino || '-'}</td>
-                      <td style={{ color: '#64748b', fontSize: '11px', whiteSpace: 'nowrap', padding: '10px 12px' }}>{v.local_destino || '-'}</td>
-                      <td style={{ fontSize: '11px', whiteSpace: 'nowrap', padding: '10px 12px' }}>{v.motivo || '-'}</td>
-                      <td style={{ whiteSpace: 'nowrap', fontSize: '11px', padding: '10px 12px' }}>{v.tipo_viagem || '-'}</td>
-                      <td style={{ color: '#64748b', minWidth: '120px', fontSize: '11px', whiteSpace: 'nowrap', padding: '10px 12px' }}>{v.acomp1_nome || '-'}</td>
-                      <td style={{ color: '#64748b', minWidth: '120px', fontSize: '11px', whiteSpace: 'nowrap', padding: '10px 12px' }}>{v.acomp2_nome || '-'}</td>
-                      <td style={{ color: '#64748b', whiteSpace: 'nowrap', fontSize: '11px', padding: '10px 12px' }}>{v.agendado_por || '-'}</td>
-                    </tr>
-                  ))}
+                  {filtradas.map(v => {
+                    const acomps = [v.acomp1_nome, v.acomp2_nome].filter(Boolean).join(' / ')
+                    return (
+                      <tr key={v.id}
+                        onClick={() => setLinhaSelecionada(linhaSelecionada?.id === v.id ? null : v)}
+                        className={linhaSelecionada?.id === v.id ? 'selected' : ''}>
+                        <td style={{ whiteSpace: 'nowrap', fontWeight: '600', fontSize: '11px', padding: '8px 10px' }}>{formatarData(v.data_viagem)}</td>
+                        <td style={{ whiteSpace: 'nowrap', color: '#64748b', fontSize: '11px', padding: '8px 10px' }}>{v.hora || '-'}</td>
+                        <td style={{ fontWeight: '600', color: '#0f172a', fontSize: '11px', padding: '8px 10px', minWidth: '140px' }}>{v.paciente_nome || '-'}</td>
+                        <td style={{ color: '#64748b', whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>{formatarTelefone(v.telefone)}</td>
+                        <td style={{ whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>
+                          {v.confirmacao === 'CONFIRMADO' ? (
+                            <span style={{ padding: '2px 8px', borderRadius: '12px', background: '#dcfce7', color: '#15803d', fontWeight: '600', fontSize: '10px' }}>Confirmado</span>
+                          ) : v.confirmacao === 'DESISTIU' ? (
+                            <span style={{ padding: '2px 8px', borderRadius: '12px', background: '#fee2e2', color: '#b91c1c', fontWeight: '600', fontSize: '10px' }}>Desistiu</span>
+                          ) : (
+                            <span style={{ padding: '2px 8px', borderRadius: '12px', background: '#f1f5f9', color: '#64748b', fontWeight: '600', fontSize: '10px' }}>Sem resposta</span>
+                          )}
+                        </td>
+                        <td style={{ fontSize: '11px', whiteSpace: 'nowrap', padding: '8px 10px' }} title={v.destino || '-'}>{v.destino || '-'}</td>
+                        <td style={{ color: '#64748b', fontSize: '11px', whiteSpace: 'nowrap', padding: '8px 10px' }}>{v.local_destino || '-'}</td>
+                        <td style={{ fontSize: '11px', whiteSpace: 'nowrap', padding: '8px 10px' }}>{v.motivo || '-'}</td>
+                        <td style={{ whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>{v.tipo_viagem || '-'}</td>
+                        <td style={{ color: '#64748b', fontSize: '11px', padding: '8px 10px', minWidth: '130px' }}>{acomps || '-'}</td>
+                        <td style={{ color: '#64748b', whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>{v.agendado_por || '-'}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
