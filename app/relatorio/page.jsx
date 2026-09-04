@@ -482,9 +482,17 @@ async function abrirEditar(v) {
               <table className="table-modern" style={{ width: '100%', minWidth: '980px' }}>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #7c3aed, #c084fc)' }}>
-                    {['Data', 'Hora', 'Paciente', 'Telefone', 'Status', 'Destino', 'Local', 'Motivo', 'Tipo', 'Acompanhante(s)', 'Agendado por'].map(h => (
-                      <th key={h} style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px' }}>{h}</th>
-                    ))}
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '80px' }}>Data</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '50px' }}>Hora</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px' }}>Paciente</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '115px' }}>Telefone</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '95px' }}>Status</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '140px' }}>Destino</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '120px' }}>Local</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '100px' }}>Motivo</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '85px' }}>Tipo</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '140px' }}>Acompanhante(s)</th>
+                    <th style={{ color: '#fff', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '11px', width: '95px' }}>Agendado por</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -496,7 +504,7 @@ async function abrirEditar(v) {
                         className={linhaSelecionada?.id === v.id ? 'selected' : ''}>
                         <td style={{ whiteSpace: 'nowrap', fontWeight: '600', fontSize: '11px', padding: '8px 10px' }}>{formatarData(v.data_viagem)}</td>
                         <td style={{ whiteSpace: 'nowrap', color: '#64748b', fontSize: '11px', padding: '8px 10px' }}>{v.hora || '-'}</td>
-                        <td style={{ fontWeight: '600', color: '#0f172a', fontSize: '11px', padding: '8px 10px', minWidth: '140px' }}>{v.paciente_nome || '-'}</td>
+                        <td style={{ fontWeight: '600', color: '#0f172a', fontSize: '11px', padding: '8px 10px' }}>{v.paciente_nome || '-'}</td>
                         <td style={{ color: '#64748b', whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>{formatarTelefone(v.telefone)}</td>
                         <td style={{ whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>
                           {v.confirmacao === 'CONFIRMADO' ? (
@@ -511,7 +519,7 @@ async function abrirEditar(v) {
                         <td style={{ color: '#64748b', fontSize: '11px', whiteSpace: 'nowrap', padding: '8px 10px' }}>{v.local_destino || '-'}</td>
                         <td style={{ fontSize: '11px', whiteSpace: 'nowrap', padding: '8px 10px' }}>{v.motivo || '-'}</td>
                         <td style={{ whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>{v.tipo_viagem || '-'}</td>
-                        <td style={{ color: '#64748b', fontSize: '11px', padding: '8px 10px', minWidth: '130px' }}>{acomps || '-'}</td>
+                        <td style={{ color: '#64748b', fontSize: '11px', padding: '8px 10px' }}>{acomps || '-'}</td>
                         <td style={{ color: '#64748b', whiteSpace: 'nowrap', fontSize: '11px', padding: '8px 10px' }}>{v.agendado_por || '-'}</td>
                       </tr>
                     )
