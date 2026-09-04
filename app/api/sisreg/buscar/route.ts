@@ -5,10 +5,11 @@ export const dynamic = 'force-dynamic'
 
 const DEFAULT_SISREG_URL = 'https://sisreg-es.saude.gov.br'
 
-// Índices ordenados: do mais específico (local) para estadual (TO), nacional e históricos (2024 / anos anteriores)
+// Índices ordenados: municipais autorizados primeiro, depois padrões estaduais e históricos
 const INDICES_BUSCA = [
   'marcacao-ambulatorial-to-conceicao-do-tocantins',
   'solicitacao-ambulatorial-to-conceicao-do-tocantins',
+  '*conceicao-do-tocantins*',
   'marcacao-ambulatorial-to-*',
   'solicitacao-ambulatorial-to-*',
   'solicitacao-ambulatorial-to-estadual',
@@ -25,6 +26,55 @@ const INDICES_BUSCA = [
   'historico-solicitacao-*',
   'historico-marcacao-*'
 ]
+
+const VALID_MONITORAMENTO_COLUMNS = new Set([
+  'codigo_solicitacao',
+  'data_solicitacao',
+  'data_aprovacao',
+  'data_marcacao',
+  'data_confirmacao',
+  'no_usuario',
+  'cns_usuario',
+  'cpf_usuario',
+  'no_mae_usuario',
+  'dt_nascimento_usuario',
+  'telefone',
+  'sexo_usuario',
+  'municipio_paciente_residencia',
+  'codigo_unidade_solicitante',
+  'nome_unidade_solicitante',
+  'nome_medico_solicitante',
+  'numero_crm',
+  'codigo_interno_procedimento',
+  'descricao_interna_procedimento',
+  'codigo_sigtap_procedimento',
+  'codigo_cid',
+  'descricao_cid',
+  'codigo_classificacao_risco',
+  'codigo_tipo_regulacao',
+  'status_solicitacao',
+  'nome_unidade_executante',
+  'logradouro_unidade_executante',
+  'telefone_unidade_executante',
+  'justificativa_clinica',
+  'atualizado_em'
+])
+
+function filtrarColunasMonitoramento(obj: any) {
+  const clean: any = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (VALID_MONITORAMENTO_COLUMNS.has(key) && val !== undefined) {
+      if (key === 'codigo_classificacao_risco' && val !== null) {
+        clean[key] = String(val)
+      } else if (key === 'dt_nascimento_usuario' && typeof val === 'string' && val.includes('T')) {
+        clean[key] = val.split('T')[0]
+      } else {
+        clean[key] = val
+      }
+    }
+  }
+  return clean
+}
 
 function extrairDadosSisreg(s: any, codigoFallback?: number | string): any {
   let observacaoSolicitante = null
@@ -364,31 +414,15 @@ export async function GET(request: NextRequest) {
       console.log(`[SISREG Buscar GET] Consultando API externa para o documento ${documento}...`)
       const solicitacaoExterna = await buscarExternoPorDocumento(documento)
       if (solicitacaoExterna) {
-        // Separa os campos que não vão pro banco de dados
-        const { 
-          cpf_profissional_solicitante, 
-          sigla_uf_solicitante, 
-          uf_paciente_residencia,
-          cep_paciente_residencia,
-          endereco_paciente_residencia,
-          bairro_paciente_residencia,
-          numero_paciente_residencia,
-          raca_usuario,
-          ...dadosParaSalvar 
-        } = solicitacaoExterna
+        const dadosParaSalvar = filtrarColunasMonitoramento(solicitacaoExterna)
 
         if (dadosParaSalvar.codigo_solicitacao) {
-          // Salva no banco local para consultas futuras rápidas
-          let { error: insertErr } = await supabase
-            .from('monitoramento_sisreg')
-            .upsert(dadosParaSalvar, { onConflict: 'codigo_solicitacao' })
-
-          if (insertErr && insertErr.message.includes('column')) {
-            console.warn('[SISREG Buscar GET] Falha ao salvar com novas colunas (migração pendente). Salvando apenas colunas padrão.')
-            const { codigo_cid, descricao_cid, codigo_sigtap_procedimento, justificativa_clinica, ...standardFields } = dadosParaSalvar
+          try {
             await supabase
               .from('monitoramento_sisreg')
-              .upsert(standardFields, { onConflict: 'codigo_solicitacao' })
+              .upsert(dadosParaSalvar, { onConflict: 'codigo_solicitacao' })
+          } catch (insertErr: any) {
+            console.warn('[SISREG Buscar GET] Falha ao salvar no banco local:', insertErr.message)
           }
         }
 
@@ -400,28 +434,16 @@ export async function GET(request: NextRequest) {
       const solicitacaoExterna = await buscarExterno(codigoNum)
 
       if (solicitacaoExterna) {
-        const { 
-          cpf_profissional_solicitante, 
-          sigla_uf_solicitante, 
-          uf_paciente_residencia,
-          cep_paciente_residencia,
-          endereco_paciente_residencia,
-          bairro_paciente_residencia,
-          numero_paciente_residencia,
-          raca_usuario,
-          ...dadosParaSalvar 
-        } = solicitacaoExterna
+        const dadosParaSalvar = filtrarColunasMonitoramento(solicitacaoExterna)
 
-        let { error: insertErr } = await supabase
-          .from('monitoramento_sisreg')
-          .upsert(dadosParaSalvar, { onConflict: 'codigo_solicitacao' })
-
-        if (insertErr && insertErr.message.includes('column')) {
-          console.warn('[SISREG Buscar GET] Falha ao salvar com novas colunas (migração pendente). Salvando apenas colunas padrão.')
-          const { codigo_cid, descricao_cid, codigo_sigtap_procedimento, justificativa_clinica, ...standardFields } = dadosParaSalvar
-          await supabase
-            .from('monitoramento_sisreg')
-            .upsert(standardFields, { onConflict: 'codigo_solicitacao' })
+        if (dadosParaSalvar.codigo_solicitacao) {
+          try {
+            await supabase
+              .from('monitoramento_sisreg')
+              .upsert(dadosParaSalvar, { onConflict: 'codigo_solicitacao' })
+          } catch (insertErr: any) {
+            console.warn('[SISREG Buscar GET] Falha ao salvar no banco local:', insertErr.message)
+          }
         }
 
         resultData = solicitacaoExterna
